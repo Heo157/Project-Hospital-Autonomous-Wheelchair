@@ -1,0 +1,23 @@
+# .gitignore
+
+# 1. Qt 빌드 파일 무시
+build/
+*.o
+*.obj
+*.moc
+*.ui_*.h
+Makefile*
+
+# 2. Qt Creator 개인 설정 무시
+*.pro.user
+*.pro.user.*
+.qtcreator/
+.qmake.stash
+
+# 3. 실행 파일 무시 (서버, 앱)
+#Hospital_Terminal.exe
+#server_app
+
+# 4. OS 생성 파일 무시
+#.DS_Store
+#Thumbs.db
