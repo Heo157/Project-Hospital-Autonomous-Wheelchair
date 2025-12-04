@@ -15,6 +15,11 @@ public:
     explicit Login(QWidget *parent = nullptr);
     ~Login();
 
+    //signal to main window
+signals:
+    // login success
+    void loginSuccess(QString role);
+
 private slots:
     void on_pushButton_clicked();
 

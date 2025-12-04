@@ -1,16 +1,13 @@
 #include "login.h"
 #include "ui_login.h"
-#include "mainwindow.h"       // 메인 화면 띄우려면 필요
-#include "database_manager.h" // DB 매니저
-#include <QMessageBox>        // 알림창
+#include "database_manager.h"
+#include <QMessageBox>
 
-Login::Login(QWidget *parent)
-    : QWidget(parent)
-    , ui(new Ui::Login)
+Login::Login(QWidget *parent) :
+    QWidget(parent),
+    ui(new Ui::Login)
 {
     ui->setupUi(this);
-    // (선택사항) 시작하자마자 DB 연결 시도
-    DatabaseManager::instance().connectToDb();
 }
 
 Login::~Login()
@@ -20,21 +17,22 @@ Login::~Login()
 
 void Login::on_pushButton_clicked()
 {
-    // 1. 화면의 입력창(lineEdit)에서 글자 가져오기 (이 부분이 빠져있었음!)
+    // UI의 입력창에서 텍스트 가져오기 (Qt Designer의 objectName과 일치해야 함)
+    // 기존에 제공해주신 ui_login.h에 따르면 lineEdit, lineEdit_2로 되어있을 수 있습니다.
+    // 만약 에러가 난다면 ui->lineEdit_id, ui->lineEdit_pw 등으로 이름을 확인하세요.
     QString id = ui->lineEdit->text();
     QString pw = ui->lineEdit_2->text();
 
-    // 2. DB 매니저에게 물어보기
-    bool success = DatabaseManager::instance().checkIdPassword(id, pw);
+    // DB 매니저를 통해 역할(Role) 조회
+    // "admin", "medical", "patient" 또는 실패 시 ""(빈 문자열) 반환
+    QString role = DatabaseManager::instance().getUserRole(id, pw);
 
-    // 3. 결과에 따라 처리하기
-    if (success) {
-        // 성공 시 메인 화면으로
-        MainWindow *mw = new MainWindow();
-        mw->show();
-        this->close();
+    if (!role.isEmpty()) {
+        // [핵심 변경] 
+        // 직접 MainWindow를 띄우지 않고, 부모(MainWindow)에게 "성공 신호"만 보냅니다.
+        emit loginSuccess(role);
     } else {
-        // 실패 시 경고창 띄우기
-        QMessageBox::warning(this, "로그인 실패", "아이디 또는 비밀번호가 틀렸습니다.");
+        // 로그인 실패 시 경고창 (인자 3개 필수: 부모, 제목, 내용)
+        QMessageBox::warning(this, "Login Failed", "Wrong ID or Password.");
     }
 }
