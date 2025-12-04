@@ -10,16 +10,19 @@ CONFIG += c++17
 
 SOURCES += \
     database_manager.cpp \
+    keyboard.cpp \
     login.cpp \
     main.cpp \
     mainwindow.cpp
 
 HEADERS += \
     database_manager.h \
+    keyboard.h \
     login.h \
     mainwindow.h
 
 FORMS += \
+    keyboard.ui \
     login.ui \
     mainwindow.ui
 
