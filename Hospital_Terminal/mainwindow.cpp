@@ -9,52 +9,58 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
+    , virtualKeyboard(nullptr)
 {
     ui->setupUi(this);
 
     // ---------------------------------------------------------
-    // 1. 가상 키보드 설정 (화면 하단에 붙이기)
+    // 1. 가상 키보드 설정 (조건부 생성)
     // ---------------------------------------------------------
-    virtualKeyboard = new Keyboard(this);
     
-    // 메인 레이아웃의 맨 아래에 추가 (이렇게 해야 화면을 밀어 올림)
-    // ui->verticalLayout이 mainwindow.ui에 정의되어 있어야 합니다.
-    ui->verticalLayout->addWidget(virtualKeyboard);
-    
-    // 높이 고정 (300px), 너비는 화면에 맞춤
-    virtualKeyboard->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-    virtualKeyboard->setFixedHeight(300);
-    virtualKeyboard->hide(); // 기본은 숨김 상태
+    // 디버깅용: 현재 키보드 상태 출력
+    bool hasKeyboard = isPhysicalKeyboardConnected();
+    qDebug() << "Initial Keyboard Check:" << hasKeyboard;
+
+    if (!hasKeyboard) {
+        virtualKeyboard = new Keyboard(this);
+        
+        // 메인 레이아웃의 맨 아래에 추가
+        ui->verticalLayout->addWidget(virtualKeyboard);
+        
+        // 높이 고정 및 사이즈 정책 설정
+        virtualKeyboard->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+        virtualKeyboard->setFixedHeight(300);
+        
+        // 초기 상태는 숨김
+        virtualKeyboard->hide();
+        virtualKeyboard->setVisible(false);
+    }
+    // 물리 키보드가 있다면 virtualKeyboard는 nullptr 상태로 유지
 
     // ---------------------------------------------------------
-    // 2. 로그인 페이지 조립 (기존 Login 클래스 재활용)
+    // 2. 로그인 페이지 조립
     // ---------------------------------------------------------
     loginPage = new Login(this);
     
-    // 스택 위젯의 0번 페이지로 추가
     ui->stackedWidget->addWidget(loginPage);
     ui->stackedWidget->setCurrentWidget(loginPage);
 
-    // [신호 연결] Login 위젯이 "성공 신호"를 보내면 -> 내 함수(onLoginSuccess) 실행
+    // 신호 연결
     connect(loginPage, &Login::loginSuccess, this, &MainWindow::onLoginSuccess);
 
-    // 로그인 페이지의 입력창(LineEdit)들도 키보드 이벤트 필터에 등록해야 합니다.
-    // Login 객체의 자식 위젯들을 찾아서 필터를 설치합니다.
+    // 로그인 페이지의 입력창(LineEdit)들도 이벤트 필터에 등록
     QList<QLineEdit *> lineEdits = loginPage->findChildren<QLineEdit *>();
     for (QLineEdit *edit : lineEdits) {
         edit->installEventFilter(this);
     }
 
     // ---------------------------------------------------------
-    // 3. 로그아웃 버튼 연결 (UI에 btn_logout이 있다고 가정)
+    // 3. 로그아웃 버튼 연결 및 초기 상태
     // ---------------------------------------------------------
-    // page_dashboard (ui->stackedWidget의 다른 페이지) 안에 있는 btn_logout 버튼을 찾아 연결
-    // ui파일에서 직접 접근 가능하다면 ui->btn_logout으로 써도 됩니다.
     if (ui->btn_logout) {
         connect(ui->btn_logout, &QPushButton::clicked, this, &MainWindow::onLogoutClicked);
     }
     
-    // 초기 상태 메시지
     if (ui->label_status) {
         ui->label_status->setText("시스템 로그인 대기중...");
     }
@@ -66,49 +72,89 @@ MainWindow::~MainWindow()
 }
 
 // ---------------------------------------------------------
-// 기능 1: 물리 키보드 연결 확인 (리눅스 전용)
+// [수정됨] 기능 1: 물리 키보드 연결 확인 (정밀 검사)
 // ---------------------------------------------------------
 bool MainWindow::isPhysicalKeyboardConnected()
 {
     QFile file("/proc/bus/input/devices");
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        return false; // 파일 못 읽으면 없는 것으로 간주 (가상키보드 사용)
+        qDebug() << "Failed to open input devices file";
+        return false; 
     }
 
-    QTextStream in(&file);
-    bool isKeyboard = false;
+    // 파일 전체 읽기 (0바이트 문제 해결)
+    QByteArray data = file.readAll();
+    file.close();
+
+    QString content = QString::fromUtf8(data);
     
-    while (!in.atEnd()) {
-        QString line = in.readLine();
-        // Handlers 항목에 kbd가 있으면 키보드로 인식
-        // (가상 장치 필터링이 필요할 수 있으나, 기본적으로 kbd 확인)
+    // 각 장치 블록은 빈 줄로 구분됩니다.
+    // 하지만 간단하게 줄 단위로 읽으면서 'Context'를 파악하는 방식으로 합니다.
+    
+    QStringList lines = content.split('\n');
+    
+    bool hasKbdHandler = false;
+    bool isUsb = false;
+    bool isKeyName = false;
+
+    // 파일을 순차적으로 읽으면서 하나의 장치 블록을 분석합니다.
+    // I: Bus=... 로 시작하는 부분이 새 장치의 시작입니다.
+    
+    for (const QString &line : lines) {
+        if (line.trimmed().isEmpty()) {
+            // 빈 줄을 만나면 이전 장치 분석 결과를 확인
+            if (hasKbdHandler && (isUsb || isKeyName)) {
+                qDebug() << "Real Physical Keyboard Detected!";
+                return true;
+            }
+            
+            // 다음 장치 분석을 위해 초기화
+            hasKbdHandler = false;
+            isUsb = false;
+            isKeyName = false;
+            continue;
+        }
+
+        // 1. 핸들러 확인 (kbd가 있는지)
         if (line.contains("Handlers=") && line.contains("kbd")) {
-            isKeyboard = true;
-            break; 
+            hasKbdHandler = true;
+        }
+
+        // 2. 물리적 연결 방식 확인 (USB인지)
+        if (line.contains("Phys=usb")) {
+            isUsb = true;
+        }
+
+        // 3. 이름 확인 (Keyboard라는 단어가 들어가는지) - 대소문자 무시
+        if (line.contains("Name=") && line.contains("keyboard", Qt::CaseInsensitive)) {
+            isKeyName = true;
         }
     }
-    file.close();
-    return isKeyboard;
+    
+    // 마지막 장치 확인 (파일 끝이라 빈 줄이 없을 수 있음)
+    if (hasKbdHandler && (isUsb || isKeyName)) {
+        qDebug() << "Real Physical Keyboard Detected (Last device)!";
+        return true;
+    }
+
+    qDebug() << "No physical keyboard found.";
+    return false;
 }
 
 // ---------------------------------------------------------
-// 기능 2: 이벤트 필터 (터치 감지 -> 키보드 띄우기)
+// 기능 2: 이벤트 필터 (터치 감지 -> 가상 키보드 띄우기)
 // ---------------------------------------------------------
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
-    // 포커스를 얻거나 마우스를 클릭했을 때
     if (event->type() == QEvent::FocusIn || event->type() == QEvent::MouseButtonPress) {
         QLineEdit *lineEdit = qobject_cast<QLineEdit*>(obj);
         if (lineEdit) {
-            // 조건 a-1: 물리 키보드가 있으면 -> 가상 키보드 숨김
-            if (isPhysicalKeyboardConnected()) {
-                virtualKeyboard->hide();
-            } 
-            // 조건 a-2: 물리 키보드가 없으면 -> 가상 키보드 띄움
-            else {
+            
+            // 가상 키보드가 생성된 경우(nullptr가 아님)에만 동작
+            // 즉, 시작할 때 물리 키보드가 없었던 경우에만 띄움
+            if (virtualKeyboard != nullptr) {
                 virtualKeyboard->setLineEdit(lineEdit);
                 virtualKeyboard->show();
-                // 키보드가 보이면 레이아웃이 다시 계산되어 상단 화면이 밀려 올라감
             }
         }
     }
@@ -116,39 +162,31 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 }
 
 // ---------------------------------------------------------
-// 기능 3: 로그인 성공 처리 (화면 전환 & 탭 구성)
+// 기능 3: 로그인 성공 처리
 // ---------------------------------------------------------
 void MainWindow::onLoginSuccess(QString role)
 {
-    // 1. 대시보드 페이지로 이동
-    // mainwindow.ui에서 만든 page_dashboard 위젯으로 전환
     if (ui->page_dashboard) {
         ui->stackedWidget->setCurrentWidget(ui->page_dashboard);
     }
 
-    // 2. 키보드 숨기기 (성공했으니 화면 넓게)
-    virtualKeyboard->hide();
+    if (virtualKeyboard != nullptr) {
+        virtualKeyboard->hide();
+    }
 
-    // 3. 역할(Role)에 따라 탭 구성
     if (ui->mainTabWidget) {
-        ui->mainTabWidget->clear(); // 기존 탭 제거
+        ui->mainTabWidget->clear();
 
         if (role == "admin") {
             if (ui->label_status) ui->label_status->setText("관리자 모드");
-            // 관리자용 탭들 추가 (나중에 파일 생성 후 주석 해제)
             // ui->mainTabWidget->addTab(new TabAdmin(this), "시스템 관리");
-            // ui->mainTabWidget->addTab(new TabMedical(this), "의료진 보기");
-            // ui->mainTabWidget->addTab(new TabPatient(this), "환자 보기");
         } 
         else if (role == "medical") {
             if (ui->label_status) ui->label_status->setText("의료진 모드");
-            // 의료진용 탭들 추가 (나중에 파일 생성 후 주석 해제)
-            // ui->mainTabWidget->addTab(new TabMedical(this), "내 업무");
-            // ui->mainTabWidget->addTab(new TabPatient(this), "환자 모니터링");
+            // ui->mainTabWidget->addTab(new TabMedical(this), "진료 업무");
         } 
         else if (role == "patient") {
             if (ui->label_status) ui->label_status->setText("환자 모드");
-            // 환자용 탭 추가 (나중에 파일 생성 후 주석 해제)
             // ui->mainTabWidget->addTab(new TabPatient(this), "휠체어 호출");
         }
     }
@@ -159,7 +197,6 @@ void MainWindow::onLoginSuccess(QString role)
 // ---------------------------------------------------------
 void MainWindow::onLogoutClicked()
 {
-    // 1. 탭 내용 비우기 (메모리 정리 포함)
     if (ui->mainTabWidget) {
         while (ui->mainTabWidget->count() > 0) {
             QWidget* widget = ui->mainTabWidget->widget(0);
@@ -168,17 +205,11 @@ void MainWindow::onLogoutClicked()
         }
     }
 
-    // 2. 로그인 화면으로 복귀
     ui->stackedWidget->setCurrentWidget(loginPage);
     
-    // 3. 상태 메시지 초기화
     if (ui->label_status) ui->label_status->setText("로그아웃 되었습니다.");
     
-    // 4. 키보드 숨김
-    virtualKeyboard->hide();
-    
-    // 5. 로그인 입력창 초기화 (선택 사항)
-    // loginPage의 자식 위젯을 찾아서 지울 수 있습니다.
-    // QLineEdit *idEdit = loginPage->findChild<QLineEdit *>("lineEdit");
-    // if(idEdit) idEdit->clear();
+    if (virtualKeyboard != nullptr) {
+        virtualKeyboard->hide();
+    }
 }
