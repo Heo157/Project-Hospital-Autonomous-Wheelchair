@@ -4,9 +4,9 @@
 #include <QMainWindow>
 #include <QMouseEvent>
 #include "keyboard.h" 
-#include "login.h" // [필수] 로그인 위젯 헤더 포함
+#include "login.h" 
 
-// [수정] 아직 만들지 않은 탭 화면 헤더들은 주석 처리 (에러 방지)
+// [주석] 탭 화면 헤더 (나중에 파일 만들면 주석 해제)
 // #include "tab_admin.h"
 // #include "tab_medical.h"
 // #include "tab_patient.h"
@@ -24,26 +24,23 @@ public:
     ~MainWindow();
 
 protected:
-    // 이벤트 필터: 화면 터치나 클릭 이벤트를 가로채서 처리함 (키보드 띄우기용)
+    // 이벤트 필터: 사용자가 화면을 터치할 때마다 감시
     bool eventFilter(QObject *obj, QEvent *event) override;
 
 private slots:
-    // 로그인 성공 시 실행될 함수 (role: admin, medical, patient 등)
     void onLoginSuccess(QString role);
-    
-    // 로그아웃 버튼 클릭 시 실행될 함수
     void onLogoutClicked();
 
 private:
     Ui::MainWindow *ui;
     
-    // 가상 키보드 객체
-    Keyboard *virtualKeyboard;
+    // 가상 키보드
+    Keyboard *virtualKeyboard = nullptr;
     
-    // 로그인 페이지 객체 (초기 화면용)
+    // 로그인 페이지
     Login *loginPage; 
 
-    // 물리 키보드 연결 여부 확인 함수
+    // [핵심] 물리 키보드가 꽂혀있는지 확인하는 함수
     bool isPhysicalKeyboardConnected();
 };
 #endif // MAINWINDOW_H
