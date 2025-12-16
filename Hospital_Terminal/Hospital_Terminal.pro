@@ -9,28 +9,46 @@ CONFIG += c++17
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-    account_manage.cpp \
-    database_manager.cpp \
-    keyboard.cpp \
-    login.cpp \
+    account_admin.cpp \
     main.cpp \
     mainwindow.cpp \
-    tab_admin.cpp
+    search_medical.cpp \
+    tab_admin.cpp \
+    tab_medical.cpp \
+    wheelchair_admin.cpp \
+    wheelchair_map.cpp \
+    wheelchair_medical.cpp \
+    keyboard.cpp \
+    login.cpp \
+    account_manage.cpp \
+    database_manager.cpp
 
 HEADERS += \
-    account_manage.h \
-    database_manager.h \
+    account_admin.h \
+    mainwindow.h \
+    search_medical.h \
+    tab_admin.h \
+    tab_medical.h \
+    wheelchair_admin.h \
+    wheelchair_map.h \
+    wheelchair_medical.h \
     keyboard.h \
     login.h \
-    mainwindow.h \
-    tab_admin.h
+    account_manage.h \
+    database_manager.h
 
 FORMS += \
-    account_manage.ui \
+    account_admin.ui \
+    mainwindow.ui \
+    search_medical.ui \
+    tab_admin.ui \
+    tab_medical.ui \
+    wheelchair_admin.ui \
+    wheelchair_map.ui \
+    wheelchair_medical.ui \
     keyboard.ui \
     login.ui \
-    mainwindow.ui \
-    tab_admin.ui
+    account_manage.ui \
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
