@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>tab_admin</class>
- <widget class="QWidget" name="tab_admin">
+ <class>tab_medical</class>
+ <widget class="QWidget" name="tab_medical">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>관리자 탭</string>
+   <string>Form</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -25,19 +25,17 @@
      <property name="currentIndex">
       <number>1</number>
      </property>
+     <property name="movable">
+      <bool>false</bool>
+     </property>
      <widget class="QWidget" name="tab">
       <attribute name="title">
-       <string>계정 관리</string>
+       <string>환자 정보</string>
       </attribute>
      </widget>
      <widget class="QWidget" name="tab_2">
       <attribute name="title">
-       <string>휠체어 모니터링</string>
-      </attribute>
-     </widget>
-     <widget class="QWidget" name="tab_3">
-      <attribute name="title">
-       <string>터미널</string>
+       <string>휠체어 정보</string>
       </attribute>
      </widget>
     </widget>
