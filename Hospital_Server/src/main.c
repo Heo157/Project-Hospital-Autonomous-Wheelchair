@@ -48,6 +48,14 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
     char buffer[MAX_BUFFER_SIZE];  // 패킷의 몸통(Payload)을 담을 버퍼
     ssize_t read_len;              // 읽어들인 바이트 수
 
+    char robot_name[64] = {0};
+
+    DBContext db;
+    int db_ok = (db_open(&db) == 0);
+    if (!db_ok) {
+        fprintf(stderr, "[DB] open failed. DB update will be skipped.\n");
+    }
+
     // 접속한 클라이언트의 IP 주소를 문자열로 변환하여 출력
     printf("[Server] New client connected: %s\n", inet_ntoa(client_addr.sin_addr));
 
@@ -130,6 +138,24 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
                 RobotStateData* st = (RobotStateData*)buffer;
                 printf("State: Battery=%d%%, Pos=(%.2f, %.2f)\n",
                     st->battery_level, st->current_x, st->current_y);
+                if (robot_name[0] == '\0') {
+                    printf("[DB] robot_name empty. Send MSG_LOGIN_REQ first.\n");
+                    break;
+                }
+
+                const char *op = (st->is_moving ? "RUNNING" : "STOP");
+
+                int batt_i = st->battery_level;
+                if (batt_i < 0) batt_i = 0;
+                if (batt_i > 100) batt_i = 100;
+
+                uint32_t batt = (uint32_t)batt_i;
+                uint8_t charging = 0; // 프로토콜에 충전 정보 없으면 0 고정
+
+                if (db_ok) {
+                    db_upsert_robot_status(&db, robot_name, op, batt, charging,
+                                           (double)st->current_x, (double)st->current_y);
+                }
             }
             break;
 
@@ -138,6 +164,8 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
             break;
         }
     }
+
+    if (db_ok) db_close(&db);
 
     // while 루프를 빠져나오면 소켓을 닫고 프로세스를 종료합니다.
     close(client_sock);
