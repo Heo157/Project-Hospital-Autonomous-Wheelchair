@@ -15,7 +15,9 @@ SOURCES += \
     login.cpp \
     main.cpp \
     mainwindow.cpp \
-    tab_admin.cpp
+    search_medical.cpp \
+    tab_admin.cpp \
+    tab_medical.cpp
 
 HEADERS += \
     account_manage.h \
@@ -23,14 +25,18 @@ HEADERS += \
     keyboard.h \
     login.h \
     mainwindow.h \
-    tab_admin.h
+    search_medical.h \
+    tab_admin.h \
+    tab_medical.h
 
 FORMS += \
     account_manage.ui \
     keyboard.ui \
     login.ui \
     mainwindow.ui \
-    tab_admin.ui
+    search_medical.ui \
+    tab_admin.ui \
+    tab_medical.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
