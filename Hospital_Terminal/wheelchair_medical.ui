@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>wheelchair_medical</class>
+ <widget class="QWidget" name="wheelchair_medical">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>900</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>휠체어 관리</string>
+  </property>
+
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <!-- ▒▒ 1. 휠체어 호출 설정 ▒▒ -->
+   <item>
+    <widget class="QGroupBox" name="gbCallWheelchair">
+     <property name="title">
+      <string>휠체어 호출 설정</string>
+     </property>
+     <layout class="QFormLayout" name="formCall">
+      <!-- 환자 이름 -->
+      <item row="0" column="0">
+       <widget class="QLabel" name="lbPatientName">
+        <property name="text">
+         <string>환자 이름</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="lePatientName">
+        <property name="placeholderText">
+         <string>환자 이름 입력</string>
+        </property>
+       </widget>
+      </item>
+
+      <!-- 병실 / 진료실 한 줄 -->
+      <item row="1" column="0">
+       <widget class="QLabel" name="lbRoomClinic">
+        <property name="text">
+         <string>병실 / 진료실</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <layout class="QHBoxLayout" name="hlRoomClinic">
+        <item>
+         <widget class="QLineEdit" name="leRoom">
+          <property name="placeholderText">
+           <string>예) 3층 305호</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="leClinic">
+          <property name="placeholderText">
+           <string>예) 내과 1진료실</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+
+      <!-- 휠체어 / 응급 한 줄 -->
+      <item row="2" column="0">
+       <widget class="QLabel" name="lbWheelchairEmergency">
+        <property name="text">
+         <string>휠체어 / 응급</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <layout class="QHBoxLayout" name="hlWheelchairEmergency">
+        <item>
+         <widget class="QComboBox" name="cbWheelchair">
+          <item>
+           <property name="text">
+            <string>WC-1</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>WC-2</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>WC-3</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="cbEmergency">
+          <property name="text">
+           <string>응급</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+
+      <!-- 예약 시간 + 호출 버튼 -->
+      <item row="3" column="0">
+       <widget class="QLabel" name="lbReserveTime">
+        <property name="text">
+         <string>예약 시간</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <layout class="QHBoxLayout" name="hlReserveTime">
+        <item>
+         <widget class="QDateTimeEdit" name="dtReserveTime">
+          <property name="calendarPopup">
+           <bool>true</bool>
+          </property>
+          <property name="displayFormat">
+           <string>yyyy-MM-dd HH:mm</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pbSendWheelchair">
+          <property name="text">
+           <string>휠체어 호출</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+
+   <!-- ▒▒ 2. 휠체어 / 예약 현황 테이블 ▒▒ -->
+   <item>
+    <widget class="QGroupBox" name="gbReservation">
+     <property name="title">
+      <string>휠체어 / 예약 현황</string>
+     </property>
+     <layout class="QVBoxLayout" name="vlReservation">
+      <item>
+       <widget class="QTableWidget" name="twReservation">
+        <property name="columnCount">
+         <number>7</number>
+        </property>
+        <property name="rowCount">
+         <number>0</number>
+        </property>
+        <column>
+         <property name="text">
+          <string>선택</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>휠체어 ID</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>환자 이름</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>병실</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>진료실</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>예약 시간</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>상태</string>
+         </property>
+        </column>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+
+   <!-- ▒▒ 3. 상태 + 탑승 정보 (가로 배치) ▒▒ -->
+   <item>
+    <layout class="QHBoxLayout" name="hlBottom">
+
+     <!-- 상태 상세 -->
+     <item>
+      <widget class="QGroupBox" name="gbStatusDetail">
+       <property name="title">
+        <string>휠체어 상태</string>
+       </property>
+       <layout class="QVBoxLayout" name="vlStatus">
+        <!-- 현재 상태 한 줄 -->
+        <item>
+         <layout class="QHBoxLayout" name="hlStatusLine">
+          <item>
+           <widget class="QLabel" name="lbStatusTitle">
+            <property name="text">
+             <string>현재 상태:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="lbStatusValue">
+            <property name="text">
+             <string>대기중</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <!-- 상태 인디케이터 -->
+        <item>
+         <layout class="QHBoxLayout" name="hlStatusIndicator">
+          <item>
+           <widget class="QLabel" name="lbStatusRequest">
+            <property name="text">
+             <string>요청중</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="lbStatusMoving">
+            <property name="text">
+             <string>이동중</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="lbStatusArrived">
+            <property name="text">
+             <string>도착</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </item>
+
+     <!-- 탑승 정보 -->
+     <item>
+      <widget class="QGroupBox" name="gbBoarding">
+       <property name="title">
+        <string>탑승 정보</string>
+       </property>
+       <layout class="QHBoxLayout" name="hlBoarding">
+        <item>
+         <widget class="QLabel" name="lbBoardingTitle">
+          <property name="text">
+           <string>탑승 여부:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="cbBoarded">
+          <property name="text">
+           <string>탑승 완료</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+
+    </layout>
+   </item>
+
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

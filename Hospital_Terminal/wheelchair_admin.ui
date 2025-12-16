@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>wheelchair_admin</class>
+ <widget class="QWidget" name="wheelchair_admin">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>900</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>휠체어 모니터링 / 제어</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="hlTop">
+     <item>
+      <widget class="QGroupBox" name="gbRobotStatus">
+       <property name="title">
+        <string>로봇 상태</string>
+       </property>
+       <layout class="QVBoxLayout" name="vlRobotStatus">
+        <item>
+         <widget class="QTableWidget" name="twRobotStatus">
+          <property name="rowCount">
+           <number>0</number>
+          </property>
+          <property name="columnCount">
+           <number>5</number>
+          </property>
+          <column>
+           <property name="text">
+            <string>로봇 ID</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>배터리(%)</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>상태</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>현재 위치</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>목표 위치</string>
+           </property>
+          </column>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="gbCallLog">
+          <property name="title">
+           <string>호출 이력</string>
+          </property>
+          <layout class="QVBoxLayout" name="vlCallLog">
+           <item>
+            <widget class="QTableWidget" name="twCallLog">
+             <property name="rowCount">
+              <number>0</number>
+             </property>
+             <property name="columnCount">
+              <number>5</number>
+             </property>
+             <column>
+              <property name="text">
+               <string>시간</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>로봇 ID</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>출발 위치</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>도착 위치</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>호출자</string>
+              </property>
+             </column>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="gbMap">
+       <property name="title">
+        <string>병원 매핑 / 로봇 제어</string>
+       </property>
+       <layout class="QVBoxLayout" name="vlMap">
+        <item>
+         <widget class="QLabel" name="lbMapPlaceholder">
+          <property name="text">
+           <string>병원 맵 표시 영역 (SLAM/맵 이미지 또는 뷰어)</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="hlSelectedRobot">
+          <item>
+           <widget class="QLabel" name="lbSelectedRobot">
+            <property name="text">
+             <string>선택 로봇:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="leSelectedRobot">
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+            <property name="placeholderText">
+             <string>로봇 상태 테이블에서 선택</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QGridLayout" name="glButtons">
+          <item row="0" column="1">
+           <widget class="QPushButton" name="pbAddwheel">
+            <property name="text">
+             <string>즉시 정지</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QPushButton" name="pbGoWait">
+            <property name="text">
+             <string>대기 스테이션 귀환</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QPushButton" name="pbGoCharge">
+            <property name="text">
+             <string>충전 스테이션 이동</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QPushButton" name="pbDirectCall">
+            <property name="text">
+             <string>휠체어 직접 호출</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QPushButton" name="pbResume">
+            <property name="text">
+             <string>동작 재개</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QPushButton" name="pushButton">
+            <property name="text">
+             <string>휠체어 등록</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
