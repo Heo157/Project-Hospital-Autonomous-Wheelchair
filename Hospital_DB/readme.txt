@@ -44,13 +44,11 @@ CREATE TABLE robot_status (
     battery_percent    TINYINT UNSIGNED NOT NULL,              
     is_charging        BOOLEAN NOT NULL DEFAULT 0,              
 
-    current_location_id INT,                                    
-    moving_location_id  INT,                                    
-
-    CONSTRAINT fk_robot_current_loc
-      FOREIGN KEY (current_location_id) REFERENCES map_location(location_id),
-    CONSTRAINT fk_robot_moving_loc
-      FOREIGN KEY (moving_location_id) REFERENCES map_location(location_id)
+    current_x DOUBLE NOT NULL DEFAULT 0,
+    current_y DOUBLE NOT NULL DEFAULT 0,                                    
+    
+    goal_x DOUBLE NULL,
+    goal_y DOUBLE NULL
 );
 
  -- 로봇 이동/호출 데이터
