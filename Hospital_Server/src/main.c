@@ -49,8 +49,10 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
     ssize_t read_len;              // 읽어들인 바이트 수
 
     //------- 추가 ------
+    // 로봇 이름 저장 (MSG_LOGIN_REQ에서 받아서 저장)
     char robot_name[64] = {0};
 
+    // DB 연결 (각 클라이언트 프로세스마다 독립적으로 연결)
     DBContext db;
     int db_ok = (db_open(&db) == 0);
     if (!db_ok) {
@@ -111,6 +113,7 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
         case MSG_LOGIN_REQ:
             printf("Login Request received.\n");
             //------- 추가 ------
+            // 로봇 이름 등록 (로그인)
             if (header.payload_len > 0 && header.payload_len < sizeof(robot_name)) {
                 memcpy(robot_name, buffer, header.payload_len);
                 robot_name[header.payload_len] = '\0';  // Null 종료
@@ -151,23 +154,31 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
                     st->battery_level, st->current_x, st->current_y);
 
                 //------- 추가 ------
+                // 로봇 이름이 등록되지 않았으면 저장 불가
                 if (robot_name[0] == '\0') {
                     printf("[DB] robot_name empty. Send MSG_LOGIN_REQ first.\n");
                     break;
                 }
-
+                // 운영 상태 결정 (이동중이면 RUNNING, 아니면 STOP)
                 const char *op = (st->is_moving ? "RUNNING" : "STOP");
 
+                // 배터리 범위 검증 (0~100)
                 int batt_i = st->battery_level;
                 if (batt_i < 0) batt_i = 0;
                 if (batt_i > 100) batt_i = 100;
-
+                
                 uint32_t batt = (uint32_t)batt_i;
                 uint8_t charging = 0; // 프로토콜에 충전 정보 없으면 0 고정
 
+                // DB에 로봇 상태 저장 (INSERT 또는 UPDATE)
                 if (db_ok) {
-                    db_upsert_robot_status(&db, robot_name, op, batt, charging,
+                    int ret = db_upsert_robot_status(&db, robot_name, op, batt, charging,
                                            (double)st->current_x, (double)st->current_y);
+                    if (ret == 0) {
+                        printf("[DB] Successfully updated status for '%s'\n", robot_name);
+                    } else {
+                        printf("[DB] Failed to update status\n");
+                    }
                 }
                 //-----------------
             }
@@ -179,7 +190,10 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
         }
     }
 
-    if (db_ok) db_close(&db);
+    // DB 연결 종료 (메모리 누수 방지)
+    if (db_ok) {
+        db_close(&db);
+    }
 
     // while 루프를 빠져나오면 소켓을 닫고 프로세스를 종료합니다.
     close(client_sock);
