@@ -138,6 +138,8 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
                 RobotStateData* st = (RobotStateData*)buffer;
                 printf("State: Battery=%d%%, Pos=(%.2f, %.2f)\n",
                     st->battery_level, st->current_x, st->current_y);
+
+                //------- 추가 ------
                 if (robot_name[0] == '\0') {
                     printf("[DB] robot_name empty. Send MSG_LOGIN_REQ first.\n");
                     break;
@@ -156,6 +158,7 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
                     db_upsert_robot_status(&db, robot_name, op, batt, charging,
                                            (double)st->current_x, (double)st->current_y);
                 }
+                //-----------------
             }
             break;
 

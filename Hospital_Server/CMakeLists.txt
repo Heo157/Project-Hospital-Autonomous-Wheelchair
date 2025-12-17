@@ -30,3 +30,4 @@ pkg_check_modules(MARIADB REQUIRED libmariadb)
 target_include_directories(hospital_server PRIVATE ${MARIADB_INCLUDE_DIRS})
 target_link_directories(hospital_server PRIVATE ${MARIADB_LIBRARY_DIRS})
 target_link_libraries(hospital_server PRIVATE ${MARIADB_LIBRARIES})
+#-------------
