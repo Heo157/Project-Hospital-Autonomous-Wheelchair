@@ -48,6 +48,7 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
     char buffer[MAX_BUFFER_SIZE];  // 패킷의 몸통(Payload)을 담을 버퍼
     ssize_t read_len;              // 읽어들인 바이트 수
 
+    //------- 추가 ------
     char robot_name[64] = {0};
 
     DBContext db;
@@ -55,6 +56,7 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
     if (!db_ok) {
         fprintf(stderr, "[DB] open failed. DB update will be skipped.\n");
     }
+    //-----------------
 
     // 접속한 클라이언트의 IP 주소를 문자열로 변환하여 출력
     printf("[Server] New client connected: %s\n", inet_ntoa(client_addr.sin_addr));
