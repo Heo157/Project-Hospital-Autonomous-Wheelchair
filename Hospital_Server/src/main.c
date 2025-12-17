@@ -174,11 +174,6 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
                 if (db_ok) {
                     int ret = db_upsert_robot_status(&db, robot_name, op, batt, charging,
                                            (double)st->current_x, (double)st->current_y);
-                    if (ret == 0) {
-                        printf("[DB] Successfully updated status for '%s'\n", robot_name);
-                    } else {
-                        printf("[DB] Failed to update status\n");
-                    }
                 }
                 //-----------------
             }
