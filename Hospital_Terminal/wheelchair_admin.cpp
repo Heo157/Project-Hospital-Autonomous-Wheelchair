@@ -4,6 +4,13 @@
 #include <QHeaderView>
 #include <QMessageBox>
 #include <QTableWidgetItem>
+#include <QDebug>
+
+#include <QDialog>
+#include <QFormLayout>
+#include <QLineEdit>
+#include <QDoubleSpinBox>
+#include <QDialogButtonBox>
 
 wheelchair_admin::wheelchair_admin(QWidget *parent) :
     QWidget(parent),
@@ -178,3 +185,9 @@ void wheelchair_admin::on_pbGoCharge_clicked()
     QMessageBox::information(this, tr("충전 스테이션 이동"),
                              tr("로봇 %1 을 충전 스테이션으로 이동시키는 명령을 전송했습니다. (TODO)").arg(robotId));
 }
+
+void wheelchair_admin::on_pushButton_clicked()
+{
+
+}
+

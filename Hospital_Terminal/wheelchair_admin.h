@@ -2,6 +2,29 @@
 #define WHEELCHAIR_ADMIN_H
 
 #include <QWidget>
+#include <QObject>
+#include <QSqlDatabase>
+#include <QSqlQuery>
+#include <QSqlError>
+#include <QDebug>
+#include <QList>
+#include <QDialog>
+#include <QFormLayout>
+#include <QLineEdit>
+#include <QDoubleSpinBox>
+#include <QDialogButtonBox>
+
+struct RobotInfo{
+    int id;
+    QString name;
+    QString status;
+    int battery;
+    double current_x;
+    double current_y;
+    double goal_x;
+    double goal_y;
+    double theta;
+};
 
 namespace Ui {
 class wheelchair_admin;
@@ -26,6 +49,9 @@ private slots:
     void on_pbGoWait_clicked();
     void on_pbGoCharge_clicked();
 
+    //wheelchair add btn
+    void on_pushButton_clicked();
+
 private:
     Ui::wheelchair_admin *ui;
 
@@ -33,6 +59,8 @@ private:
     void initCallLogTable();
 
     QString selectedRobotId() const;  // 현재 선택된 로봇 ID
+
+    bool addNewRobotToDB(QString name, double x, double y, double theta);
 };
 
 #endif // WHEELCHAIR_ADMIN_H
