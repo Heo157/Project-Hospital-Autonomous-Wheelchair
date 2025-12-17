@@ -4,6 +4,13 @@
 #include <QHeaderView>
 #include <QMessageBox>
 #include <QTableWidgetItem>
+#include <QDebug>
+
+#include <QDialog>
+#include <QFormLayout>
+#include <QLineEdit>
+#include <QDoubleSpinBox>
+#include <QDialogButtonBox>
 
 wheelchair_admin::wheelchair_admin(QWidget *parent) :
     QWidget(parent),

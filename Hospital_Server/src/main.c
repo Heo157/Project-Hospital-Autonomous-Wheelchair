@@ -1,88 +1,101 @@
 /**
  * ============================================================================
  * @file    main.c
- * @brief   C ¾ğ¾î ±â¹İ Áß°è ¼­¹ö (Protocol Aware)
- * @details common_defs.h¿¡ Á¤ÀÇµÈ ÇÁ·ÎÅäÄİÀ» ÇØ¼®ÇÏ¿© ·Î±×¸¦ Ãâ·ÂÇÏ´Â ¼­¹ö
- * Qt Å¬¶óÀÌ¾ğÆ®¿Í ROS ·Îº¿ »çÀÌÀÇ Åë½ÅÀ» Áß°èÇÏ±â À§ÇÑ ±âÃÊ ¼­¹öÀÔ´Ï´Ù.
+ * @brief   C ì–¸ì–´ ê¸°ë°˜ ì¤‘ê³„ ì„œë²„ (Protocol Aware)
+ * @details common_defs.hì— ì •ì˜ëœ í”„ë¡œí† ì½œì„ í•´ì„í•˜ì—¬ ë¡œê·¸ë¥¼ ì¶œë ¥í•˜ëŠ” ì„œë²„
+ * Qt í´ë¼ì´ì–¸íŠ¸ì™€ ROS ë¡œë´‡ ì‚¬ì´ì˜ í†µì‹ ì„ ì¤‘ê³„í•˜ê¸° ìœ„í•œ ê¸°ì´ˆ ì„œë²„ì…ë‹ˆë‹¤.
  * ============================================================================
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>      // close(), fork() µîÀ» »ç¿ëÇÏ±â À§ÇØ ÇÊ¿ä
-#include <arpa/inet.h>   // sockaddr_in, inet_ntoa() µî ³×Æ®¿öÅ© ÁÖ¼Ò °ü·Ã
-#include <sys/socket.h>  // socket(), bind(), accept() µî ¼ÒÄÏ ÇÙ½É ÇÔ¼ö
+#include <unistd.h>      // close(), fork() ë“±ì„ ì‚¬ìš©í•˜ê¸° ìœ„í•´ í•„ìš”
+#include <arpa/inet.h>   // sockaddr_in, inet_ntoa() ë“± ë„¤íŠ¸ì›Œí¬ ì£¼ì†Œ ê´€ë ¨
+#include <sys/socket.h>  // socket(), bind(), accept() ë“± ì†Œì¼“ í•µì‹¬ í•¨ìˆ˜
 #include <sys/types.h>
-#include <sys/wait.h>    // waitpid()¸¦ »ç¿ëÇÏ±â À§ÇØ ÇÊ¿ä (Á»ºñ ÇÁ·Î¼¼½º Ã³¸®)
-#include <signal.h>      // signal() ÇÔ¼ö »ç¿ë
+#include <sys/wait.h>    // waitpid()ë¥¼ ì‚¬ìš©í•˜ê¸° ìœ„í•´ í•„ìš” (ì¢€ë¹„ í”„ë¡œì„¸ìŠ¤ ì²˜ë¦¬)
+#include <signal.h>      // signal() í•¨ìˆ˜ ì‚¬ìš©
+#include "server_db.h"
 
- // ¿ì¸®°¡ Á¤ÀÇÇÑ °øÅë Çì´õ (ÆĞÅ¶ ±¸Á¶Ã¼, »ó¼ö µî)
- // ÀÌ ÆÄÀÏÀº Å¬¶óÀÌ¾ğÆ®(Qt/ROS)¿Í ¼­¹ö°¡ ¹İµå½Ã µ¿ÀÏÇÑ ¹öÀüÀ» °¡Áö°í ÀÖ¾î¾ß ÇÕ´Ï´Ù.
+ // ìš°ë¦¬ê°€ ì •ì˜í•œ ê³µí†µ í—¤ë” (íŒ¨í‚· êµ¬ì¡°ì²´, ìƒìˆ˜ ë“±)
+ // ì´ íŒŒì¼ì€ í´ë¼ì´ì–¸íŠ¸(Qt/ROS)ì™€ ì„œë²„ê°€ ë°˜ë“œì‹œ ë™ì¼í•œ ë²„ì „ì„ ê°€ì§€ê³  ìˆì–´ì•¼ í•©ë‹ˆë‹¤.
 #include "../include/common_defs.h"
 
 /**
- * @brief Á»ºñ ÇÁ·Î¼¼½º(Zombie Process) Ã³¸® ÇÚµé·¯
- * * [°³³ä ¼³¸í]
- * fork()¸¦ ÅëÇØ »ı¼ºµÈ ÀÚ½Ä ÇÁ·Î¼¼½º°¡ ÇÒ ÀÏÀ» ´Ù ÇÏ°í Á¾·á(exit)ÇÏ¸é,
- * ºÎ¸ğ ÇÁ·Î¼¼½º°¡ ±× Á¾·á »óÅÂ¸¦ È®ÀÎÇØÁÙ ¶§±îÁö Ä¿³Î¿¡ 'Á»ºñ' »óÅÂ·Î ³²¾Æ ¸®¼Ò½º¸¦ Â÷ÁöÇÕ´Ï´Ù.
- * ÀÌ¸¦ ¹æÁöÇÏ±â À§ÇØ ÀÚ½ÄÀÌ Á×¾ú´Ù´Â ½ÅÈ£(SIGCHLD)°¡ ¿À¸é waitpid·Î Ã»¼ÒÇØÁİ´Ï´Ù.
+ * @brief ì¢€ë¹„ í”„ë¡œì„¸ìŠ¤(Zombie Process) ì²˜ë¦¬ í•¸ë“¤ëŸ¬
+ * * [ê°œë… ì„¤ëª…]
+ * fork()ë¥¼ í†µí•´ ìƒì„±ëœ ìì‹ í”„ë¡œì„¸ìŠ¤ê°€ í•  ì¼ì„ ë‹¤ í•˜ê³  ì¢…ë£Œ(exit)í•˜ë©´,
+ * ë¶€ëª¨ í”„ë¡œì„¸ìŠ¤ê°€ ê·¸ ì¢…ë£Œ ìƒíƒœë¥¼ í™•ì¸í•´ì¤„ ë•Œê¹Œì§€ ì»¤ë„ì— 'ì¢€ë¹„' ìƒíƒœë¡œ ë‚¨ì•„ ë¦¬ì†ŒìŠ¤ë¥¼ ì°¨ì§€í•©ë‹ˆë‹¤.
+ * ì´ë¥¼ ë°©ì§€í•˜ê¸° ìœ„í•´ ìì‹ì´ ì£½ì—ˆë‹¤ëŠ” ì‹ í˜¸(SIGCHLD)ê°€ ì˜¤ë©´ waitpidë¡œ ì²­ì†Œí•´ì¤ë‹ˆë‹¤.
  */
 void handle_sigchld(int sig) {
-    (void)sig; // ÄÄÆÄÀÏ·¯ÀÇ '»ç¿ëµÇÁö ¾ÊÀº º¯¼ö' °æ°í ¹æÁö
+    (void)sig; // ì»´íŒŒì¼ëŸ¬ì˜ 'ì‚¬ìš©ë˜ì§€ ì•Šì€ ë³€ìˆ˜' ê²½ê³  ë°©ì§€
 
-    // waitpid(-1, ...): Á¾·áµÈ ÀÓÀÇÀÇ ÀÚ½Ä ÇÁ·Î¼¼½º¸¦ ±â´Ù¸²
-    // WNOHANG: ÀÚ½Ä ÇÁ·Î¼¼½º°¡ ¾ÆÁ÷ Á¾·áµÇÁö ¾Ê¾ÒÀ¸¸é ±â´Ù¸®Áö ¾Ê°í ¹Ù·Î ¸®ÅÏ (Non-blocking)
+    // waitpid(-1, ...): ì¢…ë£Œëœ ì„ì˜ì˜ ìì‹ í”„ë¡œì„¸ìŠ¤ë¥¼ ê¸°ë‹¤ë¦¼
+    // WNOHANG: ìì‹ í”„ë¡œì„¸ìŠ¤ê°€ ì•„ì§ ì¢…ë£Œë˜ì§€ ì•Šì•˜ìœ¼ë©´ ê¸°ë‹¤ë¦¬ì§€ ì•Šê³  ë°”ë¡œ ë¦¬í„´ (Non-blocking)
     while (waitpid(-1, NULL, WNOHANG) > 0);
 }
 
 /**
- * @brief Å¬¶óÀÌ¾ğÆ® 1:1 Àü´ã ¸¶Å© ÇÔ¼ö (ÇÙ½É ·ÎÁ÷)
- * * [µ¿ÀÛ ¿ø¸®]
- * ÀÌ ÇÔ¼ö´Â fork()µÈ ÀÚ½Ä ÇÁ·Î¼¼½º¿¡¼­ ½ÇÇàµË´Ï´Ù.
- * ¿¬°áµÈ ÇÏ³ªÀÇ Å¬¶óÀÌ¾ğÆ®¿Í °è¼Ó ´ëÈ­ÇÏ¸ç ÆĞÅ¶À» ÁÖ°í¹Ş½À´Ï´Ù.
+ * @brief í´ë¼ì´ì–¸íŠ¸ 1:1 ì „ë‹´ ë§ˆí¬ í•¨ìˆ˜ (í•µì‹¬ ë¡œì§)
+ * * [ë™ì‘ ì›ë¦¬]
+ * ì´ í•¨ìˆ˜ëŠ” fork()ëœ ìì‹ í”„ë¡œì„¸ìŠ¤ì—ì„œ ì‹¤í–‰ë©ë‹ˆë‹¤.
+ * ì—°ê²°ëœ í•˜ë‚˜ì˜ í´ë¼ì´ì–¸íŠ¸ì™€ ê³„ì† ëŒ€í™”í•˜ë©° íŒ¨í‚·ì„ ì£¼ê³ ë°›ìŠµë‹ˆë‹¤.
  */
 void handle_client(int client_sock, struct sockaddr_in client_addr) {
-    PacketHeader header;           // ÆĞÅ¶ÀÇ ¸Ó¸®(Header)¸¦ ´ãÀ» ±¸Á¶Ã¼
-    char buffer[MAX_BUFFER_SIZE];  // ÆĞÅ¶ÀÇ ¸öÅë(Payload)À» ´ãÀ» ¹öÆÛ
-    ssize_t read_len;              // ÀĞ¾îµéÀÎ ¹ÙÀÌÆ® ¼ö
+    PacketHeader header;           // íŒ¨í‚·ì˜ ë¨¸ë¦¬(Header)ë¥¼ ë‹´ì„ êµ¬ì¡°ì²´
+    char buffer[MAX_BUFFER_SIZE];  // íŒ¨í‚·ì˜ ëª¸í†µ(Payload)ì„ ë‹´ì„ ë²„í¼
+    ssize_t read_len;              // ì½ì–´ë“¤ì¸ ë°”ì´íŠ¸ ìˆ˜
 
-    // Á¢¼ÓÇÑ Å¬¶óÀÌ¾ğÆ®ÀÇ IP ÁÖ¼Ò¸¦ ¹®ÀÚ¿­·Î º¯È¯ÇÏ¿© Ãâ·Â
+    //------- ì¶”ê°€ ------
+    // ë¡œë´‡ ì´ë¦„ ì €ì¥ (MSG_LOGIN_REQì—ì„œ ë°›ì•„ì„œ ì €ì¥)
+    char robot_name[64] = {0};
+
+    // DB ì—°ê²° (ê° í´ë¼ì´ì–¸íŠ¸ í”„ë¡œì„¸ìŠ¤ë§ˆë‹¤ ë…ë¦½ì ìœ¼ë¡œ ì—°ê²°)
+    DBContext db;
+    int db_ok = (db_open(&db) == 0);
+    if (!db_ok) {
+        fprintf(stderr, "[DB] open failed. DB update will be skipped.\n");
+    }
+    //-----------------
+
+    // ì ‘ì†í•œ í´ë¼ì´ì–¸íŠ¸ì˜ IP ì£¼ì†Œë¥¼ ë¬¸ìì—´ë¡œ ë³€í™˜í•˜ì—¬ ì¶œë ¥
     printf("[Server] New client connected: %s\n", inet_ntoa(client_addr.sin_addr));
 
     while (1) {
         // ====================================================================
-        // 1´Ü°è: Çì´õ ÀĞ±â (°íÁ¤ ±æÀÌ 4¹ÙÀÌÆ®)
+        // 1ë‹¨ê³„: í—¤ë” ì½ê¸° (ê³ ì • ê¸¸ì´ 4ë°”ì´íŠ¸)
         // ====================================================================
-        // MSG_WAITALL: TCP´Â µ¥ÀÌÅÍ°¡ ½ºÆ®¸²(¹°ÁÙ±â)Ã³·³ Èå¸£±â ¶§¹®¿¡,
-        // 4¹ÙÀÌÆ®¸¦ ¿äÃ»ÇØµµ ³×Æ®¿öÅ© »óÈ²¿¡ µû¶ó 1~2¹ÙÀÌÆ®¸¸ ¿Ã ¼ö ÀÖ½À´Ï´Ù.
-        // ÀÌ ¿É¼ÇÀº 4¹ÙÀÌÆ®°¡ ²Ë Âû ¶§±îÁö ±â´Ù·È´Ù°¡ ¸®ÅÏÇÏ¶ó°í Áö½ÃÇÕ´Ï´Ù.
+        // MSG_WAITALL: TCPëŠ” ë°ì´í„°ê°€ ìŠ¤íŠ¸ë¦¼(ë¬¼ì¤„ê¸°)ì²˜ëŸ¼ íë¥´ê¸° ë•Œë¬¸ì—,
+        // 4ë°”ì´íŠ¸ë¥¼ ìš”ì²­í•´ë„ ë„¤íŠ¸ì›Œí¬ ìƒí™©ì— ë”°ë¼ 1~2ë°”ì´íŠ¸ë§Œ ì˜¬ ìˆ˜ ìˆìŠµë‹ˆë‹¤.
+        // ì´ ì˜µì…˜ì€ 4ë°”ì´íŠ¸ê°€ ê½‰ ì°° ë•Œê¹Œì§€ ê¸°ë‹¤ë ¸ë‹¤ê°€ ë¦¬í„´í•˜ë¼ê³  ì§€ì‹œí•©ë‹ˆë‹¤.
         read_len = recv(client_sock, &header, sizeof(PacketHeader), MSG_WAITALL);
 
         if (read_len <= 0) {
-            // 0ÀÌ¸é Å¬¶óÀÌ¾ğÆ®°¡ Á¤»ó Á¾·á(close), -1ÀÌ¸é ¿¡·¯ ¹ß»ı
+            // 0ì´ë©´ í´ë¼ì´ì–¸íŠ¸ê°€ ì •ìƒ ì¢…ë£Œ(close), -1ì´ë©´ ì—ëŸ¬ ë°œìƒ
             printf("[Server] Client disconnected or error.\n");
-            break; // while ·çÇÁ Å»Ãâ -> ÇÔ¼ö Á¾·á -> ÇÁ·Î¼¼½º Á¾·á
+            break; // while ë£¨í”„ íƒˆì¶œ -> í•¨ìˆ˜ ì¢…ë£Œ -> í”„ë¡œì„¸ìŠ¤ ì¢…ë£Œ
         }
 
         // ====================================================================
-        // 2´Ü°è: À¯È¿¼º °Ë»ç (Magic Number)
+        // 2ë‹¨ê³„: ìœ íš¨ì„± ê²€ì‚¬ (Magic Number)
         // ====================================================================
-        // µ¥ÀÌÅÍ°¡ Áß°£¿¡ ±úÁ³°Å³ª, ¿ì¸® ÇÁ·ÎÅäÄİÀ» ¸ğ¸£´Â ÀÌ»óÇÑ ³ğÀÌ Á¢¼ÓÇß´ÂÁö È®ÀÎÇÕ´Ï´Ù.
-        // common_defs.h¿¡ Á¤ÀÇµÈ MAGIC_NUMBER(0xAB)¿Í ´Ù¸£¸é ¹«½ÃÇÕ´Ï´Ù.
+        // ë°ì´í„°ê°€ ì¤‘ê°„ì— ê¹¨ì¡Œê±°ë‚˜, ìš°ë¦¬ í”„ë¡œí† ì½œì„ ëª¨ë¥´ëŠ” ì´ìƒí•œ ë†ˆì´ ì ‘ì†í–ˆëŠ”ì§€ í™•ì¸í•©ë‹ˆë‹¤.
+        // common_defs.hì— ì •ì˜ëœ MAGIC_NUMBER(0xAB)ì™€ ë‹¤ë¥´ë©´ ë¬´ì‹œí•©ë‹ˆë‹¤.
         if (header.magic != MAGIC_NUMBER) {
             printf("[Warning] Invalid magic number: 0x%02X\n", header.magic);
-            continue; // ÀÌ¹ø ÆĞÅ¶Àº ¹ö¸®°í ´ÙÀ½ ÆĞÅ¶ ´ë±â
+            continue; // ì´ë²ˆ íŒ¨í‚·ì€ ë²„ë¦¬ê³  ë‹¤ìŒ íŒ¨í‚· ëŒ€ê¸°
         }
 
         // ====================================================================
-        // 3´Ü°è: ÆäÀÌ·Îµå(Payload) ÀĞ±â
+        // 3ë‹¨ê³„: í˜ì´ë¡œë“œ(Payload) ì½ê¸°
         // ====================================================================
-        // Çì´õ¿¡ ÀûÈù payload_len(µ¥ÀÌÅÍ ±æÀÌ)¸¸Å­ Ãß°¡·Î µ¥ÀÌÅÍ¸¦ ÀĞ¾î¿É´Ï´Ù.
+        // í—¤ë”ì— ì íŒ payload_len(ë°ì´í„° ê¸¸ì´)ë§Œí¼ ì¶”ê°€ë¡œ ë°ì´í„°ë¥¼ ì½ì–´ì˜µë‹ˆë‹¤.
         if (header.payload_len > 0) {
             read_len = recv(client_sock, buffer, header.payload_len, MSG_WAITALL);
 
-            // Çì´õ¿¡´Â 10¹ÙÀÌÆ® º¸³½´Ù°í Çß´Âµ¥, ½ÇÁ¦·Î´Â ´ú ¿Ô´Ù¸é? -> ¿¡·¯ Ã³¸®
+            // í—¤ë”ì—ëŠ” 10ë°”ì´íŠ¸ ë³´ë‚¸ë‹¤ê³  í–ˆëŠ”ë°, ì‹¤ì œë¡œëŠ” ëœ ì™”ë‹¤ë©´? -> ì—ëŸ¬ ì²˜ë¦¬
             if (read_len != header.payload_len) {
                 printf("[Error] Payload read mismatch.\n");
                 break;
@@ -90,21 +103,31 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
         }
 
         // ====================================================================
-        // 4´Ü°è: ¸Ş½ÃÁö ÇØ¼® ¹× Ã³¸®
+        // 4ë‹¨ê³„: ë©”ì‹œì§€ í•´ì„ ë° ì²˜ë¦¬
         // ====================================================================
-        // ¿©±â±îÁö ¿ÔÀ¸¸é ¿ÏÀüÇÑ ÆĞÅ¶ ÇÏ³ª(Header + Payload)¸¦ ¼Õ¿¡ Áå °ÍÀÔ´Ï´Ù.
+        // ì—¬ê¸°ê¹Œì§€ ì™”ìœ¼ë©´ ì™„ì „í•œ íŒ¨í‚· í•˜ë‚˜(Header + Payload)ë¥¼ ì†ì— ì¥” ê²ƒì…ë‹ˆë‹¤.
         printf("[Packet] Device: 0x%02X | Type: 0x%02X | Len: %d -> ",
             header.device_type, header.msg_type, header.payload_len);
 
         switch (header.msg_type) {
         case MSG_LOGIN_REQ:
             printf("Login Request received.\n");
-            // ³ªÁß¿¡´Â ¿©±â¼­ DB¸¦ Á¶È¸ÇÏ°Å³ª ·Î±×ÀÎ ½ÂÀÎ ÆĞÅ¶À» º¸³»¾ß ÇÔ
+            //------- ì¶”ê°€ ------
+            // ë¡œë´‡ ì´ë¦„ ë“±ë¡ (ë¡œê·¸ì¸)
+            if (header.payload_len > 0 && header.payload_len < sizeof(robot_name)) {
+                memcpy(robot_name, buffer, header.payload_len);
+                robot_name[header.payload_len] = '\0';  // Null ì¢…ë£Œ
+                printf("Login Request: Robot name = '%s'\n", robot_name);
+            } else {
+                printf("Login Request received (invalid payload).\n");
+            }
+            //-----------------
+            // ë‚˜ì¤‘ì—ëŠ” ì—¬ê¸°ì„œ DBë¥¼ ì¡°íšŒí•˜ê±°ë‚˜ ë¡œê·¸ì¸ ìŠ¹ì¸ íŒ¨í‚·ì„ ë³´ë‚´ì•¼ í•¨
             break;
 
         case MSG_MOVE_FORWARD:
             printf("Command: MOVE FORWARD\n");
-            // ³ªÁß¿¡´Â ÀÌ ¸í·ÉÀ» ¿¬°áµÈ ROS ·Îº¿ ÇÁ·Î¼¼½º¿¡°Ô Àü´ŞÇØ¾ß ÇÔ (IPC ÇÊ¿ä)
+            // ë‚˜ì¤‘ì—ëŠ” ì´ ëª…ë ¹ì„ ì—°ê²°ëœ ROS ë¡œë´‡ í”„ë¡œì„¸ìŠ¤ì—ê²Œ ì „ë‹¬í•´ì•¼ í•¨ (IPC í•„ìš”)
             break;
 
         case MSG_MOVE_BACKWARD:
@@ -116,7 +139,7 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
             break;
 
         case MSG_MOVE_TO_GOAL:
-            // ÆäÀÌ·Îµå¸¦ WaypointData ±¸Á¶Ã¼ ¸ğ¾çÀ¸·Î ÇØ¼®(Casting)
+            // í˜ì´ë¡œë“œë¥¼ WaypointData êµ¬ì¡°ì²´ ëª¨ì–‘ìœ¼ë¡œ í•´ì„(Casting)
             if (header.payload_len == sizeof(WaypointData)) {
                 WaypointData* wp = (WaypointData*)buffer;
                 printf("Goal: X=%.2f, Y=%.2f, Theta=%.2f\n", wp->x, wp->y, wp->theta);
@@ -124,11 +147,35 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
             break;
 
         case MSG_ROBOT_STATE:
-            // ÆäÀÌ·Îµå¸¦ RobotStateData ±¸Á¶Ã¼ ¸ğ¾çÀ¸·Î ÇØ¼®
+            // í˜ì´ë¡œë“œë¥¼ RobotStateData êµ¬ì¡°ì²´ ëª¨ì–‘ìœ¼ë¡œ í•´ì„
             if (header.payload_len == sizeof(RobotStateData)) {
                 RobotStateData* st = (RobotStateData*)buffer;
                 printf("State: Battery=%d%%, Pos=(%.2f, %.2f)\n",
                     st->battery_level, st->current_x, st->current_y);
+
+                //------- ì¶”ê°€ ------
+                // ë¡œë´‡ ì´ë¦„ì´ ë“±ë¡ë˜ì§€ ì•Šì•˜ìœ¼ë©´ ì €ì¥ ë¶ˆê°€
+                if (robot_name[0] == '\0') {
+                    printf("[DB] robot_name empty. Send MSG_LOGIN_REQ first.\n");
+                    break;
+                }
+                // ìš´ì˜ ìƒíƒœ ê²°ì • (ì´ë™ì¤‘ì´ë©´ RUNNING, ì•„ë‹ˆë©´ STOP)
+                const char *op = (st->is_moving ? "RUNNING" : "STOP");
+
+                // ë°°í„°ë¦¬ ë²”ìœ„ ê²€ì¦ (0~100)
+                int batt_i = st->battery_level;
+                if (batt_i < 0) batt_i = 0;
+                if (batt_i > 100) batt_i = 100;
+                
+                uint32_t batt = (uint32_t)batt_i;
+                uint8_t charging = 0; // í”„ë¡œí† ì½œì— ì¶©ì „ ì •ë³´ ì—†ìœ¼ë©´ 0 ê³ ì •
+
+                // DBì— ë¡œë´‡ ìƒíƒœ ì €ì¥ (INSERT ë˜ëŠ” UPDATE)
+                if (db_ok) {
+                    int ret = db_upsert_robot_status(&db, robot_name, op, batt, charging,
+                                           (double)st->current_x, (double)st->current_y);
+                }
+                //-----------------
             }
             break;
 
@@ -138,9 +185,14 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
         }
     }
 
-    // while ·çÇÁ¸¦ ºüÁ®³ª¿À¸é ¼ÒÄÏÀ» ´İ°í ÇÁ·Î¼¼½º¸¦ Á¾·áÇÕ´Ï´Ù.
+    // DB ì—°ê²° ì¢…ë£Œ (ë©”ëª¨ë¦¬ ëˆ„ìˆ˜ ë°©ì§€)
+    if (db_ok) {
+        db_close(&db);
+    }
+
+    // while ë£¨í”„ë¥¼ ë¹ ì ¸ë‚˜ì˜¤ë©´ ì†Œì¼“ì„ ë‹«ê³  í”„ë¡œì„¸ìŠ¤ë¥¼ ì¢…ë£Œí•©ë‹ˆë‹¤.
     close(client_sock);
-    exit(0); // ÀÚ½Ä ÇÁ·Î¼¼½º Á¾·á (ÀÌ¶§ SIGCHLD ½ÅÈ£°¡ ºÎ¸ğ¿¡°Ô ³¯¾Æ°¨)
+    exit(0); // ìì‹ í”„ë¡œì„¸ìŠ¤ ì¢…ë£Œ (ì´ë•Œ SIGCHLD ì‹ í˜¸ê°€ ë¶€ëª¨ì—ê²Œ ë‚ ì•„ê°)
 }
 
 int main() {
@@ -148,34 +200,34 @@ int main() {
     struct sockaddr_in server_addr, client_addr;
     socklen_t addr_len = sizeof(client_addr);
 
-    // [Signal µî·Ï] ÀÚ½Ä ÇÁ·Î¼¼½º°¡ Á×À¸¸é handle_sigchld ÇÔ¼ö ½ÇÇà
+    // [Signal ë“±ë¡] ìì‹ í”„ë¡œì„¸ìŠ¤ê°€ ì£½ìœ¼ë©´ handle_sigchld í•¨ìˆ˜ ì‹¤í–‰
     signal(SIGCHLD, handle_sigchld);
 
-    // 1. ¼ÒÄÏ »ı¼º (IPv4, TCP ½ºÆ®¸² ¹æ½Ä)
+    // 1. ì†Œì¼“ ìƒì„± (IPv4, TCP ìŠ¤íŠ¸ë¦¼ ë°©ì‹)
     server_sock = socket(AF_INET, SOCK_STREAM, 0);
     if (server_sock == -1) {
         perror("socket error");
         return 1;
     }
 
-    // [Áß¿ä ¿É¼Ç] "Address already in use" ¿¡·¯ ¹æÁö
-    // ¼­¹ö¸¦ °­Á¦ Á¾·áÇÏ°í ¹Ù·Î ´Ù½Ã ÄÓ ¶§, Æ÷Æ®°¡ ¾ÆÁ÷ Á¡À¯ ÁßÀÌ¶ó¸ç ¿¡·¯°¡ ³ª´Â °ÍÀ» ¸·¾ÆÁİ´Ï´Ù.
+    // [ì¤‘ìš” ì˜µì…˜] "Address already in use" ì—ëŸ¬ ë°©ì§€
+    // ì„œë²„ë¥¼ ê°•ì œ ì¢…ë£Œí•˜ê³  ë°”ë¡œ ë‹¤ì‹œ ì¼¤ ë•Œ, í¬íŠ¸ê°€ ì•„ì§ ì ìœ  ì¤‘ì´ë¼ë©° ì—ëŸ¬ê°€ ë‚˜ëŠ” ê²ƒì„ ë§‰ì•„ì¤ë‹ˆë‹¤.
     int opt = 1;
     setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
-    // 2. ÁÖ¼Ò ¼³Á¤ (IP¿Í Port ÁöÁ¤)
+    // 2. ì£¼ì†Œ ì„¤ì • (IPì™€ Port ì§€ì •)
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = htonl(INADDR_ANY); // ³» ÄÄÇ»ÅÍÀÇ ¸ğµç IP·Î Á¢¼Ó Çã¿ë
-    server_addr.sin_port = htons(SERVER_PORT);       // common_defs.h¿¡ Á¤ÀÇµÈ Æ÷Æ® (8080)
+    server_addr.sin_addr.s_addr = htonl(INADDR_ANY); // ë‚´ ì»´í“¨í„°ì˜ ëª¨ë“  IPë¡œ ì ‘ì† í—ˆìš©
+    server_addr.sin_port = htons(SERVER_PORT);       // common_defs.hì— ì •ì˜ëœ í¬íŠ¸ (8080)
 
-    // 3. Bind (¼ÒÄÏ¿¡ ÁÖ¼ÒÇ¥ ºÙÀÌ±â)
+    // 3. Bind (ì†Œì¼“ì— ì£¼ì†Œí‘œ ë¶™ì´ê¸°)
     if (bind(server_sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
         perror("bind error");
         return 1;
     }
 
-    // 4. Listen (Á¢¼Ó ´ë±â¿­ »ı¼º, ÃÖ´ë 5¸í ´ë±â °¡´É)
+    // 4. Listen (ì ‘ì† ëŒ€ê¸°ì—´ ìƒì„±, ìµœëŒ€ 5ëª… ëŒ€ê¸° ê°€ëŠ¥)
     if (listen(server_sock, 5) == -1) {
         perror("listen error");
         return 1;
@@ -184,29 +236,29 @@ int main() {
     printf("=== Middle Server Started on Port %d ===\n", SERVER_PORT);
 
     while (1) {
-        // 5. Accept (Å¬¶óÀÌ¾ğÆ®°¡ ¿Ã ¶§±îÁö ºí·ÎÅ·/´ë±â)
-        // ´©±º°¡ Á¢¼ÓÇÏ¸é »õ·Î¿î ¼ÒÄÏ(client_sock)À» ¸¸µé¾îÁİ´Ï´Ù.
+        // 5. Accept (í´ë¼ì´ì–¸íŠ¸ê°€ ì˜¬ ë•Œê¹Œì§€ ë¸”ë¡œí‚¹/ëŒ€ê¸°)
+        // ëˆ„êµ°ê°€ ì ‘ì†í•˜ë©´ ìƒˆë¡œìš´ ì†Œì¼“(client_sock)ì„ ë§Œë“¤ì–´ì¤ë‹ˆë‹¤.
         client_sock = accept(server_sock, (struct sockaddr*)&client_addr, &addr_len);
         if (client_sock == -1) {
-            continue; // ¿¡·¯ ³ª¸é ´Ù½Ã ´ë±â
+            continue; // ì—ëŸ¬ ë‚˜ë©´ ë‹¤ì‹œ ëŒ€ê¸°
         }
 
-        // 6. Fork (ÇÁ·Î¼¼½º º¹Á¦ - º´·Ä Ã³¸®)
-        // ºÎ¸ğ(¼­¹ö º»Ã¼)´Â °è¼Ó »õ·Î¿î ¼Õ´ÔÀ» ¹Ş¾Æ¾ß ÇÏ¹Ç·Î,
-        // Áö±İ µé¾î¿Â ¼Õ´ÔÀº º¹Á¦ÀÎ°£(ÀÚ½Ä ÇÁ·Î¼¼½º)¿¡°Ô ¸Ã±é´Ï´Ù.
+        // 6. Fork (í”„ë¡œì„¸ìŠ¤ ë³µì œ - ë³‘ë ¬ ì²˜ë¦¬)
+        // ë¶€ëª¨(ì„œë²„ ë³¸ì²´)ëŠ” ê³„ì† ìƒˆë¡œìš´ ì†ë‹˜ì„ ë°›ì•„ì•¼ í•˜ë¯€ë¡œ,
+        // ì§€ê¸ˆ ë“¤ì–´ì˜¨ ì†ë‹˜ì€ ë³µì œì¸ê°„(ìì‹ í”„ë¡œì„¸ìŠ¤)ì—ê²Œ ë§¡ê¹ë‹ˆë‹¤.
         pid_t pid = fork();
 
         if (pid == 0) {
-            // [ÀÚ½Ä ÇÁ·Î¼¼½º ¿µ¿ª]
-            // ÀÚ½ÄÀº ¸®½¼ ¼ÒÄÏ(ÀÔ±¸)ÀÌ ÇÊ¿ä ¾ø½À´Ï´Ù.
+            // [ìì‹ í”„ë¡œì„¸ìŠ¤ ì˜ì—­]
+            // ìì‹ì€ ë¦¬ìŠ¨ ì†Œì¼“(ì…êµ¬)ì´ í•„ìš” ì—†ìŠµë‹ˆë‹¤.
             close(server_sock);
-            // Å¬¶óÀÌ¾ğÆ® ´ã´ç ÇÔ¼ö ½ÇÇà (¿©±â¼­ ¹«ÇÑ·çÇÁ µ¹¸ç ´ëÈ­ÇÔ)
+            // í´ë¼ì´ì–¸íŠ¸ ë‹´ë‹¹ í•¨ìˆ˜ ì‹¤í–‰ (ì—¬ê¸°ì„œ ë¬´í•œë£¨í”„ ëŒë©° ëŒ€í™”í•¨)
             handle_client(client_sock, client_addr);
         }
         else if (pid > 0) {
-            // [ºÎ¸ğ ÇÁ·Î¼¼½º ¿µ¿ª]
-            // ºÎ¸ğ´Â Å¬¶óÀÌ¾ğÆ®¿Í ´ëÈ­ÇÒ ÇÊ¿ä°¡ ¾ø½À´Ï´Ù(ÀÚ½ÄÀÌ ÇÏ´Ï±î).
-            // µû¶ó¼­ Å¬¶óÀÌ¾ğÆ® ¼ÒÄÏ ÇÚµé¸¸ ´İ°í, ´Ù½Ã accept()ÇÏ·¯ ·çÇÁ À§·Î ¿Ã¶ó°©´Ï´Ù.
+            // [ë¶€ëª¨ í”„ë¡œì„¸ìŠ¤ ì˜ì—­]
+            // ë¶€ëª¨ëŠ” í´ë¼ì´ì–¸íŠ¸ì™€ ëŒ€í™”í•  í•„ìš”ê°€ ì—†ìŠµë‹ˆë‹¤(ìì‹ì´ í•˜ë‹ˆê¹Œ).
+            // ë”°ë¼ì„œ í´ë¼ì´ì–¸íŠ¸ ì†Œì¼“ í•¸ë“¤ë§Œ ë‹«ê³ , ë‹¤ì‹œ accept()í•˜ëŸ¬ ë£¨í”„ ìœ„ë¡œ ì˜¬ë¼ê°‘ë‹ˆë‹¤.
             close(client_sock);
         }
         else {
@@ -214,7 +266,7 @@ int main() {
         }
     }
 
-    // ¼­¹ö Á¾·á ½Ã ¸®½¼ ¼ÒÄÏ ´İ±â (»ç½Ç»ó µµ´ŞÇÏÁö ¾ÊÀ½)
+    // ì„œë²„ ì¢…ë£Œ ì‹œ ë¦¬ìŠ¨ ì†Œì¼“ ë‹«ê¸° (ì‚¬ì‹¤ìƒ ë„ë‹¬í•˜ì§€ ì•ŠìŒ)
     close(server_sock);
     return 0;
 }
