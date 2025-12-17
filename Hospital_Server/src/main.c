@@ -110,6 +110,15 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
         switch (header.msg_type) {
         case MSG_LOGIN_REQ:
             printf("Login Request received.\n");
+            //------- 추가 ------
+            if (header.payload_len > 0 && header.payload_len < sizeof(robot_name)) {
+                memcpy(robot_name, buffer, header.payload_len);
+                robot_name[header.payload_len] = '\0';  // Null 종료
+                printf("Login Request: Robot name = '%s'\n", robot_name);
+            } else {
+                printf("Login Request received (invalid payload).\n");
+            }
+            //-----------------
             // 나중에는 여기서 DB를 조회하거나 로그인 승인 패킷을 보내야 함
             break;
 
