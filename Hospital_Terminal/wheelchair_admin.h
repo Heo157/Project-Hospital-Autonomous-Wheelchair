@@ -50,8 +50,6 @@ private slots:
     void on_pbGoCharge_clicked();
     void on_pbAddWheel_clicked();
 
-    //wheelchair add btn
-    void on_pushButton_clicked();
 
 private:
     Ui::wheelchair_admin *ui;
