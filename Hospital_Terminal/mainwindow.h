@@ -7,8 +7,8 @@
 #include "login.h" 
 
 // [주석] 탭 화면 헤더 (나중에 파일 만들면 주석 해제)
-// #include "tab_admin.h"
-// #include "tab_medical.h"
+ #include "tab_admin.h"
+ #include "tab_medical.h"
 // #include "tab_patient.h"
 
 QT_BEGIN_NAMESPACE
@@ -33,7 +33,6 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
-    
     // 가상 키보드
     Keyboard *virtualKeyboard = nullptr;
     

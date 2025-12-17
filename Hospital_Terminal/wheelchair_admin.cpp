@@ -186,8 +186,15 @@ void wheelchair_admin::on_pbGoCharge_clicked()
                              tr("로봇 %1 을 충전 스테이션으로 이동시키는 명령을 전송했습니다. (TODO)").arg(robotId));
 }
 
-void wheelchair_admin::on_pushButton_clicked()
+void wheelchair_admin::on_pbAddWheel_clicked()
 {
+    const QString robotId = selectedRobotId();
+    if (robotId.isEmpty()) {
+        QMessageBox::warning(this, tr("알림"), tr("추가할 로봇을 입력하세요."));
+        return;
+    }
 
+    // TODO: '충전 스테이션' 좌표로 이동 goal 전송
+    QMessageBox::information(this, tr("로봇 추가중"),
+                             tr("로봇 추가를 완료 했습니다. (TODO)").arg(robotId));
 }
-

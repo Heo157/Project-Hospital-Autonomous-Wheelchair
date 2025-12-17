@@ -48,6 +48,7 @@ private slots:
     void on_pbResume_clicked();
     void on_pbGoWait_clicked();
     void on_pbGoCharge_clicked();
+    void on_pbAddWheel_clicked();
 
     //wheelchair add btn
     void on_pushButton_clicked();
