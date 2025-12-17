@@ -6,8 +6,8 @@
 // 서버가 실행되는 PC 기준 DB 주소/계정으로 수정하세요.
 #define DB_HOST "10.10.14.138"
 #define DB_PORT 3306
-#define DB_USER "robot_user"
-#define DB_PASS "robot_pw"
+#define DB_USER "admin"
+#define DB_PASS "1234"
 #define DB_NAME "hospital_db"
 // =============================================
 
