@@ -25,6 +25,7 @@ private slots:
     void on_pbResume_clicked();
     void on_pbGoWait_clicked();
     void on_pbGoCharge_clicked();
+    void on_pbAddWheel_clicked();
 
 private:
     Ui::wheelchair_admin *ui;

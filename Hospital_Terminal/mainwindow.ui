@@ -16,7 +16,7 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout_2">
     <item>
-     <layout class="QVBoxLayout" name="verticalLayout" stretch="1,20">
+     <layout class="QVBoxLayout" name="verticalLayout">
       <item>
        <widget class="QFrame" name="topPanel">
         <property name="maximumSize">
@@ -26,27 +26,110 @@
          </size>
         </property>
         <property name="styleSheet">
-         <string notr="true">background-color: rgb(52, 73, 94);</string>
+         <string notr="true">background-color: rgb(255, 192, 203);</string>
         </property>
         <property name="frameShape">
-         <enum>QFrame::StyledPanel</enum>
+         <enum>QFrame::Shape::StyledPanel</enum>
         </property>
         <property name="frameShadow">
-         <enum>QFrame::Raised</enum>
+         <enum>QFrame::Shadow::Raised</enum>
         </property>
-        <widget class="QLabel" name="label_status">
-         <property name="geometry">
-          <rect>
-           <x>30</x>
-           <y>0</y>
-           <width>70</width>
-           <height>22</height>
-          </rect>
+        <layout class="QHBoxLayout" name="topPanelLayout">
+         <property name="leftMargin">
+          <number>15</number>
          </property>
-         <property name="text">
-          <string>TextLabel</string>
+         <property name="topMargin">
+          <number>0</number>
          </property>
-        </widget>
+         <property name="rightMargin">
+          <number>15</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="label_status">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">color: rgb(255, 255, 255);
+            </string>
+           </property>
+           <property name="text">
+            <string>Text</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_time">
+           <property name="styleSheet">
+            <string notr="true">color: white;</string>
+           </property>
+           <property name="text">
+            <string>0000-00-00 00:00:00</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_wifi">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>15</width>
+             <height>15</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>15</width>
+             <height>15</height>
+            </size>
+           </property>
+           <property name="pixmap">
+            <pixmap></pixmap>
+           </property>
+           <property name="scaledContents">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btn_logout">
+           <property name="text">
+            <string>LOG OUT</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+        <zorder>label_status</zorder>
+        <zorder>label_time</zorder>
+        <zorder>btn_logout</zorder>
+        <zorder>label_wifi</zorder>
        </widget>
       </item>
       <item>
@@ -60,19 +143,6 @@
              <attribute name="title">
               <string>Tab 1</string>
              </attribute>
-             <widget class="QPushButton" name="btn_logout">
-              <property name="geometry">
-               <rect>
-                <x>260</x>
-                <y>180</y>
-                <width>92</width>
-                <height>30</height>
-               </rect>
-              </property>
-              <property name="text">
-               <string>logout</string>
-              </property>
-             </widget>
             </widget>
             <widget class="QWidget" name="tab_2">
              <attribute name="title">
