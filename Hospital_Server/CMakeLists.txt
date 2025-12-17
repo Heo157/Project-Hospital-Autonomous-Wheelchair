@@ -22,3 +22,11 @@ add_executable(hospital_server ${SOURCES})
 
 # 리눅스 소켓/스레드 라이브러리 연결 (필요시 사용)
 # target_link_libraries(hospital_server pthread)
+
+# --- 추가 ---
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(MARIADB REQUIRED libmariadb)
+
+target_include_directories(hospital_server PRIVATE ${MARIADB_INCLUDE_DIRS})
+target_link_directories(hospital_server PRIVATE ${MARIADB_LIBRARY_DIRS})
+target_link_libraries(hospital_server PRIVATE ${MARIADB_LIBRARIES})
