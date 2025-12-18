@@ -9,6 +9,12 @@
 // [주석] 탭 화면 헤더 (나중에 파일 만들면 주석 해제)
  #include "tab_admin.h"
  #include "tab_medical.h"
+#include "kiosk_main.h"
+#include "kiosk_search.h"
+#include "kiosk_login.h"
+#include "kiosk_wheel.h"
+#include "kiosk_back.h"
+#include "kiosk_container.h"
 // #include "tab_patient.h"
 
 QT_BEGIN_NAMESPACE
@@ -37,7 +43,18 @@ private:
     Keyboard *virtualKeyboard = nullptr;
     
     // 로그인 페이지
-    Login *loginPage; 
+    Login *loginPage;
+
+    // Kiosk pages (stackedWidget용)
+    // -----------------------------
+    kiosk_main   *kioskMain   = nullptr;
+    kiosk_search *kioskSearch = nullptr;
+    kiosk_login  *kioskLogin  = nullptr;
+    kiosk_wheel  *kioskWheel  = nullptr;
+    kiosk_back   *kioskBack   = nullptr;
+
+    // kiosk_wheel에서 뒤로가기 분기용 (search에서 왔는지 / login에서 왔는지)
+    QString kioskPrevPage;
 
     // [핵심] 물리 키보드가 꽂혀있는지 확인하는 함수
     bool isPhysicalKeyboardConnected();

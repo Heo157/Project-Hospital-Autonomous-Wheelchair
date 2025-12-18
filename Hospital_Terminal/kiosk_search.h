@@ -1,0 +1,22 @@
+#ifndef KIOSK_SEARCH_H
+#define KIOSK_SEARCH_H
+
+#include <QWidget>
+
+namespace Ui {
+class kiosk_search;
+}
+
+class kiosk_search : public QWidget
+{
+    Q_OBJECT
+
+public:
+    explicit kiosk_search(QWidget *parent = nullptr);
+    ~kiosk_search();
+
+private:
+    Ui::kiosk_search *ui;
+};
+
+#endif // KIOSK_SEARCH_H
