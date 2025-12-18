@@ -31,8 +31,7 @@ ubuntu@ubuntu:~/turtlebot3_ws/src/turtlebot3/turtlebot3_description/urdf$
  source ~/turtlebot3_ws/install/setup.bash
 ubuntu@ubuntu:~/turtlebot3_ws/src/turtlebot3/turtlebot3_description/urdf$
  ros2 run robot_state_publisher robot_state_publisher \
-  --ros-args -p robot_description:="$(cat \
-~/turtlebot3_ws/install/turtlebot3_description/share/turtlebot3_description/urdf/turtlebot3_burger_Hospital_fixed.urdf)"
+  --ros-args -p robot_description:="$(cat turtlebot3_burger_Hospital_fixed.urdf)"
 
 터미널 2)
 ubuntu@ubuntu:~$ source /opt/ros/humble/setup.bash
