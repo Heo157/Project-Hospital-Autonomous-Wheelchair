@@ -5,6 +5,10 @@
 #include <QTextStream>
 #include <QDebug>
 #include <QLineEdit> // QLineEdit 캐스팅을 위해 필요
+#include <QTabBar>
+#include <QTimer>
+#include <QDateTime>
+#include <QPixmap>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -12,6 +16,24 @@ MainWindow::MainWindow(QWidget *parent)
     , virtualKeyboard(nullptr)
 {
     ui->setupUi(this);
+
+    QPixmap wifi(":/icons/wifi.png");
+    if (wifi.isNull()) {
+        qDebug() << "wifi resource load failed";
+    } else {
+        ui->label_wifi->setPixmap(wifi);
+        ui->label_wifi->setScaledContents(true);
+        ui->label_wifi->setAlignment(Qt::AlignCenter);
+    }
+    QTimer *timeTimer = new QTimer(this);
+
+    connect(timeTimer, &QTimer::timeout, this, [=]() {
+        ui->label_time->setText(
+            QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss")
+            );
+    });
+
+    timeTimer->start(1000);
 
     // ---------------------------------------------------------
     // 1. 가상 키보드 설정 (조건부 생성)
@@ -55,6 +77,25 @@ MainWindow::MainWindow(QWidget *parent)
     }
 
     // ---------------------------------------------------------
+    // 2-1. Kiosk 페이지 생성
+    // ---------------------------------------------------------
+    kioskMain   = new kiosk_main(this);
+    kioskSearch = new kiosk_search(this);
+    kioskLogin  = new kiosk_login(this);
+    kioskWheel  = new kiosk_wheel(this);
+    kioskBack   = new kiosk_back(this);
+
+    // ---------------------------------------------------------
+    // 2-2. stackedWidget에 Kiosk 페이지 등록
+    // (상단바는 MainWindow에 있으므로 내용만 교체됨)
+    // ---------------------------------------------------------
+    ui->stackedWidget->addWidget(kioskMain);
+    ui->stackedWidget->addWidget(kioskSearch);
+    ui->stackedWidget->addWidget(kioskLogin);
+    ui->stackedWidget->addWidget(kioskWheel);
+    ui->stackedWidget->addWidget(kioskBack);
+
+    // ---------------------------------------------------------
     // 3. 로그아웃 버튼 연결 및 초기 상태
     // ---------------------------------------------------------
     if (ui->btn_logout) {
@@ -62,7 +103,7 @@ MainWindow::MainWindow(QWidget *parent)
     }
     
     if (ui->label_status) {
-        ui->label_status->setText("시스템 로그인 대기중...");
+        ui->label_status->setText("Hospital");
     }
 }
 
@@ -177,19 +218,32 @@ void MainWindow::onLoginSuccess(QString role)
     if (ui->mainTabWidget) {
         ui->mainTabWidget->clear();
 
+        // 🔹 탭 바 숨기기 (시스템 관리 / 진료 업무 글자 제거)
+        ui->mainTabWidget->tabBar()->hide();
+
         if (role == "admin") {
-            if (ui->label_status) ui->label_status->setText("관리자 모드");
-            // ui->mainTabWidget->addTab(new TabAdmin(this), "시스템 관리");
-        } 
+            if (ui->label_status)
+                ui->label_status->setText("관리자 모드");
+
+            ui->mainTabWidget->addTab(new tab_admin(this), "시스템 관리");
+            ui->mainTabWidget->setCurrentIndex(0);
+        }
         else if (role == "medical") {
-            if (ui->label_status) ui->label_status->setText("의료진 모드");
-            // ui->mainTabWidget->addTab(new TabMedical(this), "진료 업무");
-        } 
-        else if (role == "patient") {
-            if (ui->label_status) ui->label_status->setText("환자 모드");
-            // ui->mainTabWidget->addTab(new TabPatient(this), "휠체어 호출");
+            if (ui->label_status)
+                ui->label_status->setText("의료진 모드");
+
+            ui->mainTabWidget->addTab(new tab_medical(this), "진료 업무");
+            ui->mainTabWidget->setCurrentIndex(0);
+        }
+        else if (role == "kiosk") {
+            if (ui->label_status)
+                ui->label_status->setText("키오스크 모드");
+            ui->mainTabWidget->clear();
+            ui->mainTabWidget->addTab(new kiosk_container(this), "키오스크");
+            ui->mainTabWidget->setCurrentIndex(0);
         }
     }
+
 }
 
 // ---------------------------------------------------------
@@ -208,7 +262,7 @@ void MainWindow::onLogoutClicked()
     ui->stackedWidget->setCurrentWidget(loginPage);
     
     if (ui->label_status) ui->label_status->setText("로그아웃 되었습니다.");
-    
+        ui->label_status->setText("Hospital");
     if (virtualKeyboard != nullptr) {
         virtualKeyboard->hide();
     }

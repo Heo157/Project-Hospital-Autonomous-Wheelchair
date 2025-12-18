@@ -20,4 +20,5 @@ Makefile*
 
 # 4. OS 생성 파일 무시
 #.DS_Store
-#Thumbs.db
+#Thumbs.dbbuild-*/
+build-Hospital_Terminal-Desktop-Debug/

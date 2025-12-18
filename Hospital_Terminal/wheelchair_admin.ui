@@ -19,7 +19,7 @@
      <item>
       <widget class="QGroupBox" name="gbRobotStatus">
        <property name="title">
-        <string>로봇 상태</string>
+        <string>휠체어 상태</string>
        </property>
        <layout class="QVBoxLayout" name="vlRobotStatus">
         <item>
@@ -28,11 +28,11 @@
            <number>0</number>
           </property>
           <property name="columnCount">
-           <number>5</number>
+           <number>7</number>
           </property>
           <column>
            <property name="text">
-            <string>로봇 ID</string>
+            <string>휠체어 ID</string>
            </property>
           </column>
           <column>
@@ -53,6 +53,16 @@
           <column>
            <property name="text">
             <string>목표 위치</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>X좌표</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Y좌표</string>
            </property>
           </column>
          </widget>
@@ -78,7 +88,7 @@
              </column>
              <column>
               <property name="text">
-               <string>로봇 ID</string>
+               <string>휠체어 ID</string>
               </property>
              </column>
              <column>
@@ -106,17 +116,35 @@
      </item>
      <item>
       <widget class="QGroupBox" name="gbMap">
-       <property name="title">
-        <string>병원 매핑 / 로봇 제어</string>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
        </property>
-       <layout class="QVBoxLayout" name="vlMap">
+       <property name="title">
+        <string>병원 매핑 / 휠체어 제어</string>
+       </property>
+       <layout class="QVBoxLayout" name="vlMap" stretch="5,0,3,3">
         <item>
          <widget class="QLabel" name="lbMapPlaceholder">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="text">
-           <string>병원 맵 표시 영역 (SLAM/맵 이미지 또는 뷰어)</string>
+           <string/>
+          </property>
+          <property name="pixmap">
+           <pixmap>../SLAM_MAP/ImageToStl.com_map_Hospital.jpg</pixmap>
+          </property>
+          <property name="scaledContents">
+           <bool>true</bool>
           </property>
           <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignCenter</set>
+           <set>Qt::AlignCenter</set>
           </property>
           <property name="wordWrap">
            <bool>true</bool>
@@ -124,7 +152,7 @@
          </widget>
         </item>
         <item>
-         <layout class="QHBoxLayout" name="hlSelectedRobot">
+         <layout class="QHBoxLayout" name="hlSelectedRobot" stretch="1,2">
           <item>
            <widget class="QLabel" name="lbSelectedRobot">
             <property name="text">
@@ -133,21 +161,14 @@
            </widget>
           </item>
           <item>
-           <widget class="QLineEdit" name="leSelectedRobot">
-            <property name="readOnly">
-             <bool>true</bool>
-            </property>
-            <property name="placeholderText">
-             <string>로봇 상태 테이블에서 선택</string>
-            </property>
-           </widget>
+           <widget class="QComboBox" name="cbSelectedRobot"/>
           </item>
          </layout>
         </item>
         <item>
          <layout class="QGridLayout" name="glButtons">
           <item row="0" column="1">
-           <widget class="QPushButton" name="pbAddwheel">
+           <widget class="QPushButton" name="pbStop">
             <property name="text">
              <string>즉시 정지</string>
             </property>
@@ -182,13 +203,26 @@
            </widget>
           </item>
           <item row="1" column="2">
-           <widget class="QPushButton" name="pushButton">
+           <widget class="QPushButton" name="pbAddWheel">
             <property name="text">
              <string>휠체어 등록</string>
             </property>
            </widget>
           </item>
          </layout>
+        </item>
+        <item>
+         <spacer name="verticalSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
         </item>
        </layout>
       </widget>
