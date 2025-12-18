@@ -110,6 +110,7 @@ typedef struct __attribute__((packed)) {
     int   battery_level; // 0~100
     float current_x;
     float current_y;
+    float theta;         // 로봇이 바라보는 방향 (라디안)
     uint8_t is_moving;   // 1:이동중, 0:정지
 } RobotStateData;
 

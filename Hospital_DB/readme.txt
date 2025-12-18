@@ -47,8 +47,12 @@ CREATE TABLE robot_status (
     current_x DOUBLE NOT NULL DEFAULT 0,
     current_y DOUBLE NOT NULL DEFAULT 0,                                    
     
-    goal_x DOUBLE NULL,
-    goal_y DOUBLE NULL
+    goal_x DOUBLE NULL DEFAULT NULL,
+    goal_y DOUBLE NULL DEFAULT NULL,
+
+    senser INT(11) NULL DEFAULT NULL,
+    `order` TINYINT(3) UNSIGNED NOT NULL DEFAULT 0,
+    `ip_address` VARCHAR(15) NULL DEFAULT NULL
 );
 
  -- 로봇 이동/호출 데이터

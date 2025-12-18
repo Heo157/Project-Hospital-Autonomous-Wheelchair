@@ -77,6 +77,25 @@ MainWindow::MainWindow(QWidget *parent)
     }
 
     // ---------------------------------------------------------
+    // 2-1. Kiosk 페이지 생성
+    // ---------------------------------------------------------
+    kioskMain   = new kiosk_main(this);
+    kioskSearch = new kiosk_search(this);
+    kioskLogin  = new kiosk_login(this);
+    kioskWheel  = new kiosk_wheel(this);
+    kioskBack   = new kiosk_back(this);
+
+    // ---------------------------------------------------------
+    // 2-2. stackedWidget에 Kiosk 페이지 등록
+    // (상단바는 MainWindow에 있으므로 내용만 교체됨)
+    // ---------------------------------------------------------
+    ui->stackedWidget->addWidget(kioskMain);
+    ui->stackedWidget->addWidget(kioskSearch);
+    ui->stackedWidget->addWidget(kioskLogin);
+    ui->stackedWidget->addWidget(kioskWheel);
+    ui->stackedWidget->addWidget(kioskBack);
+
+    // ---------------------------------------------------------
     // 3. 로그아웃 버튼 연결 및 초기 상태
     // ---------------------------------------------------------
     if (ui->btn_logout) {
@@ -216,11 +235,11 @@ void MainWindow::onLoginSuccess(QString role)
             ui->mainTabWidget->addTab(new tab_medical(this), "진료 업무");
             ui->mainTabWidget->setCurrentIndex(0);
         }
-        else if (role == "patient") {
+        else if (role == "kiosk") {
             if (ui->label_status)
-                ui->label_status->setText("환자 모드");
-
-            //ui->mainTabWidget->addTab(new TabPatient(this), "휠체어 호출");
+                ui->label_status->setText("키오스크 모드");
+            ui->mainTabWidget->clear();
+            ui->mainTabWidget->addTab(new kiosk_container(this), "키오스크");
             ui->mainTabWidget->setCurrentIndex(0);
         }
     }

@@ -10,6 +10,12 @@ CONFIG += c++17
 
 SOURCES += \
     account_admin.cpp \
+    kiosk_back.cpp \
+    kiosk_container.cpp \
+    kiosk_login.cpp \
+    kiosk_main.cpp \
+    kiosk_search.cpp \
+    kiosk_wheel.cpp \
     main.cpp \
     mainwindow.cpp \
     search_medical.cpp \
@@ -26,6 +32,12 @@ SOURCES += \
 HEADERS += \
     account_admin.h \
     add_robot_dialog.h \
+    kiosk_back.h \
+    kiosk_container.h \
+    kiosk_login.h \
+    kiosk_main.h \
+    kiosk_search.h \
+    kiosk_wheel.h \
     mainwindow.h \
     search_medical.h \
     tab_admin.h \
@@ -40,6 +52,12 @@ HEADERS += \
 
 FORMS += \
     account_admin.ui \
+    kiosk_back.ui \
+    kiosk_container.ui \
+    kiosk_login.ui \
+    kiosk_main.ui \
+    kiosk_search.ui \
+    kiosk_wheel.ui \
     mainwindow.ui \
     search_medical.ui \
     tab_admin.ui \
