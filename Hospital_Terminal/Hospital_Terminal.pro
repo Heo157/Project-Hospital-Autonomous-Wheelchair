@@ -31,6 +31,7 @@ SOURCES += \
 
 HEADERS += \
     account_admin.h \
+    add_robot_dialog.h \
     kiosk_back.h \
     kiosk_container.h \
     kiosk_login.h \
