@@ -25,6 +25,7 @@ SOURCES += \
 
 HEADERS += \
     account_admin.h \
+    add_robot_dialog.h \
     mainwindow.h \
     search_medical.h \
     tab_admin.h \
