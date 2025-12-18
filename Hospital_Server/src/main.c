@@ -154,26 +154,25 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
                     st->battery_level, st->current_x, st->current_y);
 
                 //------- 추가 ------
-                // 로봇 이름이 등록되지 않았으면 저장 불가
-                if (robot_name[0] == '\0') {
-                    printf("[DB] robot_name empty. Send MSG_LOGIN_REQ first.\n");
-                    break;
-                }
-                // 운영 상태 결정 (이동중이면 RUNNING, 아니면 STOP)
-                const char *op = (st->is_moving ? "RUNNING" : "STOP");
-
-                // 배터리 범위 검증 (0~100)
-                int batt_i = st->battery_level;
-                if (batt_i < 0) batt_i = 0;
-                if (batt_i > 100) batt_i = 100;
-                
-                uint32_t batt = (uint32_t)batt_i;
-                uint8_t charging = 0; // 프로토콜에 충전 정보 없으면 0 고정
-
-                // DB에 로봇 상태 저장 (INSERT 또는 UPDATE)
+                // 로봇이 DB에 등록되어 있는지 확인
                 if (db_ok) {
-                    int ret = db_upsert_robot_status(&db, robot_name, op, batt, charging,
-                                           (double)st->current_x, (double)st->current_y);
+                    int exists = db_check_robot_exists(&db, robot_name);
+                    if (exists != 1) {
+                        // DB에 없으면 무시 (Qt에서 먼저 등록해야 함)
+                        printf("[DB] Robot '%s' not registered yet\n", robot_name);
+                        break;
+                    }
+                    
+                    // 등록되어 있으면 상태 업데이트
+                    const char *op = (st->is_moving ? "RUNNING" : "STOP");
+                    int batt_i = st->battery_level;
+                    if (batt_i < 0) batt_i = 0;
+                    if (batt_i > 100) batt_i = 100;
+                    
+                    db_upsert_robot_status(&db, robot_name, op, (uint32_t)batt_i, 0,
+                                        (double)st->current_x, 
+                                        (double)st->current_y,
+                                        (double)st->theta);  // theta 추가
                 }
                 //-----------------
             }
