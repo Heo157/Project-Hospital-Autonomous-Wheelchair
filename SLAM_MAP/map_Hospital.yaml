@@ -1,4 +1,4 @@
-image: map_hospital_fix.pgm
+image: map_hospital.pgm
 mode: trinary
 resolution: 0.05
 origin: [-1.38, -4.95, 0]
