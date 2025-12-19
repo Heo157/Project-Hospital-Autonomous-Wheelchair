@@ -172,6 +172,41 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
                                         (double)st->current_y,
                                         (double)st->theta);  // theta 추가
                 }
+                // ========================================================
+                // [추가된 부분] DB에서 명령 확인 후 로봇에게 전송 (Push)
+                // ========================================================
+                double gx = 0.0, gy = 0.0;
+                
+                // DB 조회: "이 로봇한테 내려진 명령(order>=1) 있어?"
+                if (db_get_order_and_goal(&db, robot_name, &gx, &gy) == 0) {
+                    printf("[Server] Order detected for '%s' -> Go to (%.2f, %.2f)\n", 
+                            robot_name, gx, gy);
+
+                    // 1. 보낼 패킷 데이터 준비
+                    WaypointData wp;
+                    wp.x = (float)gx;
+                    wp.y = (float)gy;
+                    wp.theta = 0.0f; // 이동 명령엔 보통 좌표만 주므로 각도는 0
+
+                    // 2. 헤더 준비
+                    PacketHeader cmd_header;
+                    cmd_header.magic = MAGIC_NUMBER;
+                    cmd_header.device_type = DEVICE_ADMIN_QT; // 서버(혹은 관리자)가 보냄
+                    cmd_header.msg_type = MSG_MOVE_TO_GOAL;   // 0x15
+                    cmd_header.payload_len = sizeof(WaypointData);
+
+                    // 3. 전송 (Header + Payload)
+                    // send() 함수는 소켓이 유효할 때만
+                    if (send(client_sock, &cmd_header, sizeof(cmd_header), 0) > 0) {
+                        send(client_sock, &wp, sizeof(wp), 0);
+                        
+                        printf("[Server] Command sent to robot.\n");
+
+                        // 4. DB 정리: 명령을 보냈으니 order를 0으로 리셋 (중복 전송 방지)
+                        db_reset_order(&db, robot_name);
+                    }
+                }
+                // ========================================================
                 //-----------------
             }
             break;

@@ -328,3 +328,91 @@ int db_upsert_robot_status(
     
     return 0;  // 성공
 }
+// [추가] 특정 로봇에게 내려진 명령(Order)이 있는지 확인
+// 리턴값: 1(명령있음), 0(없음), -1(에러)
+int db_get_order_and_goal(DBContext *ctx, const char *name, double *goal_x, double *goal_y)
+{
+    if (!ctx || !ctx->connected || !name) return -1;
+
+    // 1. 명령 조회 쿼리 (order가 1 이상인 것)
+    const char *query = "SELECT goal_x, goal_y FROM robot_status WHERE name = ? AND `order` >= 1";
+    
+    MYSQL_STMT *stmt = mysql_stmt_init(ctx->conn);
+    if (mysql_stmt_prepare(stmt, query, strlen(query)) != 0) {
+        mysql_stmt_close(stmt);
+        return -1;
+    }
+
+    // 바인딩: 로봇 이름 (?)
+    MYSQL_BIND bind_in[1];
+    memset(bind_in, 0, sizeof(bind_in));
+    unsigned long name_len = strlen(name);
+    bind_in[0].buffer_type = MYSQL_TYPE_STRING;
+    bind_in[0].buffer = (char*)name;
+    bind_in[0].buffer_length = name_len;
+    bind_in[0].length = &name_len;
+
+    if (mysql_stmt_bind_param(stmt, bind_in) != 0) {
+        mysql_stmt_close(stmt);
+        return -1;
+    }
+
+    if (mysql_stmt_execute(stmt) != 0) {
+        mysql_stmt_close(stmt);
+        return -1;
+    }
+
+    // 결과값 받을 변수 바인딩
+    MYSQL_BIND bind_out[2];
+    memset(bind_out, 0, sizeof(bind_out));
+    
+    double x = 0.0, y = 0.0;
+    bind_out[0].buffer_type = MYSQL_TYPE_DOUBLE;
+    bind_out[0].buffer = &x;
+    
+    bind_out[1].buffer_type = MYSQL_TYPE_DOUBLE;
+    bind_out[1].buffer = &y;
+
+    if (mysql_stmt_bind_result(stmt, bind_out) != 0) {
+        mysql_stmt_close(stmt);
+        return -1;
+    }
+
+    int has_order = 0;
+    // 데이터 가져오기 (Fetch)
+    if (mysql_stmt_fetch(stmt) == 0) {
+        *goal_x = x;
+        *goal_y = y;
+        has_order = 1; // 명령 있음!
+    }
+
+    mysql_stmt_close(stmt);
+    return has_order;
+}
+
+// [추가] 명령 처리가 끝났으니 order를 0으로 초기화
+int db_reset_order(DBContext *ctx, const char *name)
+{
+    if (!ctx || !ctx->connected || !name) return -1;
+
+    const char *query = "UPDATE robot_status SET `order` = 0 WHERE name = ?";
+    
+    MYSQL_STMT *stmt = mysql_stmt_init(ctx->conn);
+    if (mysql_stmt_prepare(stmt, query, strlen(query)) != 0) {
+        mysql_stmt_close(stmt);
+        return -1;
+    }
+
+    MYSQL_BIND bind[1];
+    memset(bind, 0, sizeof(bind));
+    unsigned long name_len = strlen(name);
+    bind[0].buffer_type = MYSQL_TYPE_STRING;
+    bind[0].buffer = (char*)name;
+    bind[0].buffer_length = name_len;
+    bind[0].length = &name_len;
+
+    mysql_stmt_bind_param(stmt, bind);
+    mysql_stmt_execute(stmt);
+    mysql_stmt_close(stmt);
+    return 0;
+}
