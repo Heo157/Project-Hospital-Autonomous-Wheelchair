@@ -3,6 +3,8 @@
 
 #include <QWidget>
 
+class QTableWidgetItem; // 전방 선언
+
 namespace Ui {
 class search_medical;
 }
@@ -16,19 +18,26 @@ public:
     ~search_medical();
 
 private slots:
-    void on_pbSearchPatient_clicked();   // 환자 조회
-    void on_pbAddPatient_clicked();      // 환자 추가
-    void on_pbUpdatePatient_clicked();   // 선택 환자 수정
-    void on_pbDeletePatient_clicked();   // 선택 환자 삭제
+    // [수정] clicked -> toggled (체크박스 상태 변화 감지)
+    void on_btnIN_toggled(bool checked);
 
-    void on_twPatientList_cellClicked(int row, int column); // 행 선택 시 폼 채우기
+    // [추가] 병동 콤보박스 값이 바뀌면 침대 목록을 갱신하는 슬롯
+    void on_cbWard_currentTextChanged(const QString &arg1);
+
+    // 기존 슬롯들
+    void on_pbSearchPatient_clicked();
+    void on_twPatientList_cellClicked(int row, int column);
+    void on_pbAddPatient_clicked();
+    void on_pbUpdatePatient_clicked();
+    void on_pbDeletePatient_clicked();
 
 private:
     Ui::search_medical *ui;
 
-    void clearPatientForm();        // 입력 폼 초기화
-    void fillFormFromRow(int row);  // 테이블 row → 폼
-    int  firstCheckedRow() const;   // 체크된 첫 행 인덱스 (없으면 -1)
+    void initUi();          // UI 초기화
+    void loadDiseaseList(); // 병명 로드
+    void loadWardList();    // [추가] 병동 목록 로드 (DB에서 '5동' 가져옴)
+    void clearForm();       // 폼 초기화
 };
 
 #endif // SEARCH_MEDICAL_H

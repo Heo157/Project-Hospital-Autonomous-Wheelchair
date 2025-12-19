@@ -26,6 +26,7 @@ private:
     Ui::account_admin *ui;
 
     void initUserTable();   // 테이블 기본 설정
+    void loadUserList();    // db에서 데이터 불러오기
 };
 
 #endif // ACCOUNT_ADMIN_H

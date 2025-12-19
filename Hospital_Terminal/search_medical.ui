@@ -13,9 +13,7 @@
   <property name="windowTitle">
    <string>환자 조회</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
-
-   <!-- ▒▒ 검색 줄 ▒▒ -->
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="1,6,6">
    <item>
     <layout class="QHBoxLayout" name="hlSearchPatient">
      <item>
@@ -28,7 +26,7 @@
      <item>
       <widget class="QLineEdit" name="leSearchName">
        <property name="placeholderText">
-        <string>환자 이름 입력</string>
+        <string>환자 이름 입력(입력 안하면 전체검색)</string>
        </property>
       </widget>
      </item>
@@ -41,19 +39,17 @@
      </item>
     </layout>
    </item>
-
-   <!-- ▒▒ 조회 결과 테이블 ▒▒ -->
    <item>
     <widget class="QTableWidget" name="twPatientList">
-     <property name="columnCount">
-      <number>6</number>
-     </property>
      <property name="rowCount">
       <number>0</number>
      </property>
+     <property name="columnCount">
+      <number>8</number>
+     </property>
      <column>
       <property name="text">
-       <string>선택</string>
+       <string>환자 ID</string>
       </property>
      </column>
      <column>
@@ -68,133 +64,195 @@
      </column>
      <column>
       <property name="text">
-       <string>병실</string>
+       <string>응급여부</string>
       </property>
      </column>
      <column>
       <property name="text">
-       <string>진료실</string>
+       <string>입원유무</string>
       </property>
      </column>
      <column>
       <property name="text">
-       <string>환자 타입</string>
+       <string>입원병동</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>침대번호</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>입원일</string>
       </property>
      </column>
     </widget>
    </item>
-
-   <!-- ▒▒ 환자 정보 입력/수정 영역 ▒▒ -->
    <item>
-    <widget class="QGroupBox" name="gbPatientDetail">
-     <property name="title">
-      <string>환자 정보</string>
-     </property>
-     <layout class="QFormLayout" name="formLayout">
-      <item row="0" column="0">
-       <widget class="QLabel" name="lbEditName">
-        <property name="text">
-         <string>환자 이름</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <widget class="QLineEdit" name="leEditName"/>
-      </item>
-
-      <item row="1" column="0">
-       <widget class="QLabel" name="lbEditDisease">
-        <property name="text">
-         <string>병명</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QLineEdit" name="leEditDisease"/>
-      </item>
-
-      <item row="2" column="0">
-       <widget class="QLabel" name="lbEditRoom">
-        <property name="text">
-         <string>병실</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
-       <widget class="QLineEdit" name="leEditRoom"/>
-      </item>
-
-      <!-- 진료실 -->
-      <item row="3" column="0">
-       <widget class="QLabel" name="lbEditClinic">
-        <property name="text">
-         <string>진료실</string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="1">
-       <widget class="QLineEdit" name="leEditClinic"/>
-      </item>
-
-      <item row="4" column="0">
-       <widget class="QLabel" name="lbEditType">
-        <property name="text">
-         <string>환자 타입</string>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="1">
-       <widget class="QComboBox" name="cbEditType">
-        <item>
+    <layout class="QVBoxLayout" name="vlPatientInfo" stretch="1,1,1,1">
+     <item>
+      <layout class="QHBoxLayout" name="hl1" stretch="1,9,1,9">
+       <item>
+        <widget class="QLabel" name="lbID">
+         <property name="text">
+          <string>환자 ID</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="leID"/>
+       </item>
+       <item>
+        <widget class="QLabel" name="lbName">
+         <property name="text">
+          <string>환자 이름</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="leName_2"/>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="hl2" stretch="1,2,1,2,1,1,1,1">
+       <item>
+        <widget class="QLabel" name="label_3">
+         <property name="text">
+          <string>병명(한글)</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="cbDisease_KR"/>
+       </item>
+       <item>
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>병명(영문)</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="cbDisease_EN"/>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_4">
+         <property name="text">
+          <string>응급여부</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="btnEM">
+         <property name="text">
+          <string>응급</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_5">
+         <property name="text">
+          <string>입원유무</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="btnIN">
          <property name="text">
           <string>입원</string>
          </property>
-        </item>
-        <item>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="hl3" stretch="1,2,1,2,1,2">
+       <item>
+        <widget class="QLabel" name="label_6">
          <property name="text">
-          <string>외래</string>
+          <string>입원병동</string>
          </property>
-        </item>
-       </widget>
-      </item>
-
-      <!-- 버튼 줄 -->
-      <item row="5" column="0">
-       <widget class="QLabel" name="lbEditButtons">
-        <property name="text">
-         <string>작업</string>
-        </property>
-       </widget>
-      </item>
-      <item row="5" column="1">
-       <layout class="QHBoxLayout" name="hlEditButtons">
-        <item>
-         <widget class="QPushButton" name="pbAddPatient">
-          <property name="text">
-           <string>추가</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="pbUpdatePatient">
-          <property name="text">
-           <string>수정</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="pbDeletePatient">
-          <property name="text">
-           <string>삭제</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-     </layout>
-    </widget>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="cbWard"/>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_7">
+         <property name="text">
+          <string>침대번호</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="cbBedNum"/>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_8">
+         <property name="text">
+          <string>입원일</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QDateTimeEdit" name="dtDate">
+         <property name="calendarPopup">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="hl4">
+       <item>
+        <widget class="QPushButton" name="pbAddPatient">
+         <property name="text">
+          <string>삽입</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pbUpdatePatient">
+         <property name="text">
+          <string>수정</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pbDeletePatient">
+         <property name="text">
+          <string>삭제</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
    </item>
-
   </layout>
  </widget>
  <resources/>
