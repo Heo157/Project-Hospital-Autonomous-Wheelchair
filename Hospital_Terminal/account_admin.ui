@@ -138,13 +138,8 @@
          <number>0</number>
         </property>
         <property name="columnCount">
-         <number>5</number>
+         <number>4</number>
         </property>
-        <column>
-         <property name="text">
-          <string>선택</string>
-         </property>
-        </column>
         <column>
          <property name="text">
           <string>사용자 ID</string>

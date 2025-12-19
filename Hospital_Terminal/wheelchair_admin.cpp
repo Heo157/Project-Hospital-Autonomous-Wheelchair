@@ -5,6 +5,7 @@
 #include <QMessageBox>
 #include <QTableWidgetItem>
 #include <QDebug>
+#include <QVBoxLayout>
 
 #include <QDialog>
 #include <QFormLayout>
@@ -110,69 +111,184 @@ void wheelchair_admin::on_twRobotStatus_cellClicked(int row, int column)
 
 /* 제어 버튼들 – 지금은 메시지박스로만 확인, 나중에 ROS/서버 연동 */
 
+// [1. 휠체어 직접 호출]
 void wheelchair_admin::on_pbDirectCall_clicked()
 {
-    const QString robotId = selectedRobotId();
-    if (robotId.isEmpty()) {
-        QMessageBox::warning(this, tr("알림"), tr("로봇 상태에서 제어할 로봇을 먼저 선택하세요."));
+    // 로봇 선택 여부 확인
+    if (m_selectedRobotId == -1) {
+        QMessageBox::warning(this, "알림", "제어할 로봇을 먼저 선택해주세요.");
         return;
     }
 
-    // TODO: 관리자용 로봇 직접 호출 다이얼로그 or 기본 목적지 호출
-    QMessageBox::information(this, tr("직접 호출"),
-                             tr("로봇 %1 에 직접 호출 명령을 전송했습니다. (TODO)").arg(robotId));
+    // --- 팝업창(Dialog) 동적 생성 ---
+    QDialog dialog(this);
+    dialog.setWindowTitle("목적지 선택");
+    dialog.resize(300, 200);
+
+    QVBoxLayout layout(&dialog);
+    QLabel label("이동할 목적지를 선택하세요:", &dialog);
+    layout.addWidget(&label);
+
+    // 버튼 3개 생성
+    QPushButton btnRestaurant("식당", &dialog);
+    QPushButton btnOffice("진료실", &dialog);
+    QPushButton btnWard("병실", &dialog);
+
+    // 버튼 스타일 (옵션)
+    QString btnStyle = "padding: 10px; font-size: 14px; font-weight: bold;";
+    btnRestaurant.setStyleSheet(btnStyle);
+    btnOffice.setStyleSheet(btnStyle);
+    btnWard.setStyleSheet(btnStyle);
+
+    layout.addWidget(&btnRestaurant);
+    layout.addWidget(&btnOffice);
+    layout.addWidget(&btnWard);
+
+    // --- 좌표 및 Order 값 설정 (사용자 커스터마이징 영역) ---
+    // TODO: 여기의 좌표(targetX, targetY)와 Order값(orderVal)을 실제 맵에 맞춰 수정하세요.
+    double targetX = 0.0;
+    double targetY = 0.0;
+    int orderVal = 0; // DB에 넣을 unsigned char 값
+
+    bool clicked = false; // 버튼이 눌렸는지 확인용
+
+    // 식당 버튼 클릭 시
+    connect(&btnRestaurant, &QPushButton::clicked, [&]() {
+        targetX = 5.0;  // [수정필요] 식당 X좌표
+        targetY = 2.0;  // [수정필요] 식당 Y좌표
+        orderVal = 1;   // [수정필요] 호출 명령 코드
+        clicked = true;
+        dialog.accept(); // 창 닫기
+    });
+
+    // 진료실 버튼 클릭 시
+    connect(&btnOffice, &QPushButton::clicked, [&]() {
+        targetX = 10.0; // [수정필요] 진료실 X좌표
+        targetY = 5.0;  // [수정필요] 진료실 Y좌표
+        orderVal = 1;   // [수정필요] 호출 명령 코드
+        clicked = true;
+        dialog.accept();
+    });
+
+    // 병실 버튼 클릭 시
+    connect(&btnWard, &QPushButton::clicked, [&]() {
+        targetX = 15.0; // [수정필요] 병실 X좌표
+        targetY = 8.0;  // [수정필요] 병실 Y좌표
+        orderVal = 1;   // [수정필요] 호출 명령 코드
+        clicked = true;
+        dialog.accept();
+    });
+
+    // 다이얼로그 실행 (모달)
+    dialog.exec();
+
+    // 버튼을 눌러서 닫힌 경우에만 DB 업데이트 수행
+    if (clicked) {
+        QString name = "admin";
+        bool success = DatabaseManager::instance().updateRobotGoal(m_selectedRobotId, targetX, targetY, orderVal, name);
+        if (success) {
+            QMessageBox::information(this, "명령 전송", QString("로봇 %1번이 지정된 위치로 이동합니다.").arg(m_selectedRobotId));
+            refreshRobotTable(); // 상태 즉시 갱신
+        } else {
+            QMessageBox::critical(this, "오류", "DB 업데이트 실패");
+        }
+    }
 }
 
+// [2. 즉시 정지]
 void wheelchair_admin::on_pbStop_clicked()
 {
-    const QString robotId = selectedRobotId();
-    if (robotId.isEmpty()) {
-        QMessageBox::warning(this, tr("알림"), tr("즉시 정지할 로봇을 선택하세요."));
+    if (m_selectedRobotId == -1) {
+        QMessageBox::warning(this, "알림", "정지할 로봇을 선택해주세요.");
         return;
     }
 
-    // TODO: 서버/ROS2에 E-stop 또는 goal cancel 명령 전송
-    QMessageBox::information(this, tr("즉시 정지"),
-                             tr("로봇 %1 에 즉시 정지 명령을 전송했습니다. (TODO)").arg(robotId));
+    auto reply = QMessageBox::question(this, "즉시 정지",
+                                       QString("로봇 %1번을 즉시 정지하시겠습니까?").arg(m_selectedRobotId),
+                                       QMessageBox::Yes | QMessageBox::No);
+
+    if (reply == QMessageBox::Yes) {
+        // TODO: [수정필요] 정지 명령에 해당하는 unsigned char 값을 넣으세요 (예: 2)
+        int stopOrder = 2;
+        QString name = "admin";
+
+        if (DatabaseManager::instance().updateRobotOrder(m_selectedRobotId, stopOrder, name)) {
+            QMessageBox::information(this, "성공", "정지 명령을 전송했습니다.");
+            refreshRobotTable();
+        } else {
+            QMessageBox::critical(this, "오류", "명령 전송 실패");
+        }
+    }
 }
 
+// [3. 동작 재개]
 void wheelchair_admin::on_pbResume_clicked()
 {
-    const QString robotId = selectedRobotId();
-    if (robotId.isEmpty()) {
-        QMessageBox::warning(this, tr("알림"), tr("동작 재개할 로봇을 선택하세요."));
+    if (m_selectedRobotId == -1) {
+        QMessageBox::warning(this, "알림", "로봇을 선택해주세요.");
         return;
     }
 
-    // TODO: 일시정지 해제 / 재개 명령 전송
-    QMessageBox::information(this, tr("동작 재개"),
-                             tr("로봇 %1 에 동작 재개 명령을 전송했습니다. (TODO)").arg(robotId));
+    auto reply = QMessageBox::question(this, "동작 재개",
+                                       QString("로봇 %1번의 동작을 재개하시겠습니까?").arg(m_selectedRobotId),
+                                       QMessageBox::Yes | QMessageBox::No);
+
+    if (reply == QMessageBox::Yes) {
+        // TODO: [수정필요] 재개 명령값 (예: 3)
+        int resumeOrder = 3;
+        QString name = "admin";
+
+        if (DatabaseManager::instance().updateRobotOrder(m_selectedRobotId, resumeOrder, name)) {
+            QMessageBox::information(this, "성공", "재개 명령을 전송했습니다.");
+            refreshRobotTable();
+        }
+    }
 }
 
+// [4. 대기 스테이션 귀환]
 void wheelchair_admin::on_pbGoWait_clicked()
 {
-    const QString robotId = selectedRobotId();
-    if (robotId.isEmpty()) {
-        QMessageBox::warning(this, tr("알림"), tr("대기 스테이션으로 보낼 로봇을 선택하세요."));
+    if (m_selectedRobotId == -1) {
+        QMessageBox::warning(this, "알림", "로봇을 선택해주세요.");
         return;
     }
 
-    // TODO: '대기 스테이션' 좌표로 이동 goal 전송
-    QMessageBox::information(this, tr("대기 스테이션 귀환"),
-                             tr("로봇 %1 을 대기 스테이션으로 이동시키는 명령을 전송했습니다. (TODO)").arg(robotId));
+    auto reply = QMessageBox::question(this, "복귀 명령",
+                                       "대기 스테이션으로 복귀시키겠습니까?",
+                                       QMessageBox::Yes | QMessageBox::No);
+    if (reply == QMessageBox::Yes) {
+        // TODO: [수정필요] 대기 스테이션 복귀 명령값 (예: 4)
+        int waitOrder = 4;
+        QString name = "admin";
+
+        if (DatabaseManager::instance().updateRobotOrder(m_selectedRobotId, waitOrder, name)) {
+            QMessageBox::information(this, "성공", "복귀 명령을 전송했습니다.");
+            refreshRobotTable();
+        }
+    }
 }
 
+// [5. 충전 스테이션 이동]
 void wheelchair_admin::on_pbGoCharge_clicked()
 {
-    const QString robotId = selectedRobotId();
-    if (robotId.isEmpty()) {
-        QMessageBox::warning(this, tr("알림"), tr("충전 스테이션으로 보낼 로봇을 선택하세요."));
+    if (m_selectedRobotId == -1) {
+        QMessageBox::warning(this, "알림", "로봇을 선택해주세요.");
         return;
     }
 
-    // TODO: '충전 스테이션' 좌표로 이동 goal 전송
-    QMessageBox::information(this, tr("충전 스테이션 이동"),
-                             tr("로봇 %1 을 충전 스테이션으로 이동시키는 명령을 전송했습니다. (TODO)").arg(robotId));
+    auto reply = QMessageBox::question(this, "충전 명령",
+                                       "충전 스테이션으로 이동하시겠습니까?",
+                                       QMessageBox::Yes | QMessageBox::No);
+    if (reply == QMessageBox::Yes) {
+        // TODO: [수정필요] 충전소 이동 명령값 (예: 5)
+        int chargeOrder = 5;
+        QString name = "admin";
+
+        if (DatabaseManager::instance().updateRobotOrder(m_selectedRobotId, chargeOrder, name)) {
+            QMessageBox::information(this, "성공", "충전 명령을 전송했습니다.");
+            refreshRobotTable();
+        }
+    }
 }
 
 void wheelchair_admin::on_pbAddWheel_clicked()
