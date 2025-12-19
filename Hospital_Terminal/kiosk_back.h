@@ -15,6 +15,9 @@ public:
     explicit kiosk_back(QWidget *parent = nullptr);
     ~kiosk_back();
 
+signals:
+    void goMain();
+
 private:
     Ui::kiosk_back *ui;
 };
