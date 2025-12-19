@@ -2,10 +2,11 @@ import socket
 import struct
 import threading
 import time
+import math
 
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import PoseWithCovarianceStamped
+from geometry_msgs.msg import PoseWithCovarianceStamped, Quaternion
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import BatteryState
 
@@ -31,12 +32,13 @@ HDR_FMT = "<BBBB"
 HDR_SIZE = struct.calcsize(HDR_FMT)  # 크기: 4바이트
 
 # ------------------------------------------
-# 로봇 상태 데이터 (RobotStateData) 정의: 13 Bytes
+# 로봇 상태 데이터 (RobotStateData) 정의: 17 Bytes
 # 포맷: < (리틀 엔디안)
-# i (배터리, int 4B), f (x좌표, float 4B), f (y좌표, float 4B), B (이동여부, uchar 1B)
+# i (배터리, int 4B), f (x좌표, float 4B), f (y좌표, float 4B), 
+# f (theta, float 4B), B (이동여부, uchar 1B)
 # ------------------------------------------
-STATE_FMT = "<iffB"
-STATE_SIZE = struct.calcsize(STATE_FMT)  # 크기: 13바이트
+STATE_FMT = "<ifffB"
+STATE_SIZE = struct.calcsize(STATE_FMT)  # 크기: 17바이트
 
 
 class TcpBridge(Node):
@@ -61,6 +63,7 @@ class TcpBridge(Node):
         # 서버로 보낼 로봇의 현재 상태값들
         self.x = 0.0
         self.y = 0.0
+        self.theta = 0.0           # 로봇이 바라보는 방향 (라디안)
         self.battery_percent = 100
         self.is_moving = 0
 
@@ -103,17 +106,34 @@ class TcpBridge(Node):
         )
 
     # ==========================================
+    # Quaternion → Yaw 변환 함수
+    # ==========================================
+    def quaternion_to_yaw(self, q: Quaternion) -> float:
+        """
+        Quaternion(x, y, z, w)을 Yaw 각도(라디안)로 변환
+        - Yaw: Z축 회전 (2D 평면에서의 방향)
+        - 범위: -π ~ π (-3.14 ~ 3.14)
+        """
+        siny_cosp = 2.0 * (q.w * q.z + q.x * q.y)
+        cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
+        return math.atan2(siny_cosp, cosy_cosp)
+
+    # ==========================================
     # ROS 콜백 함수 (데이터 수집)
     # ==========================================
     def pose_cb(self, msg: PoseWithCovarianceStamped):
         """AMCL 위치 데이터 수신 시 호출"""
         self.x = float(msg.pose.pose.position.x)
         self.y = float(msg.pose.pose.position.y)
+        # Quaternion을 Yaw로 변환하여 저장
+        self.theta = self.quaternion_to_yaw(msg.pose.pose.orientation)
 
     def odom_pose_cb(self, msg: Odometry):
         """Odom 위치 데이터 수신 시 호출 (AMCL 미사용 시)"""
         self.x = float(msg.pose.pose.position.x)
         self.y = float(msg.pose.pose.position.y)
+        # Quaternion을 Yaw로 변환하여 저장
+        self.theta = self.quaternion_to_yaw(msg.pose.pose.orientation)
 
     def odom_twist_cb(self, msg: Odometry):
         """로봇의 속도(Twist)를 확인하여 움직임 여부(is_moving) 갱신"""
@@ -251,13 +271,14 @@ class TcpBridge(Node):
             # 2. 로그인 안 된 상태면 로그인 패킷 먼저 전송
             self.send_login_once()
 
-            # 3. 로봇 상태 데이터 패킹
+            # 3. 로봇 상태 데이터 패킹 (theta 추가)
             payload = struct.pack(
                 STATE_FMT,
-                int(self.battery_percent),  # int32
-                float(self.x),              # float32
-                float(self.y),              # float32
-                int(self.is_moving)         # uint8
+                int(self.battery_percent),  # int32 (4B)
+                float(self.x),              # float32 (4B)
+                float(self.y),              # float32 (4B)
+                float(self.theta),          # float32 (4B) - 바라보는 방향
+                int(self.is_moving)         # uint8 (1B)
             )
             
             # 사이즈 검증 (실수 방지용)
