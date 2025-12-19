@@ -176,6 +176,24 @@
               </color>
              </brush>
             </colorrole>
+            <colorrole role="Base">
+             <brush brushstyle="SolidPattern">
+              <color alpha="255">
+               <red>246</red>
+               <green>97</green>
+               <blue>81</blue>
+              </color>
+             </brush>
+            </colorrole>
+            <colorrole role="Window">
+             <brush brushstyle="SolidPattern">
+              <color alpha="255">
+               <red>246</red>
+               <green>97</green>
+               <blue>81</blue>
+              </color>
+             </brush>
+            </colorrole>
             <colorrole role="PlaceholderText">
              <brush brushstyle="SolidPattern">
               <color alpha="128">
@@ -220,6 +238,24 @@
                <red>255</red>
                <green>255</green>
                <blue>255</blue>
+              </color>
+             </brush>
+            </colorrole>
+            <colorrole role="Base">
+             <brush brushstyle="SolidPattern">
+              <color alpha="255">
+               <red>246</red>
+               <green>97</green>
+               <blue>81</blue>
+              </color>
+             </brush>
+            </colorrole>
+            <colorrole role="Window">
+             <brush brushstyle="SolidPattern">
+              <color alpha="255">
+               <red>246</red>
+               <green>97</green>
+               <blue>81</blue>
               </color>
              </brush>
             </colorrole>
@@ -273,9 +309,18 @@
             <colorrole role="Base">
              <brush brushstyle="SolidPattern">
               <color alpha="255">
-               <red>251</red>
-               <green>206</green>
-               <blue>197</blue>
+               <red>246</red>
+               <green>97</green>
+               <blue>81</blue>
+              </color>
+             </brush>
+            </colorrole>
+            <colorrole role="Window">
+             <brush brushstyle="SolidPattern">
+              <color alpha="255">
+               <red>246</red>
+               <green>97</green>
+               <blue>81</blue>
               </color>
              </brush>
             </colorrole>
@@ -308,7 +353,8 @@
           <bool>false</bool>
          </property>
          <property name="styleSheet">
-          <string notr="true">color: rgb(255, 255, 255);</string>
+          <string notr="true">color: rgb(255, 255, 255);
+background-color: rgb(246, 97, 81);</string>
          </property>
          <property name="text">
           <string>환자 조회</string>
@@ -384,6 +430,24 @@
               </color>
              </brush>
             </colorrole>
+            <colorrole role="Base">
+             <brush brushstyle="SolidPattern">
+              <color alpha="255">
+               <red>224</red>
+               <green>27</green>
+               <blue>36</blue>
+              </color>
+             </brush>
+            </colorrole>
+            <colorrole role="Window">
+             <brush brushstyle="SolidPattern">
+              <color alpha="255">
+               <red>224</red>
+               <green>27</green>
+               <blue>36</blue>
+              </color>
+             </brush>
+            </colorrole>
             <colorrole role="PlaceholderText">
              <brush brushstyle="SolidPattern">
               <color alpha="128">
@@ -428,6 +492,24 @@
                <red>255</red>
                <green>255</green>
                <blue>255</blue>
+              </color>
+             </brush>
+            </colorrole>
+            <colorrole role="Base">
+             <brush brushstyle="SolidPattern">
+              <color alpha="255">
+               <red>224</red>
+               <green>27</green>
+               <blue>36</blue>
+              </color>
+             </brush>
+            </colorrole>
+            <colorrole role="Window">
+             <brush brushstyle="SolidPattern">
+              <color alpha="255">
+               <red>224</red>
+               <green>27</green>
+               <blue>36</blue>
               </color>
              </brush>
             </colorrole>
@@ -478,6 +560,24 @@
               </color>
              </brush>
             </colorrole>
+            <colorrole role="Base">
+             <brush brushstyle="SolidPattern">
+              <color alpha="255">
+               <red>224</red>
+               <green>27</green>
+               <blue>36</blue>
+              </color>
+             </brush>
+            </colorrole>
+            <colorrole role="Window">
+             <brush brushstyle="SolidPattern">
+              <color alpha="255">
+               <red>224</red>
+               <green>27</green>
+               <blue>36</blue>
+              </color>
+             </brush>
+            </colorrole>
             <colorrole role="PlaceholderText">
              <brush brushstyle="SolidPattern">
               <color alpha="128">
@@ -501,7 +601,8 @@
           <cursorShape>OpenHandCursor</cursorShape>
          </property>
          <property name="styleSheet">
-          <string notr="true">color: rgb(255, 255, 255);</string>
+          <string notr="true">color: rgb(255, 255, 255);
+background-color: rgb(224, 27, 36);</string>
          </property>
          <property name="text">
           <string>휠체어 호출</string>

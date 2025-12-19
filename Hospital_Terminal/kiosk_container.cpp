@@ -1,8 +1,6 @@
 #include "kiosk_container.h"
 #include "ui_kiosk_container.h"
 
-#include <QPushButton>
-
 #include "kiosk_main.h"
 #include "kiosk_search.h"
 #include "kiosk_login.h"
@@ -16,7 +14,7 @@ kiosk_container::kiosk_container(QWidget *parent)
     ui->setupUi(this);
 
     // ---------------------------------
-    // 1. 실제 kiosk 페이지 생성
+    // 1. 페이지 생성
     // ---------------------------------
     kiosk_main   *pageMain   = new kiosk_main(this);
     kiosk_search *pageSearch = new kiosk_search(this);
@@ -25,8 +23,7 @@ kiosk_container::kiosk_container(QWidget *parent)
     kiosk_back   *pageBack   = new kiosk_back(this);
 
     // ---------------------------------
-    // 2. stackedWidget 교체 삽입
-    // (Qt Designer 기본 페이지 제거)
+    // 2. stackedWidget 교체
     // ---------------------------------
     ui->stackedWidget->removeWidget(ui->stackedWidget->widget(0));
     ui->stackedWidget->insertWidget(0, pageMain);
@@ -46,86 +43,58 @@ kiosk_container::kiosk_container(QWidget *parent)
     ui->stackedWidget->setCurrentWidget(pageMain);
 
     // ---------------------------------
-    // 3. 버튼 연결 (화면 전환)
+    // kiosk_main
     // ---------------------------------
+    connect(pageMain, &kiosk_main::goSearch, this, [=]() {
+        ui->stackedWidget->setCurrentWidget(pageSearch);
+    });
 
-    // ===== kiosk_main =====
+    connect(pageMain, &kiosk_main::goLogin, this, [=]() {
+        ui->stackedWidget->setCurrentWidget(pageLogin);
+    });
 
-    // 메인 → 환자 조회
-    connect(pageMain->findChild<QPushButton*>("pbkioskpatient"),
-            &QPushButton::clicked,
-            this, [=]() {
-                prevPage = pageMain;
-                ui->stackedWidget->setCurrentWidget(pageSearch);
-            });
+    // ---------------------------------
+    // kiosk_search
+    // ---------------------------------
+    connect(pageSearch, &kiosk_search::searchAccepted, this, [=]() {
+        prevPage = pageSearch;
+        ui->stackedWidget->setCurrentWidget(pageWheel);
+    });
 
-    // 메인 → 휠체어 호출 (로그인)
-    connect(pageMain->findChild<QPushButton*>("pbkioskwheel"),
-            &QPushButton::clicked,
-            this, [=]() {
-                prevPage = pageMain;
-                ui->stackedWidget->setCurrentWidget(pageLogin);
-            });
+    connect(pageSearch, &kiosk_search::goBack, this, [=]() {
+        ui->stackedWidget->setCurrentWidget(pageMain);
+    });
 
-    // ===== kiosk_login =====
+    // ---------------------------------
+    // kiosk_login
+    // ---------------------------------
+    connect(pageLogin, &kiosk_login::loginAccepted, this, [=]() {
+        prevPage = pageLogin;
+        ui->stackedWidget->setCurrentWidget(pageWheel);
+    });
 
-    // 로그인 → 휠체어 호출
-    connect(pageLogin->findChild<QPushButton*>("btn_login"),
-            &QPushButton::clicked,
-            this, [=]() {
-                prevPage = pageLogin;
-                ui->stackedWidget->setCurrentWidget(pageWheel);
-            });
+    connect(pageLogin, &kiosk_login::goBack, this, [=]() {
+        ui->stackedWidget->setCurrentWidget(pageMain);
+    });
 
-    // 로그인 → 뒤로
-    connect(pageLogin->findChild<QPushButton*>("btn_back"),
-            &QPushButton::clicked,
-            this, [=]() {
-                ui->stackedWidget->setCurrentWidget(pageMain);
-            });
+    // ---------------------------------
+    // kiosk_wheel
+    // ---------------------------------
+    connect(pageWheel, &kiosk_wheel::wheelConfirmed, this, [=]() {
+        ui->stackedWidget->setCurrentWidget(pageBack);
+    });
 
-    // ===== kiosk_search =====
+    connect(pageWheel, &kiosk_wheel::goBack, this, [=]() {
+        if (prevPage)
+            ui->stackedWidget->setCurrentWidget(prevPage);
+    });
 
-    // 환자 조회 → 휠체어 호출
-    connect(pageSearch->findChild<QPushButton*>("btn_call"),
-            &QPushButton::clicked,
-            this, [=]() {
-                prevPage = pageSearch;
-                ui->stackedWidget->setCurrentWidget(pageWheel);
-            });
-
-    // 환자 조회 → 뒤로
-    connect(pageSearch->findChild<QPushButton*>("btn_back"),
-            &QPushButton::clicked,
-            this, [=]() {
-                ui->stackedWidget->setCurrentWidget(pageMain);
-            });
-
-    // ===== kiosk_wheel =====
-
-    // 휠체어 호출 → 뒤로 (이전 페이지)
-    connect(pageWheel->findChild<QPushButton*>("btn_back"),
-            &QPushButton::clicked,
-            this, [=]() {
-                if (prevPage)
-                    ui->stackedWidget->setCurrentWidget(prevPage);
-            });
-
-    // 휠체어 호출 → 완료
-    connect(pageWheel->findChild<QPushButton*>("btn_call"),
-            &QPushButton::clicked,
-            this, [=]() {
-                ui->stackedWidget->setCurrentWidget(pageBack);
-            });
-
-    // ===== kiosk_back =====
-
-    // 완료 → 메인
-    connect(pageBack->findChild<QPushButton*>("btn_main"),
-            &QPushButton::clicked,
-            this, [=]() {
-                ui->stackedWidget->setCurrentWidget(pageMain);
-            });
+    // ---------------------------------
+    // kiosk_back
+    // ---------------------------------
+    connect(pageBack, &kiosk_back::goMain, this, [=]() {
+        ui->stackedWidget->setCurrentWidget(pageMain);
+    });
 }
 
 kiosk_container::~kiosk_container()

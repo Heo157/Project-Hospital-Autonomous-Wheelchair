@@ -15,6 +15,11 @@ public:
     explicit kiosk_search(QWidget *parent = nullptr);
     ~kiosk_search();
 
+signals:
+    void callWheelchair();
+    void goBack();
+    void searchAccepted();
+
 private:
     Ui::kiosk_search *ui;
 };
