@@ -37,17 +37,18 @@
  * ============================================================================ */
 static const char *SQL_UPSERT =
     "INSERT INTO robot_status "
-    // 삽입할 컬럼 목록 (6개)
-    "(name, op_status, battery_percent, is_charging, current_x, current_y) "
+    // 삽입할 컬럼 목록 (7개)
+    "(name, op_status, battery_percent, is_charging, current_x, current_y, current_theta) "
     // 삽입할 값들 (? = 나중에 바인딩할 자리)
-    "VALUES (?, ?, ?, ?, ?, ?) "
+    "VALUES (?, ?, ?, ?, ?, ?, ?) "
     // 중복 키(name)가 있으면 아래 UPDATE 실행
-    "ON DUPLICATE KEY UPDATE "
+    "ON DUPLICATE KEY UPDATE "               
     "op_status=VALUES(op_status), "           // 운영 상태 갱신
     "battery_percent=VALUES(battery_percent), " // 배터리 잔량 갱신
     "is_charging=VALUES(is_charging), "       // 충전 상태 갱신
     "current_x=VALUES(current_x), "           // X 좌표 갱신
-    "current_y=VALUES(current_y)";            // Y 좌표 갱신
+    "current_y=VALUES(current_y),"
+    "current_theta=VALUES(current_theta)";            // Y 좌표 갱신
 
 /**
  * ============================================================================
@@ -206,7 +207,8 @@ int db_upsert_robot_status(
     uint32_t battery_percent,
     uint8_t is_charging,
     double current_x,
-    double current_y
+    double current_y,
+    double current_theta
 ){
     /* ------------------------------------------------------------------------
      * 입력값 검증
@@ -224,7 +226,7 @@ int db_upsert_robot_status(
      * - SQL의 6개 '?'에 각각 대응하는 값 정보를 담음
      * - 각 원소는 (타입, 데이터 주소, 길이) 정보를 포함
      * ------------------------------------------------------------------------ */
-    MYSQL_BIND b[6];
+    MYSQL_BIND b[7];
     memset(b, 0, sizeof(b));  // 구조체 초기화 (중요!)
 
     // 문자열 길이 미리 계산 (바인딩 시 필요)
@@ -285,6 +287,14 @@ int db_upsert_robot_status(
      * ======================================================================== */
     b[5].buffer_type = MYSQL_TYPE_DOUBLE;
     b[5].buffer      = &current_y;
+
+    /* ========================================================================
+     * 바인딩 7: current_theta (실수, 방향)
+     * - VALUES의 일곱 번째 '?'에 해당
+     * - MYSQL_TYPE_DOUBLE: 8바이트 부동소수점
+     * ======================================================================== */
+    b[6].buffer_type = MYSQL_TYPE_DOUBLE;
+    b[6].buffer      = &current_theta;
 
     /* ------------------------------------------------------------------------
      * Statement에 바인딩 정보 등록

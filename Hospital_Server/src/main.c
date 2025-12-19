@@ -150,16 +150,14 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
             // 페이로드를 RobotStateData 구조체 모양으로 해석
             if (header.payload_len == sizeof(RobotStateData)) {
                 RobotStateData* st = (RobotStateData*)buffer;
-                printf("State: Battery=%d%%, Pos=(%.2f, %.2f)\n",
-                    st->battery_level, st->current_x, st->current_y);
+                printf("State: Battery=%d%%, Pos=(%.2f, %.2f), Theta=%.2f\n",
+                    st->battery_level, st->current_x, st->current_y, st->theta);
 
                 //------- 추가 ------
                 // 로봇이 DB에 등록되어 있는지 확인
                 if (db_ok) {
-                    int exists = db_check_robot_exists(&db, robot_name);
-                    if (exists != 1) {
-                        // DB에 없으면 무시 (Qt에서 먼저 등록해야 함)
-                        printf("[DB] Robot '%s' not registered yet\n", robot_name);
+                    if (robot_name[0] == '\0') {
+                        printf("[DB] robot_name empty. Send MSG_LOGIN_REQ first.\n");
                         break;
                     }
                     
