@@ -3,5 +3,7 @@
         <file>icons/wifi.png</file>
         <file>icons/mascot.png</file>
         <file>icons/mascotbye.png</file>
+        <file>icons/Lan.png</file>
+        <file>icons/caution.png</file>
     </qresource>
 </RCC>

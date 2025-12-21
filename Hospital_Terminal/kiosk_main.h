@@ -15,6 +15,10 @@ public:
     explicit kiosk_main(QWidget *parent = nullptr);
     ~kiosk_main();
 
+signals:
+    void goLogin();
+    void goSearch();
+
 private:
     Ui::kiosk_main *ui;
 };

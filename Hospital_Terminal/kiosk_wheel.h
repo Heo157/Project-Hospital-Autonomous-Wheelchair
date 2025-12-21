@@ -2,6 +2,7 @@
 #define KIOSK_WHEEL_H
 
 #include <QWidget>
+#include <QString>
 
 namespace Ui {
 class kiosk_wheel;
@@ -15,8 +16,13 @@ public:
     explicit kiosk_wheel(QWidget *parent = nullptr);
     ~kiosk_wheel();
 
+signals:
+    void wheelConfirmed();
+    void goBack();
+
 private:
     Ui::kiosk_wheel *ui;
+    QString selectedDestination;
 };
 
 #endif // KIOSK_WHEEL_H

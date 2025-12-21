@@ -15,6 +15,10 @@ public:
     explicit kiosk_login(QWidget *parent = nullptr);
     ~kiosk_login();
 
+signals:
+    void loginAccepted();
+    void goBack();
+
 private:
     Ui::kiosk_login *ui;
 };

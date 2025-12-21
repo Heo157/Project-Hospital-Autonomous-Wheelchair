@@ -9,6 +9,8 @@
 #include <QTimer>
 #include <QDateTime>
 #include <QPixmap>
+#include <QProcess>
+#include <QStringList>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -16,15 +18,50 @@ MainWindow::MainWindow(QWidget *parent)
     , virtualKeyboard(nullptr)
 {
     ui->setupUi(this);
+    //-----------네트워크 로고(초기)----------//
+    QPixmap pmWifi(":/icons/wifi.png");
+    QPixmap pmLan(":/icons/Lan.png");
+    QPixmap pmCaution(":/icons/caution.png");
 
-    QPixmap wifi(":/icons/wifi.png");
-    if (wifi.isNull()) {
-        qDebug() << "wifi resource load failed";
-    } else {
-        ui->label_wifi->setPixmap(wifi);
-        ui->label_wifi->setScaledContents(true);
-        ui->label_wifi->setAlignment(Qt::AlignCenter);
-    }
+    ui->label_wifi->setScaledContents(true);
+    ui->label_wifi->setAlignment(Qt::AlignCenter);
+
+    // 초기값은 연결 확인 전이므로 경고 아이콘
+    ui->label_wifi->setPixmap(pmCaution);
+
+    //-----------네트워크 상태 감시 타이머----------//
+    QTimer *netTimer = new QTimer(this);
+
+    connect(netTimer, &QTimer::timeout, this, [=]() {
+
+        // 1) nmcli로 연결 상태 확인 (NetworkManager 기준)
+        QProcess proc;
+        proc.start("nmcli", {"-t", "-f", "TYPE,STATE", "device"});
+        if (!proc.waitForFinished(1000)) {
+            // 명령 실패/타임아웃 → 경고
+            ui->label_wifi->setPixmap(pmCaution);
+            return;
+        }
+
+        QString out = QString::fromUtf8(proc.readAllStandardOutput());
+
+        // 2) 우선순위: ethernet > wifi > none
+        // (원하면 wifi를 우선으로 바꿔도 됨)
+        if (out.contains("ethernet:connected")) {
+            ui->label_wifi->setPixmap(pmLan);
+        }
+        else if (out.contains("wifi:connected")) {
+            ui->label_wifi->setPixmap(pmWifi);
+        }
+        else {
+            ui->label_wifi->setPixmap(pmCaution);
+        }
+    });
+
+    // 처음 실행 시 즉시 반영 + 이후 주기 실행
+    netTimer->start(3000);
+
+    //-----------년일월시----------//
     QTimer *timeTimer = new QTimer(this);
 
     connect(timeTimer, &QTimer::timeout, this, [=]() {
