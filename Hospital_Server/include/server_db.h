@@ -124,4 +124,16 @@ int db_get_order_and_goal(
  */
 int db_reset_order(DBContext *ctx, const char *name);
 
+/**
+ * @brief 특정 로봇에게 내려진 주문(order=1)이 있는지 확인하고, 있으면 목표좌표 반환
+ * @param goal_x, goal_y: 결과값을 담을 포인터
+ * @return 1: 주문 있음(좌표 반환), 0: 주문 없음, -1: 에러
+ */
+int db_check_new_order(DBContext *ctx, const char *name, double *goal_x, double *goal_y);
+
+/**
+ * @brief 주문 처리가 완료되었으므로 order 컬럼을 0으로 초기화
+ */
+int db_reset_order(DBContext *ctx, const char *name);
+
 #endif // SERVER_DB_H
