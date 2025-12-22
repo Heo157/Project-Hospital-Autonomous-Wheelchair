@@ -38,6 +38,7 @@ HEADERS += \
     kiosk_main.h \
     kiosk_search.h \
     kiosk_wheel.h \
+    live_monitor_dialog.h \
     mainwindow.h \
     search_medical.h \
     tab_admin.h \

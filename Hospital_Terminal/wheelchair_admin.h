@@ -16,7 +16,11 @@
 #include <QTimer>
 #include <QMenu>
 #include <QAction>
+#include <QPushButton> // 버튼 포함
+#include <QMap>
+#include <QSet> // QSet 포함
 
+// 로봇 정보 구조체
 struct RobotInfo{
     int id;
     QString name;
@@ -42,7 +46,6 @@ class wheelchair_admin : public QWidget
     Q_OBJECT
 
 protected:
-    //창 크기가 변할 때 호출되는 이벤트 함수
     void resizeEvent(QResizeEvent *event) override;
 
 public:
@@ -50,7 +53,6 @@ public:
     ~wheelchair_admin();
 
 private slots:
-    // 로봇 상태 테이블에서 행 선택 시
     void on_twRobotStatus_cellClicked(int row, int column);
 
     // 제어 버튼들
@@ -61,42 +63,39 @@ private slots:
     void on_pbGoCharge_clicked();
     void on_pbAddWheel_clicked();
 
-    void refreshRobotTable();
+    // [통합 갱신] 타이머에 의해 호출됨
+    void refreshAll();
 
-    //우클릭 메뉴 요청 시 실행될 슬롯
     void onCustomContextMenuRequested(const QPoint &pos);
-
 
 private:
     Ui::wheelchair_admin *ui;
 
     void initRobotTable();
-    void initCallLogTable();
-    QString selectedRobotId() const;  // 현재 선택된 로봇 ID
-    bool addNewRobotToDB(QString name, double x, double y, double theta);
+    void initCallLogTable(); // 테이블 헤더 설정
 
-    QList<QPushButton*> mapButtons;
+    // [신규] 호출 이력 데이터 채우기
+    void refreshCallLog();
+    // [기존] 로봇 상태 데이터 채우기
+    void refreshRobotTable();
+
+    QString selectedRobotId() const;
+
     void updateMapMarkers(const QList<RobotInfo> &robotList);
 
     int m_selectedRobotId = -1;
-
     void selectRobot(int robotId);
 
     QMap<int, QPushButton*> m_robotButtons;
-
     QTimer *updateTimer;
 
-    //db 삭제 로직
     void deleteRobotProcess(int robotId);
 
-    //맵의 실제 크기
+    // 맵 상수
     const double MAP_REAL_WIDTH = 20.0;
     const double MAP_REAL_HEIGHT = 10.0;
-
-    // (옵션) 맵 원점 보정 (맵의 (0,0)이 시작하는 오프셋이 있다면 사용)
     const double MAP_ORIGIN_X = 0.0;
     const double MAP_ORIGIN_Y = 0.0;
-
 };
 
 #endif // WHEELCHAIR_ADMIN_H
