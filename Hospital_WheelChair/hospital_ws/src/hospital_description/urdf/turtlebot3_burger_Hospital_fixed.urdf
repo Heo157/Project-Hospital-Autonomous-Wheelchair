@@ -265,9 +265,64 @@
   </joint>
   <!-- Top Plate End -->
 
+<!--   LiDAR -->
+  <gazebo reference="base_scan">
+    <sensor type="ray" name="lidar">
+      <pose>0 0 0 0 0 0</pose>
+      <visualize>true</visualize>
+      <update_rate>10</update_rate>
+
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>360</samples>
+            <resolution>1</resolution>
+            <min_angle>-3.14159</min_angle>
+            <max_angle>3.14159</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.12</min>
+          <max>3.5</max>
+          <resolution>0.01</resolution>
+        </range>
+      </ray>
+
+      <plugin name="gazebo_ros_laser" filename="libgazebo_ros_ray_sensor.so">
+        <ros>
+          <namespace>/</namespace>
+        </ros>
+        <output_type>sensor_msgs/LaserScan</output_type>
+        <frame_name>base_scan</frame_name>
+        <topic_name>scan</topic_name>
+      </plugin>
+    </sensor>
+  </gazebo>
 
 
- 
+    <!-- Diff Drive -->
+  <gazebo>
+    <plugin name="diff_drive" filename="libgazebo_ros_diff_drive.so">
+      <ros>
+        <namespace>/</namespace>
+      </ros>
+
+      <left_joint>wheel_left_joint</left_joint>
+      <right_joint>wheel_right_joint</right_joint>
+
+      <wheel_separation>0.160</wheel_separation>
+      <wheel_diameter>0.066</wheel_diameter>
+
+      <cmd_vel_topic>cmd_vel</cmd_vel_topic>
+      <odom_topic>odom</odom_topic>
+
+      <odom_frame>odom</odom_frame>
+      <robot_base_frame>base_footprint</robot_base_frame>
+
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>false</publish_odom_tf>
+    </plugin>
+  </gazebo>
 
 
 </robot>
