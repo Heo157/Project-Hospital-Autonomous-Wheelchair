@@ -391,11 +391,11 @@ int db_get_priority_call(DBContext *ctx, int *call_id, char *start_loc, char *ca
  * 2) 배터리가 20% 이상 (작업 수행 가능)
  */
 int db_get_available_robot(DBContext *ctx, char *robot_name) {
-    // 쿼리 실패 방지를 위해 ctx 확인
     if (!ctx || !ctx->conn) return -1;
 
+    // [수정] 오직 'WAITING' 상태인 로봇만 조회
     const char *query = "SELECT name FROM robot_status "
-                        "WHERE (op_status = 'WAITING) "
+                        "WHERE op_status = 'WAITING' "
                         "AND battery_percent > 20 "
                         "LIMIT 1";
 
@@ -412,12 +412,12 @@ int db_get_available_robot(DBContext *ctx, char *robot_name) {
     
     if (row) {
         strncpy(robot_name, row[0], 63);
-        robot_name[63] = '\0'; // 안전장치
+        robot_name[63] = '\0';
         found = 1;
     }
     
     mysql_free_result(res);
-    return found; // 1: 로봇 찾음, 0: 없음
+    return found;
 }
 
 /**
@@ -503,27 +503,26 @@ void db_process_dispatch_cycle(DBContext *ctx) {
     char robot_name[64];
     double goal_x, goal_y;
 
-    // 1. 우선순위 높은 대기 호출이 있는가?
-    if (db_get_priority_call(ctx, &call_id, start_loc, caller)) {
+    // 1. 우선순위 높은 대기 호출 확인 (에러(-1)가 아니고 찾았을 때(1)만 진입)
+    if (db_get_priority_call(ctx, &call_id, start_loc, caller) == 1) {
         
-        // 2. 가용한(STOP/WAITING) 로봇이 있는가?
-        if (db_get_available_robot(ctx, robot_name)) {
+        // 2. 가용한 로봇 확인
+        // [수정] 단순히 if(...)라고 쓰면 -1(에러)도 true가 됩니다. == 1을 꼭 붙여주세요.
+        if (db_get_available_robot(ctx, robot_name) == 1) {
             
-            // 3. 출발지 장소명을 좌표로 변환할 수 있는가?
-            if (db_get_location_coords(ctx, start_loc, &goal_x, &goal_y)) {
+            // 3. 좌표 변환
+            if (db_get_location_coords(ctx, start_loc, &goal_x, &goal_y) == 1) {
                 
                 printf("[Dispatch] Matched! Call #%d (%s) -> Robot '%s' (Goal: %.2f, %.2f)\n",
                        call_id, start_loc, robot_name, goal_x, goal_y);
 
-                // 4. 배차 실행 (DB 업데이트)
+                // 4. 배차 실행
                 db_assign_job_to_robot(ctx, robot_name, call_id, goal_x, goal_y, caller);
                 
             } else {
-                // 장소 이름을 DB에서 못 찾음 (예: 오타)
                 printf("[Dispatch] Error: Coordinates not found for location '%s'\n", start_loc);
             }
         } 
-        // 로봇이 없으면 이번 사이클은 넘어감 (다음 1초 뒤에 다시 시도)
     }
 }
 
