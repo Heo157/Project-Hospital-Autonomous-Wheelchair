@@ -5,5 +5,8 @@
         <file>icons/mascotbye.png</file>
         <file>icons/Lan.png</file>
         <file>icons/caution.png</file>
+        <file>icons/HJK_1.png</file>
+        <file>icons/HJK_2.png</file>
+        <file>icons/map_hospital.pgm</file>
     </qresource>
 </RCC>

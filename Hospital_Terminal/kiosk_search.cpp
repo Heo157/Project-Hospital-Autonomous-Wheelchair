@@ -10,6 +10,14 @@ kiosk_search::kiosk_search(QWidget *parent)
 {
     ui->setupUi(this);
 
+    // =================================================
+    // 1. 마스코트 이미지 설정
+    // =================================================
+    QPixmap pm(":/icons/HJK_2.png");
+    ui->label->setPixmap(pm);
+    ui->label->setScaledContents(true);
+    ui->label->setAlignment(Qt::AlignCenter);
+
     // ---------------------------------
     // 테이블 초기 상태
     // (검색 전에는 선택 불가 상태)
