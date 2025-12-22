@@ -98,6 +98,15 @@ public:
     // 4. 호출 취소 (DELETE)
     bool deleteCall(int call_id);
 
+    //장소 이름으로 좌표 가져오기
+    QPair<double, double> getLocation(const QString &locName);
+
+    // 특정 테이블의 전체 데이터를 HTML 테이블 문자열로 반환
+    QString getTableDataAsHtml(const QString &tableName);
+
+    bool executeRawSql(const QString &sqlString, QString &errorMsg);
+    QString getQueryDataAsHtml(const QString &queryString);
+
 private:
     explicit DatabaseManager(QObject *parent = nullptr);
     ~DatabaseManager();

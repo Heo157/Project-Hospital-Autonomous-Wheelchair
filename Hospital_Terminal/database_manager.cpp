@@ -1,4 +1,5 @@
 #include "database_manager.h"
+#include <QSqlRecord>
 
 DatabaseManager& DatabaseManager::instance()
 {
@@ -546,4 +547,128 @@ bool DatabaseManager::deleteCall(int call_id)
         return false;
     }
     return true;
+}
+
+//장소 이름으로 좌표 조회 (없으면 -1.0, -1.0 반환)
+QPair<double, double> DatabaseManager::getLocation(const QString &locName)
+{
+    QPair<double, double> coord = qMakePair(-1.0, -1.0);
+
+    if (!db.isOpen()) connectToDb();
+
+    QSqlQuery query;
+    query.prepare("SELECT x, y FROM map_location WHERE location_name = :name");
+    query.bindValue(":name", locName);
+
+    if (query.exec()) {
+        if (query.next()) {
+            coord.first = query.value(0).toDouble();  // x
+            coord.second = query.value(1).toDouble(); // y
+        }
+    } else {
+        qDebug() << "Get Location Error:" << query.lastError().text();
+    }
+    return coord;
+}
+
+// 테이블 이름을 받아서 HTML 표 형태로 반환하는 함수
+QString DatabaseManager::getTableDataAsHtml(const QString &tableName)
+{
+    if (!db.isOpen()) connectToDb();
+
+    // SQL Injection 방지를 위해 테이블 이름은 화이트리스트로 관리하거나 주의 필요
+    // 여기서는 관리자 전용 툴이라 가정하고 진행
+    QSqlQuery query(QString("SELECT * FROM %1").arg(tableName));
+
+    if (!query.exec()) {
+        return QString("<font color='red'>Error: %1</font>").arg(query.lastError().text());
+    }
+
+    // HTML 테이블 시작
+    QString html = "<table border='1' cellspacing='0' cellpadding='5' style='border-collapse:collapse; width:100%;'>";
+
+    // 1. 헤더 만들기
+    QSqlRecord record = query.record();
+    html += "<tr style='background-color: #444; color: white;'>";
+    for(int i=0; i<record.count(); ++i) {
+        html += QString("<th>%1</th>").arg(record.fieldName(i));
+    }
+    html += "</tr>";
+
+    // 2. 데이터 행 만들기
+    while(query.next()) {
+        html += "<tr>";
+        for(int i=0; i<record.count(); ++i) {
+            QString val = query.value(i).toString();
+            // NULL 값 처리
+            if(val.isEmpty()) val = "-";
+            html += QString("<td style='text-align:center;'>%1</td>").arg(val);
+        }
+        html += "</tr>";
+    }
+    html += "</table><br>";
+
+    return html;
+}
+
+bool DatabaseManager::executeRawSql(const QString &sqlString, QString &errorMsg)
+{
+    if (!db.isOpen()) {
+        if (!connectToDb()) {
+            errorMsg = "DB Connection Failed";
+            return false;
+        }
+    }
+
+    QSqlQuery query;
+    // 사용자가 입력한 쿼리 그대로 실행 (주의: 관리자용이므로 SQL Injection 신경 안 씀)
+    if (!query.exec(sqlString)) {
+        errorMsg = query.lastError().text();
+        return false;
+    }
+    return true;
+}
+
+QString DatabaseManager::getQueryDataAsHtml(const QString &queryString)
+{
+    if (!db.isOpen()) connectToDb();
+
+    QSqlQuery query;
+    // 사용자가 입력한 쿼리 그대로 실행
+    if (!query.exec(queryString)) {
+        return QString("<font color='red'>SQL Error: %1</font>").arg(query.lastError().text());
+    }
+
+    // 결과가 Select가 아니거나 비어있을 수 있으므로 체크
+    if (!query.isSelect()) {
+        return QString("<font color='green'>Query Executed (Rows affected: %1)</font>").arg(query.numRowsAffected());
+    }
+
+    // HTML 테이블 시작
+    QString html = "<table border='1' cellspacing='0' cellpadding='5' style='border-collapse:collapse; width:100%;'>";
+
+    // 1. 헤더 만들기
+    QSqlRecord record = query.record();
+    html += "<tr style='background-color: #444; color: white;'>";
+    for(int i=0; i<record.count(); ++i) {
+        html += QString("<th>%1</th>").arg(record.fieldName(i));
+    }
+    html += "</tr>";
+
+    // 2. 데이터 행 만들기
+    int rowCount = 0;
+    while(query.next()) {
+        rowCount++;
+        html += "<tr>";
+        for(int i=0; i<record.count(); ++i) {
+            QString val = query.value(i).toString();
+            if(val.isEmpty()) val = "-";
+            html += QString("<td style='text-align:center;'>%1</td>").arg(val);
+        }
+        html += "</tr>";
+    }
+    html += "</table><br>";
+
+    if (rowCount == 0) return "No data found.";
+    return html;
 }
