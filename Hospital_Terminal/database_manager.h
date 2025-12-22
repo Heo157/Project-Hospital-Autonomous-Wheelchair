@@ -26,6 +26,17 @@ struct PatientFullInfo {
     QDateTime admissionDate;
 };
 
+//휠체어 대기열 정보 구조체
+struct CallQueueItem {
+    int call_id;
+    QString call_time;
+    QString caller_name;
+    QString start_loc;
+    QString dest_loc;
+    int is_dispatched; // 0: 대기, 1: 배차완료
+    QString eta;
+};
+
 
 
 class DatabaseManager : public QObject
@@ -72,6 +83,20 @@ public:
     // 6. 병실 목록 가져오기 코드
     QStringList getWardList();
     QStringList getBedList(const QString &ward);
+
+
+    //휠체어 대기열 관련 함수
+    // 1. 환자 이름 목록 가져오기 (콤보박스용)
+    QStringList getPatientNameList();
+
+    // 2. 휠체어 호출 추가 (INSERT)
+    bool addCallToQueue(const QString &name, const QString &start, const QString &dest);
+
+    // 3. 대기열 목록 가져오기 (SELECT)
+    QList<CallQueueItem> getCallQueue();
+
+    // 4. 호출 취소 (DELETE)
+    bool deleteCall(int call_id);
 
 private:
     explicit DatabaseManager(QObject *parent = nullptr);

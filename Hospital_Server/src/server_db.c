@@ -328,3 +328,201 @@ int db_upsert_robot_status(
     
     return 0;  // 성공
 }
+
+
+/**
+ * @brief 1. 우선순위 공식에 따라 대기 호출 1개 조회
+ * * [정렬 기준]
+ * 1. p.is_emergency DESC : 응급 환자(1) 우선
+ * 2. d.base_priority DESC : 질병 점수가 높은 순 (뇌졸중 > 골절 > 타박상)
+ * 3. c.call_time ASC     : 먼저 호출한 순서
+ * * IFNULL/COALESCE: 환자 정보가 없으면 0점 처리하여 맨 뒤로 보냄
+ */
+int db_get_priority_call(DBContext *ctx, int *call_id, char *start_loc, char *caller_name) {
+    char query[1024];
+
+    // 복잡한 쿼리이므로 snprintf 대신 문자열 상수로 작성하거나 안전하게 복사
+    // 주의: call_queue의 caller_name과 patient_info의 name을 조인 조건으로 사용
+    const char *sql = 
+        "SELECT c.call_id, c.start_loc, c.caller_name "
+        "FROM call_queue c "
+        "LEFT JOIN patient_info p ON c.caller_name = p.name "
+        "LEFT JOIN disease_types d ON p.disease_code = d.disease_code "
+        "WHERE c.is_dispatched = 0 "
+        "ORDER BY "
+        "  COALESCE(p.is_emergency, 0) DESC, "
+        "  COALESCE(d.base_priority, 0) DESC, "
+        "  c.call_time ASC "
+        "LIMIT 1";
+
+    if (mysql_query(ctx->conn, sql)) {
+        fprintf(stderr, "[DB] Select Priority Call Error: %s\n", mysql_error(ctx->conn));
+        return -1;
+    }
+
+    MYSQL_RES *res = mysql_store_result(ctx->conn);
+    if (!res) return -1;
+
+    MYSQL_ROW row = mysql_fetch_row(res);
+    int found = 0;
+    
+    if (row) {
+        *call_id = atoi(row[0]);
+        // 안전한 문자열 복사
+        if(row[1]) strncpy(start_loc, row[1], 63); else start_loc[0] = '\0';
+        if(row[2]) strncpy(caller_name, row[2], 63); else caller_name[0] = '\0';
+        
+        // Null termination 보장
+        start_loc[63] = '\0';
+        caller_name[63] = '\0';
+        
+        found = 1;
+    }
+
+    mysql_free_result(res);
+    return found; // 1: 찾음, 0: 대기열 없음
+}
+
+/**
+ * @brief 2. 'WAITING' 상태인 로봇 하나 찾기
+ * 조건: 
+ * 1) op_status가  'WAITING' (놀고 있는 상태)
+ * 2) 배터리가 20% 이상 (작업 수행 가능)
+ */
+int db_get_available_robot(DBContext *ctx, char *robot_name) {
+    // 쿼리 실패 방지를 위해 ctx 확인
+    if (!ctx || !ctx->conn) return -1;
+
+    const char *query = "SELECT name FROM robot_status "
+                        "WHERE (op_status = 'WAITING) "
+                        "AND battery_percent > 20 "
+                        "LIMIT 1";
+
+    if (mysql_query(ctx->conn, query)) {
+        fprintf(stderr, "[DB] Select Robot Error: %s\n", mysql_error(ctx->conn));
+        return -1;
+    }
+
+    MYSQL_RES *res = mysql_store_result(ctx->conn);
+    if (!res) return -1;
+
+    MYSQL_ROW row = mysql_fetch_row(res);
+    int found = 0;
+    
+    if (row) {
+        strncpy(robot_name, row[0], 63);
+        robot_name[63] = '\0'; // 안전장치
+        found = 1;
+    }
+    
+    mysql_free_result(res);
+    return found; // 1: 로봇 찾음, 0: 없음
+}
+
+/**
+ * @brief 3. 장소 이름("정형외과")을 좌표(x, y)로 변환
+ * map_location 테이블에서 조회
+ */
+int db_get_location_coords(DBContext *ctx, const char *loc_name, double *x, double *y) {
+    if (!ctx || !ctx->conn) return -1;
+
+    char query[512];
+    // map_location 테이블이 존재해야 합니다.
+    snprintf(query, sizeof(query), 
+             "SELECT x, y FROM map_location WHERE location_name = '%s'", loc_name);
+
+    if (mysql_query(ctx->conn, query)) {
+        // 테이블이 없거나 쿼리 오류 시
+        fprintf(stderr, "[DB] Get Location Error: %s\n", mysql_error(ctx->conn));
+        return -1;
+    }
+
+    MYSQL_RES *res = mysql_store_result(ctx->conn);
+    if (!res) return -1;
+
+    MYSQL_ROW row = mysql_fetch_row(res);
+    int found = 0;
+    
+    if (row) {
+        *x = atof(row[0]);
+        *y = atof(row[1]);
+        found = 1;
+    } else {
+        // 맵에 없는 장소일 경우
+        fprintf(stderr, "[DB Warning] Unknown location: %s\n", loc_name);
+    }
+    
+    mysql_free_result(res);
+    return found;
+}
+
+/**
+ * @brief 4. 로봇에게 작업 할당 및 대기열 상태 변경 (트랜잭션급 처리)
+ * 1) robot_status 업데이트 (order=1, goal 설정)
+ * 2) call_queue 업데이트 (배차완료 처리)
+ */
+int db_assign_job_to_robot(DBContext *ctx, const char *robot_name, int call_id, double x, double y, const char *caller) {
+    if (!ctx || !ctx->conn) return -1;
+
+    char query[1024];
+    
+    // 1) 로봇 상태 업데이트: order=1, goal 좌표 설정, 상태=BUSY
+    // 주의: `order`는 SQL 예약어이므로 백틱(`)으로 감싸야 합니다.
+    snprintf(query, sizeof(query),
+             "UPDATE robot_status SET `order` = 1, goal_x = %f, goal_y = %f, "
+             "op_status = 'BUSY', who_called = '%s' WHERE name = '%s'",
+             x, y, caller, robot_name);
+    
+    if (mysql_query(ctx->conn, query)) {
+        fprintf(stderr, "[Dispatch] Update Robot Failed: %s\n", mysql_error(ctx->conn));
+        return -1;
+    }
+
+    // 2) 대기열 상태 업데이트: is_dispatched=1
+    // 필요하다면 eta 컬럼에 '이동중' 등의 텍스트를 넣을 수 있음
+    snprintf(query, sizeof(query),
+             "UPDATE call_queue SET is_dispatched = 1, eta = '이동중' WHERE call_id = %d",
+             call_id);
+             
+    if (mysql_query(ctx->conn, query)) {
+        fprintf(stderr, "[Dispatch] Update Queue Failed: %s\n", mysql_error(ctx->conn));
+        return -1;
+    }
+
+    return 0; // 성공
+}
+
+/**
+ * @brief [메인 로직] 배차 사이클 실행
+ * 배차 관리자 프로세스가 이 함수를 반복 호출합니다.
+ */
+void db_process_dispatch_cycle(DBContext *ctx) {
+    int call_id;
+    char start_loc[64], caller[64];
+    char robot_name[64];
+    double goal_x, goal_y;
+
+    // 1. 우선순위 높은 대기 호출이 있는가?
+    if (db_get_priority_call(ctx, &call_id, start_loc, caller)) {
+        
+        // 2. 가용한(STOP/WAITING) 로봇이 있는가?
+        if (db_get_available_robot(ctx, robot_name)) {
+            
+            // 3. 출발지 장소명을 좌표로 변환할 수 있는가?
+            if (db_get_location_coords(ctx, start_loc, &goal_x, &goal_y)) {
+                
+                printf("[Dispatch] Matched! Call #%d (%s) -> Robot '%s' (Goal: %.2f, %.2f)\n",
+                       call_id, start_loc, robot_name, goal_x, goal_y);
+
+                // 4. 배차 실행 (DB 업데이트)
+                db_assign_job_to_robot(ctx, robot_name, call_id, goal_x, goal_y, caller);
+                
+            } else {
+                // 장소 이름을 DB에서 못 찾음 (예: 오타)
+                printf("[Dispatch] Error: Coordinates not found for location '%s'\n", start_loc);
+            }
+        } 
+        // 로봇이 없으면 이번 사이클은 넘어감 (다음 1초 뒤에 다시 시도)
+    }
+}
+

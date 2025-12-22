@@ -465,3 +465,85 @@ QStringList DatabaseManager::getBedList(const QString &ward)
     }
     return list;
 }
+
+// 환자 이름 목록 가져오기
+// =============================================================
+QStringList DatabaseManager::getPatientNameList()
+{
+    QStringList list;
+    if (!db.isOpen()) connectToDb();
+
+    // 이름순으로 정렬해서 가져옴
+    QSqlQuery query("SELECT name FROM patient_info ORDER BY name ASC");
+    while (query.next()) {
+        list << query.value(0).toString();
+    }
+    return list;
+}
+
+// =============================================================
+// 휠체어 호출 대기열에 추가 (INSERT)
+// =============================================================
+bool DatabaseManager::addCallToQueue(const QString &name, const QString &start, const QString &dest)
+{
+    QSqlQuery query;
+    // call_time은 DEFAULT CURRENT_TIMESTAMP이므로 생략 가능
+    // is_dispatched(0), eta('-') 등은 기본값 활용
+    query.prepare("INSERT INTO call_queue (caller_name, start_loc, dest_loc, is_dispatched, eta) "
+                  "VALUES (:name, :start, :dest, 0, '-')");
+
+    query.bindValue(":name", name);
+    query.bindValue(":start", start);
+    query.bindValue(":dest", dest);
+
+    if (!query.exec()) {
+        qDebug() << "Add Call Queue Error:" << query.lastError().text();
+        return false;
+    }
+    return true;
+}
+
+// =============================================================
+// 대기열 전체 목록 조회 (SELECT)
+// =============================================================
+QList<CallQueueItem> DatabaseManager::getCallQueue()
+{
+    QList<CallQueueItem> list;
+    // 최근 호출한 순서(내림차순) 혹은 오래된 순서(오름차순) 중 선택. 여기선 최신이 위로 오게 함.
+    QSqlQuery query("SELECT call_id, call_time, caller_name, start_loc, dest_loc, is_dispatched, eta "
+                    "FROM call_queue ORDER BY call_time DESC");
+
+    while (query.next()) {
+        CallQueueItem item;
+        item.call_id = query.value(0).toInt();
+
+        // 시간 포맷 예쁘게 (YYYY-MM-DD hh:mm:ss)
+        QDateTime dt = query.value(1).toDateTime();
+        item.call_time = dt.toString("yyyy-MM-dd HH:mm:ss");
+
+        item.caller_name = query.value(2).toString();
+        item.start_loc = query.value(3).toString();
+        item.dest_loc = query.value(4).toString();
+        item.is_dispatched = query.value(5).toInt();
+        item.eta = query.value(6).toString();
+
+        list.append(item);
+    }
+    return list;
+}
+
+// =============================================================
+// 호출 취소 (DELETE)
+// =============================================================
+bool DatabaseManager::deleteCall(int call_id)
+{
+    QSqlQuery query;
+    query.prepare("DELETE FROM call_queue WHERE call_id = :id");
+    query.bindValue(":id", call_id);
+
+    if (!query.exec()) {
+        qDebug() << "Delete Call Error:" << query.lastError().text();
+        return false;
+    }
+    return true;
+}
