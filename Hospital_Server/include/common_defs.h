@@ -73,6 +73,7 @@ typedef enum {
 
     // --- [상태 정보 관련 (ROS -> Server -> Qt)] ---
     MSG_ROBOT_STATE   = 0x20,  // 배터리, 현재 위치 등 상태 보고
+    MSG_ASSIGN_GOAL   = 0x30,  // 로봇에게 목표 명령
     MSG_ERROR_REPORT  = 0x99   // 로봇 에러 발생 알림
 } MsgType;
 
@@ -91,6 +92,11 @@ typedef struct __attribute__((packed)) {
     uint8_t  msg_type;      // MsgType (메시지 종류)
     uint8_t  payload_len;   // 뒤에 따라올 데이터의 길이 (0이면 데이터 없음)
 } PacketHeader;
+
+typedef struct __attribute__((packed)) {
+    float x;
+    float y;
+} GoalAssignData;
 
 /**
  * @brief 좌표 이동용 데이터 구조체 (예시)

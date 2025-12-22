@@ -330,7 +330,132 @@ int db_upsert_robot_status(
     return 0;  // 성공
 }
 
+/* ============================================================================
+ * [주문 확인 쿼리]
+ * - 주의: 'order'는 SQL 예약어이므로 백틱(`)으로 감싸야 합니다.
+ * - name이 일치하고, order 컬럼 값이 1(명령 있음)인 행의 goal_x, goal_y를 조회
+ * ============================================================================ */
+static const char *SQL_CHECK_ORDER = 
+    "SELECT goal_x, goal_y FROM robot_status WHERE name = ? AND `order` = 1";
+    
+/* ============================================================================
+ * [주문 리셋 쿼리]
+ * - 로봇에게 명령을 보냈으므로 order를 0으로 되돌림
+ * ============================================================================ */
+static const char *SQL_RESET_ORDER = 
+    "UPDATE robot_status SET `order` = 0 WHERE name = ?";
 
+/**
+ * @brief 로봇에게 내려진 새 주문(order=1)이 있는지 확인
+ * @param goal_x, goal_y : 결과를 담을 변수의 주소
+ * @return 1: 주문 있음, 0: 주문 없음, -1: 에러
+ */
+int db_check_new_order(DBContext *ctx, const char *name, double *goal_x, double *goal_y) {
+    // 1. 기본 검사
+    if (!ctx || !ctx->connected || !name) return -1;
+
+    // 2. Statement 초기화
+    MYSQL_STMT *stmt = mysql_stmt_init(ctx->conn);
+    if (!stmt) return -1;
+
+    // 3. 쿼리 준비
+    if (mysql_stmt_prepare(stmt, SQL_CHECK_ORDER, strlen(SQL_CHECK_ORDER)) != 0) {
+        // fprintf(stderr, "[DB] prepare error: %s\n", mysql_stmt_error(stmt));
+        mysql_stmt_close(stmt);
+        return -1;
+    }
+
+    // 4. 파라미터 바인딩 (WHERE name = ?)
+    MYSQL_BIND bind_param[1];
+    memset(bind_param, 0, sizeof(bind_param));
+    unsigned long name_len = strlen(name);
+    
+    bind_param[0].buffer_type = MYSQL_TYPE_STRING;
+    bind_param[0].buffer = (char*)name;
+    bind_param[0].length = &name_len;
+
+    if (mysql_stmt_bind_param(stmt, bind_param) != 0) {
+        mysql_stmt_close(stmt);
+        return -1;
+    }
+
+    // 5. 결과 바인딩 (SELECT goal_x, goal_y)
+    MYSQL_BIND bind_res[2];
+    memset(bind_res, 0, sizeof(bind_res));
+    double x_val = 0.0, y_val = 0.0;
+    
+    // 첫 번째 컬럼: goal_x
+    bind_res[0].buffer_type = MYSQL_TYPE_DOUBLE;
+    bind_res[0].buffer = &x_val;
+    
+    // 두 번째 컬럼: goal_y
+    bind_res[1].buffer_type = MYSQL_TYPE_DOUBLE;
+    bind_res[1].buffer = &y_val;
+
+    if (mysql_stmt_bind_result(stmt, bind_res) != 0) {
+        mysql_stmt_close(stmt);
+        return -1;
+    }
+
+    // 6. 실행
+    if (mysql_stmt_execute(stmt) != 0) {
+        mysql_stmt_close(stmt);
+        return -1;
+    }
+
+    // 7. 결과 저장 및 Fetch
+    if (mysql_stmt_store_result(stmt) != 0) {
+        mysql_stmt_close(stmt);
+        return -1;
+    }
+
+    int has_order = 0;
+    // 행을 하나 가져와서 성공하면 주문이 있다는 뜻
+    if (mysql_stmt_fetch(stmt) == 0) {
+        *goal_x = x_val;
+        *goal_y = y_val;
+        has_order = 1; // 주문 발견!
+    }
+
+    mysql_stmt_close(stmt);
+    return has_order;
+}
+
+/**
+ * @brief 주문 처리 완료 후 order를 0으로 초기화
+ */
+int db_reset_order(DBContext *ctx, const char *name) {
+    if (!ctx || !ctx->connected || !name) return -1;
+
+    MYSQL_STMT *stmt = mysql_stmt_init(ctx->conn);
+    if (!stmt) return -1;
+
+    if (mysql_stmt_prepare(stmt, SQL_RESET_ORDER, strlen(SQL_RESET_ORDER)) != 0) {
+        mysql_stmt_close(stmt);
+        return -1;
+    }
+
+    MYSQL_BIND bind[1];
+    memset(bind, 0, sizeof(bind));
+    unsigned long name_len = strlen(name);
+
+    bind[0].buffer_type = MYSQL_TYPE_STRING;
+    bind[0].buffer = (char*)name;
+    bind[0].length = &name_len;
+
+    if (mysql_stmt_bind_param(stmt, bind) != 0) {
+        mysql_stmt_close(stmt);
+        return -1;
+    }
+
+    if (mysql_stmt_execute(stmt) != 0) {
+        mysql_stmt_close(stmt);
+        return -1;
+    }
+
+    mysql_stmt_close(stmt);
+    return 0; // 성공
+}
 /**
  * @brief 1. 우선순위 공식에 따라 대기 호출 1개 조회
  * * [정렬 기준]
