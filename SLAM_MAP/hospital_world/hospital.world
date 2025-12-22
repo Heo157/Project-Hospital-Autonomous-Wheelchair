@@ -1,0 +1,50 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <world name="hospital_world">
+
+    <!-- 기본 조명 -->
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <!-- 기본 바닥 -->
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+
+    <!-- =========================
+         병원 3D 벽 메쉬 (STL)
+         파일: meshes/map_Hospital_3D.stl
+         ========================= -->
+    <model name="hospital_walls">
+      <static>true</static>
+
+      <!-- 위치/회전 (필요시 z만 미세조정) -->
+      <pose>0 0 0 0 0 0</pose>
+
+      <link name="walls_link">
+        <!-- 시각화 -->
+        <visual name="walls_visual">
+          <geometry>
+            <mesh>
+              <!-- hospital.world 기준 상대경로 -->
+              <uri>file://./meshes/map_Hospital_3D.stl</uri>
+              <scale>1 1 1</scale>
+            </mesh>
+          </geometry>
+        </visual>
+
+        <!-- 충돌 (로봇이 벽 못 뚫게) -->
+        <collision name="walls_collision">
+          <geometry>
+            <mesh>
+              <uri>file://./meshes/map_Hospital_3D.stl</uri>
+              <scale>1 1 1</scale>
+            </mesh>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+
+  </world>
+</sdf>

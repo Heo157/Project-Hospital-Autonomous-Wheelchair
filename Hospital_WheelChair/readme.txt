@@ -21,17 +21,23 @@ source install/setup.bash
 ros2 run wc_server_bridge tcp_bridge
 
 
-//2512018 임정민
-urdf 파일에  <mesh filename= ~~> 부분 meshs 파일 경로에 맞게 수정해주어아함
+//251222 임정민
+코드 받아와서 
+cd Project-Hospital-Autonomous-Wheelchair/Hospital_WheelChair/hospital_ws
+source /opt/ros/humble/setup.bash
+colcon build
 
 터미널 1)
-ubuntu@ubuntu:~/turtlebot3_ws/src/turtlebot3/turtlebot3_description/urdf$  
+/Project-Hospital-Autonomous-Wheelchair/Hospital_WheelChair/hospital_ws/install/hospital_description/share/hospital_description/urdf
+$ 에서 
 source /opt/ros/humble/setup.bash
-ubuntu@ubuntu:~/turtlebot3_ws/src/turtlebot3/turtlebot3_description/urdf$ 
- source ~/turtlebot3_ws/install/setup.bash
-ubuntu@ubuntu:~/turtlebot3_ws/src/turtlebot3/turtlebot3_description/urdf$
- ros2 run robot_state_publisher robot_state_publisher \
-  --ros-args -p robot_description:="$(cat turtlebot3_burger_Hospital_fixed.urdf)"
+
+source ~/project/Project-Hospital-Autonomous-Wheelchair/Hospital_WheelChair/hospital_ws/install/setup.bash
+
+ros2 run robot_state_publisher robot_state_publisher \
+  --ros-args -p robot_description:="$(cat \
+~/project/Project-Hospital-Autonomous-Wheelchair/Hospital_WheelChair/hospital_ws/src/hospital_description/urdf/turtlebot3_burger_Hospital_fixed.urdf)"
+
 
 터미널 2)
 ubuntu@ubuntu:~$ source /opt/ros/humble/setup.bash
