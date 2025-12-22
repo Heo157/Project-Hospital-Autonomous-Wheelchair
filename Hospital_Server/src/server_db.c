@@ -14,6 +14,7 @@
 #include "server_db.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 /* ============================================================================
  * [데이터베이스 접속 정보]
