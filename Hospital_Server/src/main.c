@@ -192,6 +192,34 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
     exit(0); // 자식 프로세스 종료 (이때 SIGCHLD 신호가 부모에게 날아감)
 }
 
+// ============================================================================
+// 배차 관리자 프로세스 함수
+// 이 함수는 fork()된 자식 프로세스에서 실행되며, 절대 리턴되지 않음 (무한루프)
+// ============================================================================
+void run_dispatch_manager() {
+    DBContext db_ctx;
+    
+    // 이 프로세스 전용 DB 연결
+    if (db_open(&db_ctx) != 0) {
+        fprintf(stderr, "[Dispatch Process] DB Connection Failed! Terminating.\n");
+        exit(1);
+    }
+
+    printf("[Dispatch Process] Started (PID: %d). Monitoring call_queue...\n", getpid());
+
+    while (1) {
+        // 1. 배차 로직 실행 (server_db.c에 정의된 함수)
+        // -> 여기서 아까 만든 우선순위 쿼리가 실행됨
+        db_process_dispatch_cycle(&db_ctx);
+
+        // 2. 1초 대기 (CPU 및 DB 부하 방지)
+        sleep(1);
+    }
+
+    db_close(&db_ctx);
+    exit(0);
+}
+
 int main() {
     int server_sock, client_sock;
     struct sockaddr_in server_addr, client_addr;
@@ -231,6 +259,25 @@ int main() {
     }
 
     printf("=== Middle Server Started on Port %d ===\n", SERVER_PORT);
+
+    // ========================================================================
+    // 배차 관리자 프로세스 생성 (Fork)
+    // ========================================================================
+    pid_t dispatch_pid = fork();
+
+    if(dispatch_pid == 0){
+        //자식 프로세스 1 : 배차 관리자
+        close(server_sock);
+        run_dispatch_manager(); // 무한 루프 실행
+    }
+    else if(dispatch_pid > 0){
+        //부모 프로세스 : 네트워크 서버
+        printf("[Server] Dispatch Manager Process Created (PID: %d)\n", dispatch_pid);
+    }
+    else{
+        perror("Fork Dispatch Manager Failed");
+        return 1;
+    }
 
     while (1) {
         // 5. Accept (클라이언트가 올 때까지 블로킹/대기)

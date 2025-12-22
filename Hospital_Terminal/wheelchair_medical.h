@@ -2,6 +2,7 @@
 #define WHEELCHAIR_MEDICAL_H
 
 #include <QWidget>
+#include <QTimer> // 타이머 추가
 
 namespace Ui {
 class wheelchair_medical;
@@ -16,28 +17,24 @@ public:
     ~wheelchair_medical();
 
 private slots:
-    // 휠체어 호출 버튼
+    // [기능] 휠체어 호출 버튼 클릭
     void on_pbSendWheelchair_clicked();
 
-    // 탑승 여부 체크박스 변경
-    void on_cbBoarded_stateChanged(int state);
+    // [기능] 호출 취소 버튼 클릭
+    void on_pbCancel_clicked(); // 버튼 이름을 pbCancel로 가정
 
-    // 예약 테이블 셀 클릭 (선택된 예약 기준으로 상태 보여줄 때 사용)
-    void on_twReservation_cellClicked(int row, int column);
+    // [기능] 타이머에 의해 주기적으로 실행될 슬롯
+    void updateQueueTable();
+
+    // [기능] 환자 명단이 바뀌었는지 확인하고 갱신하는 함수
+    void updatePatientList();
 
 private:
     Ui::wheelchair_medical *ui;
+    QTimer *updateTimer; // 실시간 업데이트용 타이머
 
-    // 내부 헬퍼 함수들 (디자인 테스트 + 나중 로직 재사용)
-    void initReservationTable();  // 테이블 기본 설정
-    void resetCallForm();         // 호출 폼 초기화
-    void updateStatus(const QString &text);     // 상태 라벨 갱신
-    void addReservationRow(const QString &wheelId,
-                           const QString &patient,
-                           const QString &room,
-                           const QString &clinic,
-                           const QString &reserveTime,
-                           const QString &statusText);
+    void initUi();       // UI 초기 설정 (콤보박스 채우기 등)
+    void initTable();    // 테이블 헤더 설정
 };
 
 #endif // WHEELCHAIR_MEDICAL_H
