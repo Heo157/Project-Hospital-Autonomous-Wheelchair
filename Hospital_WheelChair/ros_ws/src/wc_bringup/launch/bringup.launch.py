@@ -11,7 +11,7 @@ def generate_launch_description():
     robot_name      = LaunchConfiguration('robot_name')
     tx_hz           = LaunchConfiguration('tx_hz')
     use_amcl        = LaunchConfiguration('use_amcl_pose')
-    use_sim_time    = LaunchConfiguration('use_sim_time') # [추가] 시뮬레이션 시간
+    use_sim_time    = LaunchConfiguration('use_sim_time')
 
     return LaunchDescription([
         # 2. 인자(Argument) 선언
@@ -29,7 +29,7 @@ def generate_launch_description():
             # 이 그룹 안의 모든 노드는 /wc1 네임스페이스 안에서 실행됨
             PushRosNamespace(namespace),
 
-            # (A) TCP Bridge 노드 (기존 코드 유지 + use_sim_time 추가)
+            # (A) TCP Bridge 노드
             Node(
                 package='wc_server_bridge',
                 executable='tcp_bridge',   # tcp_bridge 패키지의 console_scripts 이름
@@ -50,7 +50,7 @@ def generate_launch_description():
                 ],
             ),
 
-            # (B) Mission Manager 노드 [새로 추가된 부분]
+            # (B) Mission Manager 노드
             Node(
                 package='wc_mission_manager',
                 executable='mission_manager',
@@ -65,5 +65,16 @@ def generate_launch_description():
                     'status_topic': 'mission_status',
                 }]
             ),
+            # # (C) STM32 UART 노드
+            # Node(
+            #     package='wc_stm_driver',
+            #     executable='stm_driver',
+            #     name='stm_driver',
+            #     output='screen',
+            #     parameters=[{
+            #         'port': '/dev/ttyUSB1', 
+            #         'baudrate': 115200
+            #     }]
+            # ),
         ]),
     ])
