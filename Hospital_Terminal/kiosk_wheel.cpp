@@ -114,7 +114,7 @@ kiosk_wheel::kiosk_wheel(QWidget *parent)
             return;
         }
 
-        bool queueOk = DatabaseManager::instance().addCallToQueue(finalName, "대기실", selectedDestination);
+        bool queueOk = DatabaseManager::instance().addCallToQueue(finalName, "키오스크", selectedDestination);
         if (!queueOk) {
              QMessageBox::warning(this, "오류", "대기열 추가 실패");
              return;
