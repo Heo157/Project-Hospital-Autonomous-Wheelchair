@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>766</width>
-    <height>924</height>
+    <height>933</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -85,6 +85,7 @@
      <property name="font">
       <font>
        <pointsize>14</pointsize>
+       <weight>75</weight>
        <bold>true</bold>
       </font>
      </property>
@@ -129,43 +130,6 @@
       </size>
      </property>
     </spacer>
-   </item>
-   <item>
-    <widget class="QLabel" name="label_id">
-     <property name="font">
-      <font>
-       <pointsize>14</pointsize>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="text">
-      <string>환자 번호</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QLineEdit" name="edit_id">
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>40</height>
-      </size>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>14</pointsize>
-      </font>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-     <property name="placeholderText">
-      <string>환자 번호를 입력하세요</string>
-     </property>
-    </widget>
    </item>
    <item>
     <spacer>
@@ -260,7 +224,7 @@
         </colorrole>
         <colorrole role="PlaceholderText">
          <brush brushstyle="SolidPattern">
-          <color alpha="128">
+          <color alpha="255">
            <red>255</red>
            <green>255</green>
            <blue>255</blue>
@@ -325,7 +289,7 @@
         </colorrole>
         <colorrole role="PlaceholderText">
          <brush brushstyle="SolidPattern">
-          <color alpha="128">
+          <color alpha="255">
            <red>255</red>
            <green>255</green>
            <blue>255</blue>
@@ -390,7 +354,7 @@
         </colorrole>
         <colorrole role="PlaceholderText">
          <brush brushstyle="SolidPattern">
-          <color alpha="128">
+          <color alpha="255">
            <red>255</red>
            <green>255</green>
            <blue>255</blue>
@@ -403,6 +367,7 @@
      <property name="font">
       <font>
        <pointsize>15</pointsize>
+       <weight>75</weight>
        <bold>true</bold>
       </font>
      </property>
@@ -498,7 +463,7 @@ background-color: rgb(224, 27, 36);</string>
         </colorrole>
         <colorrole role="PlaceholderText">
          <brush brushstyle="SolidPattern">
-          <color alpha="128">
+          <color alpha="255">
            <red>255</red>
            <green>255</green>
            <blue>255</blue>
@@ -563,7 +528,7 @@ background-color: rgb(224, 27, 36);</string>
         </colorrole>
         <colorrole role="PlaceholderText">
          <brush brushstyle="SolidPattern">
-          <color alpha="128">
+          <color alpha="255">
            <red>255</red>
            <green>255</green>
            <blue>255</blue>
@@ -628,7 +593,7 @@ background-color: rgb(224, 27, 36);</string>
         </colorrole>
         <colorrole role="PlaceholderText">
          <brush brushstyle="SolidPattern">
-          <color alpha="128">
+          <color alpha="255">
            <red>255</red>
            <green>255</green>
            <blue>255</blue>

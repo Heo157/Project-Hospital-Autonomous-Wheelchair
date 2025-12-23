@@ -56,8 +56,9 @@ kiosk_container::kiosk_container(QWidget *parent)
     // ---------------------------------
     // kiosk_search
     // ---------------------------------
-    connect(pageSearch, &kiosk_search::searchAccepted, this, [=]() {
+    connect(pageSearch, &kiosk_search::searchAccepted, this, [=](QString name, QString id) {
         prevPage = pageSearch;
+        pageWheel->setPatientInfo(name, id);
         ui->stackedWidget->setCurrentWidget(pageWheel);
     });
 
@@ -68,8 +69,9 @@ kiosk_container::kiosk_container(QWidget *parent)
     // ---------------------------------
     // kiosk_login
     // ---------------------------------
-    connect(pageLogin, &kiosk_login::loginAccepted, this, [=]() {
+    connect(pageLogin, &kiosk_login::loginAccepted, this, [=](QString name) {
         prevPage = pageLogin;
+        pageWheel->setPatientInfo(name, "NULL");
         ui->stackedWidget->setCurrentWidget(pageWheel);
     });
 

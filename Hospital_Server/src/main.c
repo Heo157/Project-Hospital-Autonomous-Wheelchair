@@ -58,6 +58,21 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
     if (!db_ok) {
         fprintf(stderr, "[DB] open failed. DB update will be skipped.\n");
     }
+
+    const char* get_state_str(uint8_t state_id) {
+    switch (state_id) {
+        case 0: return "WAITING";
+        case 1: return "HEADING";
+        case 2: return "BOARDING";
+        case 3: return "RUNNING";
+        case 4: return "STOP";
+        case 5: return "ARRIVED";
+        case 6: return "EXITING";
+        case 7: return "CHARGING";
+        case 99: return "ERROR";
+        default: return "UNKNOWN";
+    }
+}
     //-----------------
 
     // 접속한 클라이언트의 IP 주소를 문자열로 변환하여 출력
@@ -162,7 +177,7 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
                     }
                     
                     // 등록되어 있으면 상태 업데이트
-                    const char *op = (st->is_moving ? "RUNNING" : "STOP");
+                    const char *op = get_state_str(st->is_moving);
                     int batt_i = st->battery_level;
                     if (batt_i < 0) batt_i = 0;
                     if (batt_i > 100) batt_i = 100;
@@ -171,6 +186,34 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
                                         (double)st->current_x, 
                                         (double)st->current_y,
                                         (double)st->theta);  // theta 추가
+                    // ========================================================
+                    // [추가된 로직] DB에 새 주문(Order=1)이 있는지 확인
+                    // ========================================================
+                    double gx, gy;
+                    if (db_check_new_order(&db, robot_name, &gx, &gy) == 1) {
+                        printf(">> [NEW ORDER] Found for %s! Goal: (%.2f, %.2f)\n", robot_name, gx, gy);
+
+                        // 1) 패킷 생성
+                        PacketHeader res_header;
+                        GoalAssignData goal_data;
+
+                        res_header.magic = MAGIC_NUMBER;
+                        res_header.device_type = DEVICE_ADMIN_QT; // 서버가 보냄 (Admin 권한 대행)
+                        res_header.msg_type = MSG_ASSIGN_GOAL;    // 0x30
+                        res_header.payload_len = sizeof(GoalAssignData);
+
+                        goal_data.x = (float)gx;
+                        goal_data.y = (float)gy;
+
+                        // 2) 전송 (Header + Payload)
+                        send(client_sock, &res_header, sizeof(PacketHeader), 0);
+                        send(client_sock, &goal_data, sizeof(GoalAssignData), 0);
+                        printf(">> [SENT] MSG_ASSIGN_GOAL sent to robot.\n");
+
+                        // 3) DB의 order 값을 0으로 초기화 (재전송 방지)
+                        db_reset_order(&db, robot_name);
+                    }
+                    // ========================================================
                 }
                 //-----------------
             }

@@ -16,7 +16,7 @@ public:
     ~kiosk_login();
 
 signals:
-    void loginAccepted();
+    void loginAccepted(QString name);
     void goBack();
 
 private:

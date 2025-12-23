@@ -26,11 +26,14 @@ private slots:
     void on_shift_clicked();        // Shift 키
     void on_char_2_toggled(bool checked); // 특수문자 키
     void on_enterButton_clicked();  // Enter 키
+    void on_char_hangul_toggled(bool checked); // 한/영
+    void on_backspaceButton_clicked();         // ⌫
 
 private:
     Ui::Keyboard *ui;
     QLineEdit *outputLineEdit; // 입력할 대상 위젯
     bool shift;
+    bool hangulMode;   // 한/영 상태
 };
 
 #endif // KEYBOARD_H

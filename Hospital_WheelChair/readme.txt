@@ -21,33 +21,36 @@ source install/setup.bash
 ros2 run wc_server_bridge tcp_bridge
 
 
-//251222 임정민
-코드 받아와서 
-cd Project-Hospital-Autonomous-Wheelchair/Hospital_WheelChair/hospital_ws
-source /opt/ros/humble/setup.bash
-colcon build
+//251223 임정민
+병원맵 런치 파일
+cd ~/project/Project-Hospital-Autonomous-Wheelchair/Hospital_WheelChair/hospital_ws
+colcon build --symlink-install
 
-터미널 1)
-/Project-Hospital-Autonomous-Wheelchair/Hospital_WheelChair/hospital_ws/install/hospital_description/share/hospital_description/urdf
-$ 에서 
+터미널1
 source /opt/ros/humble/setup.bash
-
 source ~/project/Project-Hospital-Autonomous-Wheelchair/Hospital_WheelChair/hospital_ws/install/setup.bash
 
-ros2 run robot_state_publisher robot_state_publisher \
-  --ros-args -p robot_description:="$(cat \
-~/project/Project-Hospital-Autonomous-Wheelchair/Hospital_WheelChair/hospital_ws/src/hospital_description/urdf/turtlebot3_burger_Hospital_fixed.urdf)"
+export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:$(ros2 pkg prefix hospital_description)/share
+echo $GAZEBO_MODEL_PATH
 
+ros2 launch gazebo_ros gazebo.launch.py
 
-터미널 2)
-ubuntu@ubuntu:~$ source /opt/ros/humble/setup.bash
-ubuntu@ubuntu:~$ source ~/turtlebot3_ws/install/setup.bash
-ubuntu@ubuntu:~$ ros2 run joint_state_publisher joint_state_publisher
+터미널2
 
-터미널 3)
-ubuntu@ubuntu:~$ source /opt/ros/humble/setup.bash
-ubuntu@ubuntu:~$ source ~/turtlebot3_ws/install/setup.bash
-ubuntu@ubuntu:~$ rviz2
+source /opt/ros/humble/setup.bash
+source ~/project/Project-Hospital-Autonomous-Wheelchair/Hospital_WheelChair/hospital_ws/install/setup.bash
 
+ros2 run gazebo_ros spawn_entity.py \
+  -entity hospital_map \
+  -file $(ros2 pkg prefix hospital_description)/share/hospital_description/urdf/map_hospital.urdf \
+  -x 0 -y 0 -z 0.2
 
-display 설정 후 RViz 화면 클릭 → F 키
+터미널 3
+source /opt/ros/humble/setup.bash
+source ~/project/Project-Hospital-Autonomous-Wheelchair/Hospital_WheelChair/hospital_ws/install/setup.bash
+
+ros2 run gazebo_ros spawn_entity.py \
+  -entity hospital_bot \
+  -file $(ros2 pkg prefix hospital_description)/share/hospital_description/urdf/turtlebot3_burger_Hospital_fixed.urdf \
+  -x 0.5 -y -1 -z 0.2
+
