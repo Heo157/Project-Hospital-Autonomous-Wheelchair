@@ -1,0 +1,15 @@
+running develop
+running egg_info
+writing wc_server_bridge.egg-info/PKG-INFO
+writing dependency_links to wc_server_bridge.egg-info/dependency_links.txt
+writing entry points to wc_server_bridge.egg-info/entry_points.txt
+writing requirements to wc_server_bridge.egg-info/requires.txt
+writing top-level names to wc_server_bridge.egg-info/top_level.txt
+reading manifest file 'wc_server_bridge.egg-info/SOURCES.txt'
+writing manifest file 'wc_server_bridge.egg-info/SOURCES.txt'
+running build_ext
+Creating /home/ubuntu/ros_ws/install/wc_server_bridge/lib/python3.10/site-packages/wc-server-bridge.egg-link (link to .)
+Installing tcp_bridge script to /home/ubuntu/ros_ws/install/wc_server_bridge/lib/wc_server_bridge
+
+Installed /home/ubuntu/ros_ws/build/wc_server_bridge
+running symlink_data
