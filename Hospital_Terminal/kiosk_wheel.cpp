@@ -1,7 +1,9 @@
 #include "kiosk_wheel.h"
 #include "ui_kiosk_wheel.h"
+#include "database_manager.h"
 
 #include <QMessageBox>
+#include <QDebug>
 
 kiosk_wheel::kiosk_wheel(QWidget *parent)
     : QWidget(parent)
@@ -10,79 +12,148 @@ kiosk_wheel::kiosk_wheel(QWidget *parent)
     ui->setupUi(this);
 
     // ---------------------------------
-    // 선택된 목적지 초기화
+    // 1. 깜빡임 타이머 설정
     // ---------------------------------
-    selectedDestination.clear();
+    blinkTimer = new QTimer(this);
+    isRed = true;
 
-    // ---------------------------------
-    // 목적지 선택 공통 처리
-    // ---------------------------------
-    auto selectDest = [&](const QString &dest) {
-
-        // 부모 없는 QMessageBox (안 꺼지게)
-        QMessageBox msg;
-        msg.setWindowTitle("목적지 선택");
-        msg.setText(
-            QString("목적지를 '%1'(으)로 선택하셨습니다.\n이동하시겠습니까?")
-                .arg(dest)
-            );
-        msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-        msg.setDefaultButton(QMessageBox::No);
-        msg.setIcon(QMessageBox::Question);
-        msg.setWindowModality(Qt::ApplicationModal);
-
-        int r = msg.exec();
-
-        if (r == QMessageBox::Yes) {
-            // YES → 목적지 선택
-            selectedDestination = dest;
+    // 0.5초(500ms)마다 호출 버튼 색상 변경
+    connect(blinkTimer, &QTimer::timeout, this, [=]() {
+        if (isRed) {
+            // 눈에 띄는 노란색 (또는 원하시는 색)
+            ui->btn_call->setStyleSheet("background-color: #FF9E9E; color: black; border-radius: 10px; font-weight: bold; font-size: 24px;");
         } else {
-            // NO → 선택 취소
-            selectedDestination.clear();
+            // 원래 붉은색 (강조)
+            ui->btn_call->setStyleSheet("background-color: #FF6B6B; color: white; border-radius: 10px; font-weight: bold; font-size: 24px;");
+        }
+        isRed = !isRed; // 상태 반전
+    });
+
+    // ---------------------------------
+    // 2. 기본 버튼 스타일 정의 (선택 안됐을 때)
+    // ---------------------------------
+    // Qt Designer에서 설정한 스타일이 있다면 그것을 기본값으로 쓰면 됩니다.
+    // 여기서는 예시로 '살구색' 정도를 기본으로 잡겠습니다.
+    QString defaultStyle = "background-color: #FFC0CB; color: black; border-radius: 10px; font-size: 18px;";
+    QString selectedStyle = "background-color: #FF1493; color: white; border: 3px solid red; border-radius: 10px; font-size: 18px; font-weight: bold;";
+
+    // 초기화 시 모든 버튼 기본 스타일 적용
+    ui->btn_dest_food->setStyleSheet(defaultStyle);
+    ui->btn_dest_jung->setStyleSheet(defaultStyle);
+    ui->btn_dest_room->setStyleSheet(defaultStyle);
+    ui->btn_dest_jae->setStyleSheet(defaultStyle);
+
+    // ---------------------------------
+    // 3. 목적지 선택 공통 처리 함수 (팝업 제거됨)
+    // ---------------------------------
+    // [중요] 어떤 버튼이 눌렸는지 알기 위해 QPushButton* 인자를 받습니다.
+    auto selectDest = [=](const QString &dest, QPushButton* btn) {
+
+        // (1) 데이터 저장
+        selectedDestination = dest;
+
+        // (2) 모든 버튼 색상 초기화 (하나만 선택된 효과)
+        ui->btn_dest_food->setStyleSheet(defaultStyle);
+        ui->btn_dest_jung->setStyleSheet(defaultStyle);
+        ui->btn_dest_room->setStyleSheet(defaultStyle);
+        ui->btn_dest_jae->setStyleSheet(defaultStyle);
+
+        // (3) 방금 누른 버튼만 '진하게' 변경
+        if(btn) {
+            btn->setStyleSheet(selectedStyle);
+        }
+
+        // (4) 휠체어 호출 버튼 깜빡임 시작!
+        if (!blinkTimer->isActive()) {
+            blinkTimer->start(500); // 500ms 간격
         }
     };
 
     // ---------------------------------
-    // 목적지 버튼 연결
+    // 4. 목적지 버튼 연결 (인자 추가)
     // ---------------------------------
-    connect(ui->btn_dest_food, &QPushButton::clicked,
-            this, [=]() { selectDest("식당"); });
-
-    connect(ui->btn_dest_jung, &QPushButton::clicked,
-            this, [=]() { selectDest("정형외과"); });
-
-    connect(ui->btn_dest_room, &QPushButton::clicked,
-            this, [=]() { selectDest("병실"); });
-
-    connect(ui->btn_dest_jae, &QPushButton::clicked,
-            this, [=]() { selectDest("재활의학과"); });
+    connect(ui->btn_dest_food, &QPushButton::clicked, this, [=]() { selectDest("식당", ui->btn_dest_food); });
+    connect(ui->btn_dest_jung, &QPushButton::clicked, this, [=]() { selectDest("정형외과", ui->btn_dest_jung); });
+    connect(ui->btn_dest_room, &QPushButton::clicked, this, [=]() { selectDest("입원실", ui->btn_dest_room); });
+    connect(ui->btn_dest_jae,  &QPushButton::clicked, this, [=]() { selectDest("재활의학과", ui->btn_dest_jae); });
 
     // ---------------------------------
     // 뒤로가기
     // ---------------------------------
-    connect(ui->btn_back, &QPushButton::clicked,
-            this, &kiosk_wheel::goBack);
+    connect(ui->btn_back, &QPushButton::clicked, this, [=](){
+        blinkTimer->stop(); // 타이머 끄기
+        // 버튼 스타일 초기화 필요하면 여기서 수행
+        emit goBack();
+    });
 
     // ---------------------------------
-    // 휠체어 호출
+    // 휠체어 호출 버튼
     // ---------------------------------
-    connect(ui->btn_call, &QPushButton::clicked,
-            this, [=]() {
+    connect(ui->btn_call, &QPushButton::clicked, this, [=]() {
 
-                if (selectedDestination.isEmpty()) {
-                    QMessageBox::information(
-                        nullptr,
-                        "알림",
-                        "목적지를 선택해주세요."
-                        );
-                    return;
-                }
+        if (selectedDestination.isEmpty()) {
+            QMessageBox::information(this, "알림", "목적지를 선택해주세요.");
+            return;
+        }
 
-                emit wheelConfirmed();
-            });
+        // [중요] 호출을 눌렀으니 깜빡임 멈춤 & 색상 고정
+        blinkTimer->stop();
+        ui->btn_call->setStyleSheet("background-color: #FF6B6B; color: white; border-radius: 10px; font-weight: bold; font-size: 24px;");
+
+        // ---------------------------------------------------------
+        // 기존 DB 로직 (그대로 유지)
+        // ---------------------------------------------------------
+        QString finalName = m_patientName;
+//        if (m_patientID == "NULL") finalName = "외래";
+//        else finalName = m_patientName;
+
+        QPair<double, double> loc = DatabaseManager::instance().getLocation(selectedDestination);
+
+        if (loc.first == -1.0 && loc.second == -1.0) {
+            QMessageBox::critical(this, "오류", "좌표 데이터 없음");
+            return;
+        }
+
+        bool queueOk = DatabaseManager::instance().addCallToQueue(finalName, "대기실", selectedDestination);
+        if (!queueOk) {
+             QMessageBox::warning(this, "오류", "대기열 추가 실패");
+             return;
+        }
+
+        bool robotOk = DatabaseManager::instance().updateRobotGoal(1, loc.first, loc.second, 2, finalName);
+
+        if (robotOk) {
+
+            emit wheelConfirmed();
+        } else {
+            QMessageBox::critical(this, "오류", "로봇 통신 실패");
+        }
+    });
 }
 
 kiosk_wheel::~kiosk_wheel()
 {
     delete ui;
+}
+
+void kiosk_wheel::setPatientInfo(QString name, QString id)
+{
+    m_patientName = name;
+    m_patientID = id;
+
+    // 화면 들어올 때마다 초기화 (선택 정보 리셋)
+    selectedDestination.clear();
+    if(blinkTimer->isActive()) blinkTimer->stop();
+
+    // 버튼 색상 초기화 (살구색)
+    QString defaultStyle = "background-color: #FFC0CB; color: black; border-radius: 10px; font-size: 18px;";
+    ui->btn_dest_food->setStyleSheet(defaultStyle);
+    ui->btn_dest_jung->setStyleSheet(defaultStyle);
+    ui->btn_dest_room->setStyleSheet(defaultStyle);
+    ui->btn_dest_jae->setStyleSheet(defaultStyle);
+
+    // 호출 버튼 초기화
+    ui->btn_call->setStyleSheet("background-color: #FF6B6B; color: white; border-radius: 10px; font-weight: bold; font-size: 24px;");
+
+    qDebug() << "Kiosk_Wheel Init -> Name:" << name << ", ID:" << id;
 }

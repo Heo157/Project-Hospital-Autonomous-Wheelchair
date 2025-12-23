@@ -149,7 +149,7 @@
           </colorrole>
           <colorrole role="PlaceholderText">
            <brush brushstyle="SolidPattern">
-            <color alpha="128">
+            <color alpha="255">
              <red>255</red>
              <green>255</green>
              <blue>255</blue>
@@ -214,7 +214,7 @@
           </colorrole>
           <colorrole role="PlaceholderText">
            <brush brushstyle="SolidPattern">
-            <color alpha="128">
+            <color alpha="255">
              <red>255</red>
              <green>255</green>
              <blue>255</blue>
@@ -279,7 +279,7 @@
           </colorrole>
           <colorrole role="PlaceholderText">
            <brush brushstyle="SolidPattern">
-            <color alpha="128">
+            <color alpha="255">
              <red>255</red>
              <green>255</green>
              <blue>255</blue>
@@ -336,7 +336,7 @@ color: rgb(255, 255, 255);</string>
       <bool>false</bool>
      </property>
      <attribute name="horizontalHeaderVisible">
-      <bool>true</bool>
+      <bool>false</bool>
      </attribute>
      <attribute name="horizontalHeaderDefaultSectionSize">
       <number>160</number>
@@ -468,7 +468,7 @@ color: rgb(255, 255, 255);</string>
         </colorrole>
         <colorrole role="PlaceholderText">
          <brush brushstyle="SolidPattern">
-          <color alpha="128">
+          <color alpha="255">
            <red>255</red>
            <green>255</green>
            <blue>255</blue>
@@ -533,7 +533,7 @@ color: rgb(255, 255, 255);</string>
         </colorrole>
         <colorrole role="PlaceholderText">
          <brush brushstyle="SolidPattern">
-          <color alpha="128">
+          <color alpha="255">
            <red>255</red>
            <green>255</green>
            <blue>255</blue>
@@ -598,7 +598,7 @@ color: rgb(255, 255, 255);</string>
         </colorrole>
         <colorrole role="PlaceholderText">
          <brush brushstyle="SolidPattern">
-          <color alpha="128">
+          <color alpha="255">
            <red>255</red>
            <green>255</green>
            <blue>255</blue>
@@ -611,6 +611,7 @@ color: rgb(255, 255, 255);</string>
      <property name="font">
       <font>
        <pointsize>16</pointsize>
+       <weight>75</weight>
        <bold>true</bold>
       </font>
      </property>
@@ -706,7 +707,7 @@ background-color: rgb(224, 27, 36);</string>
         </colorrole>
         <colorrole role="PlaceholderText">
          <brush brushstyle="SolidPattern">
-          <color alpha="128">
+          <color alpha="255">
            <red>255</red>
            <green>255</green>
            <blue>255</blue>
@@ -771,7 +772,7 @@ background-color: rgb(224, 27, 36);</string>
         </colorrole>
         <colorrole role="PlaceholderText">
          <brush brushstyle="SolidPattern">
-          <color alpha="128">
+          <color alpha="255">
            <red>255</red>
            <green>255</green>
            <blue>255</blue>
@@ -836,7 +837,7 @@ background-color: rgb(224, 27, 36);</string>
         </colorrole>
         <colorrole role="PlaceholderText">
          <brush brushstyle="SolidPattern">
-          <color alpha="128">
+          <color alpha="255">
            <red>255</red>
            <green>255</green>
            <blue>255</blue>
