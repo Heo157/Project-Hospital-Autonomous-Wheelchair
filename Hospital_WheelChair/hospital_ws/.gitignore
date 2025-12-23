@@ -1,0 +1,13 @@
+# ROS2 build artifacts
+build/
+install/
+log/
+
+# Gazebo / ROS logs
+*.log
+*.gv
+*.pdf
+
+# SLAM / temp
+*.db
+*.cache
