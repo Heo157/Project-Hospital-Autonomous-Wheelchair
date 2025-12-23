@@ -22,7 +22,9 @@ ros2 run wc_server_bridge tcp_bridge
 
 
 //251223 임정민
+
 병원맵 런치 파일
+map_gazebo.launch (맵이랑 봇이랑 따로)
 cd ~/project/Project-Hospital-Autonomous-Wheelchair/Hospital_WheelChair/hospital_ws
 colcon build --symlink-install
 
@@ -53,4 +55,11 @@ ros2 run gazebo_ros spawn_entity.py \
   -entity hospital_bot \
   -file $(ros2 pkg prefix hospital_description)/share/hospital_description/urdf/turtlebot3_burger_Hospital_fixed.urdf \
   -x 0.5 -y -1 -z 0.2
+
+++++
+터미널 한개로 (hospital_gazebo_spawn.launch.py 로 맵+봇 한번에)
+source /opt/ros/humble/setup.bash
+source ~/project/Project-Hospital-Autonomous-Wheelchair/Hospital_WheelChair/hospital_ws/install/setup.bash
+
+ros2 launch hospital_description hospital_gazebo_spawn.launch.py
 

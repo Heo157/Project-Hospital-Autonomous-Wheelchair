@@ -5,7 +5,7 @@ find_package(ament_cmake REQUIRED)
 
 # Install meshes and urdf so that "package://hospital_description/..." works
 install(
-  DIRECTORY meshes urdf
+  DIRECTORY meshes urdf launch
   DESTINATION share/${PROJECT_NAME}
 )
 
