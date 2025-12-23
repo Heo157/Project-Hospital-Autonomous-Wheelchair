@@ -596,7 +596,7 @@ int db_assign_job_to_robot(DBContext *ctx, const char *robot_name, int call_id, 
     // 주의: `order`는 SQL 예약어이므로 백틱(`)으로 감싸야 합니다.
     snprintf(query, sizeof(query),
              "UPDATE robot_status SET `order` = 1, goal_x = %f, goal_y = %f, "
-             "op_status = 'BUSY', who_called = '%s' WHERE name = '%s'",
+             "who_called = '%s' WHERE name = '%s'",
              x, y, caller, robot_name);
     
     if (mysql_query(ctx->conn, query)) {
