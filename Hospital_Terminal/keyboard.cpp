@@ -14,7 +14,8 @@ Keyboard::Keyboard(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::Keyboard),
     outputLineEdit(nullptr), // 초기 타겟은 없음
-    shift(false)
+    shift(false),
+    hangulMode(false)
 {
     ui->setupUi(this);
 
@@ -29,7 +30,8 @@ Keyboard::Keyboard(QWidget *parent) :
         
         // 기능키(Shift, Char, Enter)는 제외하고 나머지 문자 키들만 연결
         // (이들은 각각 별도의 슬롯 함수가 연결되어 있음)
-        if (name != "shift" && name != "char_2" && name != "enterButton") {
+        if (name != "shift" && name != "char_2" && name != "enterButton" &&
+            name != "char_hangul" && name != "backspaceButton" ) {
             connect(btn, SIGNAL(clicked()), this, SLOT(keyboardHandler()));
         }
     }
@@ -156,4 +158,47 @@ void Keyboard::on_char_2_toggled(bool checked)
         ui->Buttonv->setText("v"); ui->Buttonb->setText("b"); ui->Buttonn->setText("n");
         ui->Buttonm->setText("m");
     }
+}
+
+void Keyboard::on_char_hangul_toggled(bool checked)
+{
+    hangulMode = checked;
+
+    if (checked) {
+        // 🔹 영문 → 한글 키맵
+        ui->Buttonq->setText("ㅂ"); ui->Buttonw->setText("ㅈ"); ui->Buttone->setText("ㄷ");
+        ui->Buttonr->setText("ㄱ"); ui->Buttont->setText("ㅅ");
+        ui->Buttony->setText("ㅛ"); ui->Buttonu->setText("ㅕ"); ui->Buttoni->setText("ㅑ");
+        ui->Buttono->setText("ㅐ"); ui->Buttonp->setText("ㅔ");
+
+        ui->Buttona->setText("ㅁ"); ui->Buttons->setText("ㄴ"); ui->Buttond->setText("ㅇ");
+        ui->Buttonf->setText("ㄹ"); ui->Buttong->setText("ㅎ");
+        ui->Buttonh->setText("ㅗ"); ui->Buttonj->setText("ㅓ"); ui->Buttonk->setText("ㅏ");
+        ui->Buttonl->setText("ㅣ");
+
+        ui->Buttonz->setText("ㅋ"); ui->Buttonx->setText("ㅌ"); ui->Buttonc->setText("ㅊ");
+        ui->Buttonv->setText("ㅍ"); ui->Buttonb->setText("ㅠ");
+        ui->Buttonn->setText("ㅜ"); ui->Buttonm->setText("ㅡ");
+    } else {
+        // 🔹 한글 → 영문 복귀
+        ui->Buttonq->setText("q"); ui->Buttonw->setText("w"); ui->Buttone->setText("e");
+        ui->Buttonr->setText("r"); ui->Buttont->setText("t");
+        ui->Buttony->setText("y"); ui->Buttonu->setText("u"); ui->Buttoni->setText("i");
+        ui->Buttono->setText("o"); ui->Buttonp->setText("p");
+
+        ui->Buttona->setText("a"); ui->Buttons->setText("s"); ui->Buttond->setText("d");
+        ui->Buttonf->setText("f"); ui->Buttong->setText("g");
+        ui->Buttonh->setText("h"); ui->Buttonj->setText("j"); ui->Buttonk->setText("k");
+        ui->Buttonl->setText("l");
+
+        ui->Buttonz->setText("z"); ui->Buttonx->setText("x"); ui->Buttonc->setText("c");
+        ui->Buttonv->setText("v"); ui->Buttonb->setText("b");
+        ui->Buttonn->setText("n"); ui->Buttonm->setText("m");
+    }
+}
+
+void Keyboard::on_backspaceButton_clicked()
+{
+    if (!outputLineEdit) return;
+    outputLineEdit->backspace();
 }
