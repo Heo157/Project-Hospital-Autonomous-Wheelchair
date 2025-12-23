@@ -16,9 +16,8 @@ public:
     ~kiosk_search();
 
 signals:
-    void callWheelchair();
+    void searchAccepted(QString name, QString id);
     void goBack();
-    void searchAccepted();
 
 private:
     Ui::kiosk_search *ui;

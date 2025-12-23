@@ -24,18 +24,15 @@ kiosk_login::kiosk_login(QWidget *parent)
             this, [=]() {
 
                 QString name = ui->edit_name->text().trimmed();
-                QString id   = ui->edit_id->text().trimmed();
+                name = name + "/외래";
 
-                if (name.isEmpty() || id.isEmpty()) {
-                    QMessageBox::information(this, "오류", "이름과 환자번호를 입력해주세요.");
+                if (name.isEmpty()) {
+                    QMessageBox::information(this, "오류", "이름을 입력해주세요.");
                     return;
                 }
 
-                if (name == "김철수" && id == "P1001") {
-                    emit loginAccepted();
-                } else {
-                    QMessageBox::information(this, "오류", "환자 정보가 일치하지 않습니다.");
-                }
+                emit loginAccepted(name);
+
             });
 }
 
