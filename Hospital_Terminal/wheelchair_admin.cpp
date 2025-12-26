@@ -349,11 +349,14 @@ void wheelchair_admin::refreshRobotTable() {
         RobotInfo info;
         info.id = query.value("robot_id").toInt();
         info.name = query.value("name").toString();
+        // [신규] IP 주소 가져오기 (DB 컬럼명이 ip_address라고 가정)
+        info.ip = query.value("ip_address").toString();
         info.status = query.value("op_status").toString();
         info.battery = query.value("battery_percent").toInt();
         info.current_x = query.value("current_x").toDouble();
         info.current_y = query.value("current_y").toDouble();
         robotList.append(info);
+        m_robotCache.insert(info.id, info); // [신규] 캐시에 저장
     }
 
     // 콤보박스 갱신
@@ -397,14 +400,33 @@ void wheelchair_admin::resizeEvent(QResizeEvent *event) {
 }
 
 void wheelchair_admin::onCustomContextMenuRequested(const QPoint &pos) {
-    // (기존 코드 동일)
     QTableWidgetItem *item = ui->twRobotStatus->itemAt(pos);
     if (!item) return;
+
     int row = item->row();
+    // 0번 컬럼에 로봇 ID가 있다고 가정
     int robotId = ui->twRobotStatus->item(row, 0)->text().toInt();
+
     QMenu menu(this);
-    QAction *del = menu.addAction("삭제하기");
-    if (menu.exec(ui->twRobotStatus->mapToGlobal(pos)) == del) deleteRobotProcess(robotId);
+
+    // [수정] 변수명을 delAction으로 명확하게 통일했습니다.
+    QAction *delAction = menu.addAction("삭제하기");
+
+    // [신규] SSH 연결 액션 추가
+    QAction *sshAction = menu.addAction("SSH 연결");
+
+    menu.addSeparator(); // 구분선
+
+    // 메뉴를 실행하고 선택된 액션을 받습니다.
+    QAction *selectedItem = menu.exec(ui->twRobotStatus->mapToGlobal(pos));
+
+    // 선택된 액션이 무엇인지 확인하고 처리
+    if (selectedItem == delAction) {
+        deleteRobotProcess(robotId);
+    }
+    else if (selectedItem == sshAction) {
+        openSshDialog(robotId); // SSH 다이얼로그 호출
+    }
 }
 
 void wheelchair_admin::deleteRobotProcess(int robotId) {
@@ -416,3 +438,76 @@ void wheelchair_admin::deleteRobotProcess(int robotId) {
 }
 
 QString wheelchair_admin::selectedRobotId() const { return ui->cbSelectedRobot->currentText(); }
+
+// [신규 기능] SSH 접속용 팝업창
+void wheelchair_admin::openSshDialog(int robotId)
+{
+    // 1. 로봇 정보 조회 (캐시에서)
+    if (!m_robotCache.contains(robotId)) {
+        QMessageBox::warning(this, "오류", "로봇 정보를 찾을 수 없습니다.");
+        return;
+    }
+    RobotInfo info = m_robotCache[robotId];
+
+    // 2. 다이얼로그 생성
+    QDialog dialog(this);
+    dialog.setWindowTitle("SSH 연결");
+    dialog.resize(300, 150);
+
+    QVBoxLayout *layout = new QVBoxLayout(&dialog);
+
+    // 안내 라벨
+    QLabel *label = new QLabel("접속할 주소 (User@IP):", &dialog);
+    layout->addWidget(label);
+
+    // 텍스트 입력창 (자동완성: name@ip)
+    QLineEdit *lineEdit = new QLineEdit(&dialog);
+    // 예: wc1@10.10.14.31 (만약 IP가 없으면 name만 뜸)
+    QString defaultStr = QString("%1@%2").arg(info.name).arg(info.ip);
+    lineEdit->setText(defaultStr);
+    layout->addWidget(lineEdit);
+
+    // 버튼 박스 (연결 / 취소)
+    QDialogButtonBox *btnBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    btnBox->button(QDialogButtonBox::Ok)->setText("연결");
+    btnBox->button(QDialogButtonBox::Cancel)->setText("취소");
+    layout->addWidget(btnBox);
+
+    connect(btnBox, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    connect(btnBox, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+    // 3. 다이얼로그 실행 및 결과 처리
+    if (dialog.exec() == QDialog::Accepted) {
+        QString sshTarget = lineEdit->text().trimmed();
+        if (!sshTarget.isEmpty()) {
+            launchSshTerminal(sshTarget);
+        }
+    }
+}
+
+// [신규 기능] 새 터미널 창을 열어서 SSH 실행
+void wheelchair_admin::launchSshTerminal(const QString &sshTarget)
+{
+    // Ubuntu 기본 터미널인 gnome-terminal을 사용합니다.
+    // 명령 형태: gnome-terminal -- ssh user@ip
+
+    QString program = "gnome-terminal";
+    QStringList arguments;
+
+    // "--" 옵션은 이후 나오는 인자들을 터미널 내부에서 실행되는 명령어로 처리하라는 뜻입니다.
+    arguments << "--" << "ssh" << sshTarget;
+
+    // startDetached를 사용해야 현재 프로그램(Admin)과 별개로 터미널 창이 독립적으로 뜹니다.
+    bool success = QProcess::startDetached(program, arguments);
+
+    if (!success) {
+        // gnome-terminal이 없는 경우 xterm 시도 (혹시 모르니)
+        arguments.clear();
+        arguments << "-e" << "ssh" << sshTarget;
+        success = QProcess::startDetached("xterm", arguments);
+
+        if (!success) {
+            QMessageBox::critical(this, "실패", "터미널을 실행할 수 없습니다.\n(gnome-terminal 또는 xterm 필요)");
+        }
+    }
+}
