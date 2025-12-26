@@ -19,6 +19,7 @@
 #include <QPushButton> // 버튼 포함
 #include <QMap>
 #include <QSet> // QSet 포함
+#include <QProcess>
 
 // 로봇 정보 구조체
 struct RobotInfo{
@@ -63,6 +64,9 @@ private slots:
     void on_pbGoCharge_clicked();
     void on_pbAddWheel_clicked();
 
+    //SSH
+    void openSshDialog(int robotId);
+
     // [통합 갱신] 타이머에 의해 호출됨
     void refreshAll();
 
@@ -90,6 +94,13 @@ private:
     QTimer *updateTimer;
 
     void deleteRobotProcess(int robotId);
+
+    // 로봇 ID로 정보를 빠르게 찾기 위한 캐시
+    // refreshRobotTable()에서 매번 갱신됩니다.
+    QMap<int, RobotInfo> m_robotCache;
+
+    // 실제 터미널을 여는 함수
+    void launchSshTerminal(const QString &sshTarget);
 
     // 맵 상수
     const double MAP_REAL_WIDTH = 20.0;

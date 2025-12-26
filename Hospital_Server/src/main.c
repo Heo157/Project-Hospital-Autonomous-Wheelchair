@@ -1,65 +1,43 @@
 /**
  * ============================================================================
  * @file    main.c
- * @brief   C 언어 기반 중계 서버 (Protocol Aware)
- * @details common_defs.h에 정의된 프로토콜을 해석하여 로그를 출력하는 서버
- * Qt 클라이언트와 ROS 로봇 사이의 통신을 중계하기 위한 기초 서버입니다.
+ * @brief   ROS 2 - Qt 중계 서버 (Multi-Process Architecture)
+ * @details
+ * 1. Main Process: TCP 연결 수락 (Accept) 및 자식 프로세스 분기
+ * 2. Child 1 (Dispatch): 배차 알고리즘 수행 (DB Polling)
+ * 3. Child 2 (RobotMgr): 로봇 프로세스 자동 실행 관리 (DB Sync)
+ * 4. Child N (Client): 개별 클라이언트와 1:1 통신 및 DB 업데이트
  * ============================================================================
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>      // close(), fork() 등을 사용하기 위해 필요
-#include <arpa/inet.h>   // sockaddr_in, inet_ntoa() 등 네트워크 주소 관련
-#include <sys/socket.h>  // socket(), bind(), accept() 등 소켓 핵심 함수
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 #include <sys/types.h>
-#include <sys/wait.h>    // waitpid()를 사용하기 위해 필요 (좀비 프로세스 처리)
-#include <signal.h>      // signal() 함수 사용
-#include "server_db.h"
+#include <sys/wait.h>
+#include <signal.h>
 
- // 우리가 정의한 공통 헤더 (패킷 구조체, 상수 등)
- // 이 파일은 클라이언트(Qt/ROS)와 서버가 반드시 동일한 버전을 가지고 있어야 합니다.
+// 사용자 정의 헤더
+#include "server_db.h"
+#include "robot_manager.h"      // 로봇 프로세스 관리자 (run_robot_manager_loop)
 #include "../include/common_defs.h"
 
-/**
- * @brief 좀비 프로세스(Zombie Process) 처리 핸들러
- * * [개념 설명]
- * fork()를 통해 생성된 자식 프로세스가 할 일을 다 하고 종료(exit)하면,
- * 부모 프로세스가 그 종료 상태를 확인해줄 때까지 커널에 '좀비' 상태로 남아 리소스를 차지합니다.
- * 이를 방지하기 위해 자식이 죽었다는 신호(SIGCHLD)가 오면 waitpid로 청소해줍니다.
- */
-void handle_sigchld(int sig) {
-    (void)sig; // 컴파일러의 '사용되지 않은 변수' 경고 방지
+// ============================================================================
+// [1] 유틸리티 함수
+// ============================================================================
 
-    // waitpid(-1, ...): 종료된 임의의 자식 프로세스를 기다림
-    // WNOHANG: 자식 프로세스가 아직 종료되지 않았으면 기다리지 않고 바로 리턴 (Non-blocking)
+// 좀비 프로세스 처리 핸들러 (자식 프로세스 종료 시 리소스 회수)
+void handle_sigchld(int sig) {
+    (void)sig; // 경고 방지
+    // 종료된 자식 프로세스가 있으면 모두 회수 (Non-blocking)
     while (waitpid(-1, NULL, WNOHANG) > 0);
 }
 
-/**
- * @brief 클라이언트 1:1 전담 마크 함수 (핵심 로직)
- * * [동작 원리]
- * 이 함수는 fork()된 자식 프로세스에서 실행됩니다.
- * 연결된 하나의 클라이언트와 계속 대화하며 패킷을 주고받습니다.
- */
-void handle_client(int client_sock, struct sockaddr_in client_addr) {
-    PacketHeader header;           // 패킷의 머리(Header)를 담을 구조체
-    char buffer[MAX_BUFFER_SIZE];  // 패킷의 몸통(Payload)을 담을 버퍼
-    ssize_t read_len;              // 읽어들인 바이트 수
-
-    //------- 추가 ------
-    // 로봇 이름 저장 (MSG_LOGIN_REQ에서 받아서 저장)
-    char robot_name[64] = {0};
-
-    // DB 연결 (각 클라이언트 프로세스마다 독립적으로 연결)
-    DBContext db;
-    int db_ok = (db_open(&db) == 0);
-    if (!db_ok) {
-        fprintf(stderr, "[DB] open failed. DB update will be skipped.\n");
-    }
-
-    const char* get_state_str(uint8_t state_id) {
+// 상태 코드를 문자열로 변환 (로그용)
+const char* get_state_str(uint8_t state_id) {
     switch (state_id) {
         case 0: return "WAITING";
         case 1: return "HEADING";
@@ -73,189 +51,142 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
         default: return "UNKNOWN";
     }
 }
-    //-----------------
 
-    // 접속한 클라이언트의 IP 주소를 문자열로 변환하여 출력
-    printf("[Server] New client connected: %s\n", inet_ntoa(client_addr.sin_addr));
+// ============================================================================
+// [2] 클라이언트 1:1 담당 프로세스 (Handle Client)
+// ============================================================================
+void handle_client(int client_sock, struct sockaddr_in client_addr) {
+    PacketHeader header;
+    char buffer[MAX_BUFFER_SIZE];
+    ssize_t read_len;
+    
+    // 로봇 이름 저장용 (MSG_LOGIN_REQ 수신 시 설정됨)
+    char robot_name[64] = {0};
+
+    // [DB 연결] 각 클라이언트 프로세스마다 독립적인 DB 연결 생성
+    DBContext db;
+    int db_ok = (db_open(&db) == 0);
+    if (!db_ok) {
+        fprintf(stderr, "[ClientHandler] DB Open Failed. Updates will be skipped.\n");
+    }
+
+    printf("[Server] Client Connected: %s\n", inet_ntoa(client_addr.sin_addr));
 
     while (1) {
-        // ====================================================================
-        // 1단계: 헤더 읽기 (고정 길이 4바이트)
-        // ====================================================================
-        // MSG_WAITALL: TCP는 데이터가 스트림(물줄기)처럼 흐르기 때문에,
-        // 4바이트를 요청해도 네트워크 상황에 따라 1~2바이트만 올 수 있습니다.
-        // 이 옵션은 4바이트가 꽉 찰 때까지 기다렸다가 리턴하라고 지시합니다.
+        // 1. 헤더 읽기 (4바이트)
         read_len = recv(client_sock, &header, sizeof(PacketHeader), MSG_WAITALL);
-
         if (read_len <= 0) {
-            // 0이면 클라이언트가 정상 종료(close), -1이면 에러 발생
-            printf("[Server] Client disconnected or error.\n");
-            break; // while 루프 탈출 -> 함수 종료 -> 프로세스 종료
+            printf("[Server] Client disconnected (%s)\n", robot_name);
+            break;
         }
 
-        // ====================================================================
-        // 2단계: 유효성 검사 (Magic Number)
-        // ====================================================================
-        // 데이터가 중간에 깨졌거나, 우리 프로토콜을 모르는 이상한 놈이 접속했는지 확인합니다.
-        // common_defs.h에 정의된 MAGIC_NUMBER(0xAB)와 다르면 무시합니다.
+        // 2. 매직 넘버 검사
         if (header.magic != MAGIC_NUMBER) {
-            printf("[Warning] Invalid magic number: 0x%02X\n", header.magic);
-            continue; // 이번 패킷은 버리고 다음 패킷 대기
+            printf("[Warning] Invalid Magic Number: 0x%02X\n", header.magic);
+            continue;
         }
 
-        // ====================================================================
-        // 3단계: 페이로드(Payload) 읽기
-        // ====================================================================
-        // 헤더에 적힌 payload_len(데이터 길이)만큼 추가로 데이터를 읽어옵니다.
+        // 3. 페이로드 읽기
         if (header.payload_len > 0) {
             read_len = recv(client_sock, buffer, header.payload_len, MSG_WAITALL);
-
-            // 헤더에는 10바이트 보낸다고 했는데, 실제로는 덜 왔다면? -> 에러 처리
             if (read_len != header.payload_len) {
-                printf("[Error] Payload read mismatch.\n");
+                printf("[Error] Payload mismatch\n");
                 break;
             }
         }
 
-        // ====================================================================
-        // 4단계: 메시지 해석 및 처리
-        // ====================================================================
-        // 여기까지 왔으면 완전한 패킷 하나(Header + Payload)를 손에 쥔 것입니다.
-        printf("[Packet] Device: 0x%02X | Type: 0x%02X | Len: %d -> ",
-            header.device_type, header.msg_type, header.payload_len);
-
+        // 4. 메시지 처리
         switch (header.msg_type) {
-        case MSG_LOGIN_REQ:
-            printf("Login Request received.\n");
-            //------- 추가 ------
-            // 로봇 이름 등록 (로그인)
-            if (header.payload_len > 0 && header.payload_len < sizeof(robot_name)) {
-                memcpy(robot_name, buffer, header.payload_len);
-                robot_name[header.payload_len] = '\0';  // Null 종료
-                printf("Login Request: Robot name = '%s'\n", robot_name);
-            } else {
-                printf("Login Request received (invalid payload).\n");
-            }
-            //-----------------
-            // 나중에는 여기서 DB를 조회하거나 로그인 승인 패킷을 보내야 함
-            break;
-
-        case MSG_MOVE_FORWARD:
-            printf("Command: MOVE FORWARD\n");
-            // 나중에는 이 명령을 연결된 ROS 로봇 프로세스에게 전달해야 함 (IPC 필요)
-            break;
-
-        case MSG_MOVE_BACKWARD:
-            printf("Command: MOVE BACKWARD\n");
-            break;
-
-        case MSG_STOP:
-            printf("Command: STOP!\n");
-            break;
-
-        case MSG_MOVE_TO_GOAL:
-            // 페이로드를 WaypointData 구조체 모양으로 해석(Casting)
-            if (header.payload_len == sizeof(WaypointData)) {
-                WaypointData* wp = (WaypointData*)buffer;
-                printf("Goal: X=%.2f, Y=%.2f, Theta=%.2f\n", wp->x, wp->y, wp->theta);
-            }
-            break;
-
-        case MSG_ROBOT_STATE:
-            // 페이로드를 RobotStateData 구조체 모양으로 해석
-            if (header.payload_len == sizeof(RobotStateData)) {
-                RobotStateData* st = (RobotStateData*)buffer;
-                printf("State: Battery=%d%%, Pos=(%.2f, %.2f), Theta=%.2f\n",
-                    st->battery_level, st->current_x, st->current_y, st->theta);
-
-                //------- 추가 ------
-                // 로봇이 DB에 등록되어 있는지 확인
-                if (db_ok) {
-                    if (robot_name[0] == '\0') {
-                        printf("[DB] robot_name empty. Send MSG_LOGIN_REQ first.\n");
-                        break;
-                    }
-                    
-                    // 등록되어 있으면 상태 업데이트
-                    const char *op = get_state_str(st->is_moving);
-                    int batt_i = st->battery_level;
-                    if (batt_i < 0) batt_i = 0;
-                    if (batt_i > 100) batt_i = 100;
-                    
-                    db_upsert_robot_status(&db, robot_name, op, (uint32_t)batt_i, 0,
-                                        (double)st->current_x, 
-                                        (double)st->current_y,
-                                        (double)st->theta);  // theta 추가
-                    // ========================================================
-                    // [추가된 로직] DB에 새 주문(Order=1)이 있는지 확인
-                    // ========================================================
-                    double gx, gy;
-                    if (db_check_new_order(&db, robot_name, &gx, &gy) == 1) {
-                        printf(">> [NEW ORDER] Found for %s! Goal: (%.2f, %.2f)\n", robot_name, gx, gy);
-
-                        // 1) 패킷 생성
-                        PacketHeader res_header;
-                        GoalAssignData goal_data;
-
-                        res_header.magic = MAGIC_NUMBER;
-                        res_header.device_type = DEVICE_ADMIN_QT; // 서버가 보냄 (Admin 권한 대행)
-                        res_header.msg_type = MSG_ASSIGN_GOAL;    // 0x30
-                        res_header.payload_len = sizeof(GoalAssignData);
-
-                        goal_data.x = (float)gx;
-                        goal_data.y = (float)gy;
-
-                        // 2) 전송 (Header + Payload)
-                        send(client_sock, &res_header, sizeof(PacketHeader), 0);
-                        send(client_sock, &goal_data, sizeof(GoalAssignData), 0);
-                        printf(">> [SENT] MSG_ASSIGN_GOAL sent to robot.\n");
-
-                        // 3) DB의 order 값을 0으로 초기화 (재전송 방지)
-                        db_reset_order(&db, robot_name);
-                    }
-                    // ========================================================
+            case MSG_LOGIN_REQ:
+                // 로봇 이름 등록
+                if (header.payload_len > 0 && header.payload_len < sizeof(robot_name)) {
+                    memcpy(robot_name, buffer, header.payload_len);
+                    robot_name[header.payload_len] = '\0';
+                    printf("[Login] Robot Identified: '%s'\n", robot_name);
                 }
-                //-----------------
-            }
-            break;
+                break;
 
-        default:
-            printf("Unknown Message Type.\n");
-            break;
+            case MSG_ROBOT_STATE:
+                if (header.payload_len == sizeof(RobotStateData)) {
+                    RobotStateData* st = (RobotStateData*)buffer;
+                    
+                    // DB가 연결되어 있고, 로봇 이름이 식별된 경우에만 처리
+                    if (db_ok && robot_name[0] != '\0') {
+                        // A. 로봇 상태 DB 업데이트 (UPSERT)
+                        const char* op_str = get_state_str(st->is_moving);
+                        
+                        db_upsert_robot_status(&db, robot_name, op_str, 
+                                               st->battery_level, 0,
+                                               (double)st->current_x, 
+                                               (double)st->current_y, 
+                                               (double)st->theta);
+
+                        // B. [중요] 배차된 새 명령(Order)이 있는지 확인
+                        double gx, gy;
+                        // 주문이 있고(1), 그 목표 좌표를 gx, gy에 받아옴
+                        if (db_check_new_order(&db, robot_name, &gx, &gy) == 1) {
+                            printf(">> [Command] New Goal for %s: (%.2f, %.2f)\n", robot_name, gx, gy);
+
+                            // B-1. 명령 패킷 생성 (MSG_ASSIGN_GOAL)
+                            PacketHeader res_header;
+                            GoalAssignData goal_data;
+
+                            res_header.magic = MAGIC_NUMBER;
+                            res_header.device_type = DEVICE_ADMIN_QT; // 서버 권한
+                            res_header.msg_type = MSG_ASSIGN_GOAL;
+                            res_header.payload_len = sizeof(GoalAssignData);
+
+                            goal_data.x = (float)gx;
+                            goal_data.y = (float)gy;
+
+                            // B-2. 전송
+                            send(client_sock, &res_header, sizeof(PacketHeader), 0);
+                            send(client_sock, &goal_data, sizeof(GoalAssignData), 0);
+
+                            // B-3. DB 주문 상태 초기화 (중복 전송 방지)
+                            db_reset_order(&db, robot_name);
+                        }
+                    }
+                }
+                break;
+
+            // 기타 메시지들 (로그만 출력)
+            case MSG_MOVE_FORWARD: printf("[%s] CMD: Forward\n", robot_name); break;
+            case MSG_MOVE_BACKWARD: printf("[%s] CMD: Backward\n", robot_name); break;
+            case MSG_STOP: printf("[%s] CMD: Stop\n", robot_name); break;
+            
+            default:
+                // printf("Unknown Msg Type: 0x%02X\n", header.msg_type);
+                break;
         }
     }
 
-    // DB 연결 종료 (메모리 누수 방지)
-    if (db_ok) {
-        db_close(&db);
-    }
-
-    // while 루프를 빠져나오면 소켓을 닫고 프로세스를 종료합니다.
+    // 종료 처리
+    if (db_ok) db_close(&db);
     close(client_sock);
-    exit(0); // 자식 프로세스 종료 (이때 SIGCHLD 신호가 부모에게 날아감)
+    exit(0); // 자식 프로세스 종료
 }
 
 // ============================================================================
-// 배차 관리자 프로세스 함수
-// 이 함수는 fork()된 자식 프로세스에서 실행되며, 절대 리턴되지 않음 (무한루프)
+// [3] 배차 관리자 프로세스 (Dispatch Manager)
 // ============================================================================
 void run_dispatch_manager() {
     DBContext db_ctx;
     
-    // 이 프로세스 전용 DB 연결
+    // 독립적인 DB 연결
     if (db_open(&db_ctx) != 0) {
-        fprintf(stderr, "[Dispatch Process] DB Connection Failed! Terminating.\n");
+        fprintf(stderr, "[Dispatch] DB Connection Failed. Terminating.\n");
         exit(1);
     }
 
-    printf("[Dispatch Process] Started (PID: %d). Monitoring call_queue...\n", getpid());
+    printf("[Dispatch Manager] Service Started (PID: %d). Monitoring Queue...\n", getpid());
 
     while (1) {
-        // 1. 배차 로직 실행 (server_db.c에 정의된 함수)
-        // -> 여기서 아까 만든 우선순위 쿼리가 실행됨
+        // 1. 배차 로직 수행 (server_db.c에 정의됨)
+        //    (우선순위 호출 조회 -> 가용 로봇 조회 -> 매칭 -> DB 업데이트)
         db_process_dispatch_cycle(&db_ctx);
 
-        // 2. 1초 대기 (CPU 및 DB 부하 방지)
+        // 2. 폴링 주기 (1초) - 너무 빠르면 DB 부하, 너무 느리면 반응성 저하
         sleep(1);
     }
 
@@ -263,97 +194,94 @@ void run_dispatch_manager() {
     exit(0);
 }
 
+
+// ============================================================================
+// [4] 메인 함수 (Main Entry)
+// ============================================================================
 int main() {
     int server_sock, client_sock;
     struct sockaddr_in server_addr, client_addr;
     socklen_t addr_len = sizeof(client_addr);
 
-    // [Signal 등록] 자식 프로세스가 죽으면 handle_sigchld 함수 실행
+    // 1. 좀비 프로세스 방지 핸들러 등록
     signal(SIGCHLD, handle_sigchld);
 
-    // 1. 소켓 생성 (IPv4, TCP 스트림 방식)
+    // 2. 소켓 생성
     server_sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_sock == -1) {
-        perror("socket error");
-        return 1;
-    }
+    if (server_sock == -1) { perror("socket"); return 1; }
 
-    // [중요 옵션] "Address already in use" 에러 방지
-    // 서버를 강제 종료하고 바로 다시 켤 때, 포트가 아직 점유 중이라며 에러가 나는 것을 막아줍니다.
     int opt = 1;
     setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
-    // 2. 주소 설정 (IP와 Port 지정)
+    // 3. 바인딩
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = htonl(INADDR_ANY); // 내 컴퓨터의 모든 IP로 접속 허용
-    server_addr.sin_port = htons(SERVER_PORT);       // common_defs.h에 정의된 포트 (8080)
+    server_addr.sin_addr.s_addr = htonl(INADDR_ANY); // 모든 IP 허용
+    server_addr.sin_port = htons(SERVER_PORT);
 
-    // 3. Bind (소켓에 주소표 붙이기)
     if (bind(server_sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
-        perror("bind error");
-        return 1;
+        perror("bind"); return 1;
     }
 
-    // 4. Listen (접속 대기열 생성, 최대 5명 대기 가능)
-    if (listen(server_sock, 5) == -1) {
-        perror("listen error");
-        return 1;
-    }
+    // 4. 리슨
+    if (listen(server_sock, 10) == -1) { perror("listen"); return 1; }
 
-    printf("=== Middle Server Started on Port %d ===\n", SERVER_PORT);
+    printf("\n==================================================\n");
+    printf("   ROS 2 - Qt Central Server Started (Port: %d)\n", SERVER_PORT);
+    printf("==================================================\n");
 
     // ========================================================================
-    // 배차 관리자 프로세스 생성 (Fork)
+    // Fork 1: 배차 관리자 실행 (Dispatch Manager)
     // ========================================================================
     pid_t dispatch_pid = fork();
+    if (dispatch_pid == 0) {
+        close(server_sock);     // 자식은 리슨 소켓 불필요
+        run_dispatch_manager(); // 무한 루프 진입
+        exit(0);
+    }
+    printf("[System] Dispatch Manager Spawned (PID: %d)\n", dispatch_pid);
 
-    if(dispatch_pid == 0){
-        //자식 프로세스 1 : 배차 관리자
-        close(server_sock);
-        run_dispatch_manager(); // 무한 루프 실행
+    // ========================================================================
+    // Fork 2: 로봇 프로세스 관리자 실행 (Robot Process Manager)
+    // ========================================================================
+    pid_t robot_mgr_pid = fork();
+    if (robot_mgr_pid == 0) {
+        close(server_sock);       // 자식은 리슨 소켓 불필요
+        run_robot_manager_loop(); // robot_manager.c 의 함수 호출 (무한 루프)
+        exit(0);
     }
-    else if(dispatch_pid > 0){
-        //부모 프로세스 : 네트워크 서버
-        printf("[Server] Dispatch Manager Process Created (PID: %d)\n", dispatch_pid);
-    }
-    else{
-        perror("Fork Dispatch Manager Failed");
-        return 1;
-    }
+    printf("[System] Robot Process Manager Spawned (PID: %d)\n", robot_mgr_pid);
 
+
+    // ========================================================================
+    // Main Loop: 클라이언트 접속 대기
+    // ========================================================================
     while (1) {
-        // 5. Accept (클라이언트가 올 때까지 블로킹/대기)
-        // 누군가 접속하면 새로운 소켓(client_sock)을 만들어줍니다.
+        // 클라이언트 접속 수락 (Blocking)
         client_sock = accept(server_sock, (struct sockaddr*)&client_addr, &addr_len);
         if (client_sock == -1) {
-            continue; // 에러 나면 다시 대기
+            continue; // 에러 발생 시 다시 대기
         }
 
-        // 6. Fork (프로세스 복제 - 병렬 처리)
-        // 부모(서버 본체)는 계속 새로운 손님을 받아야 하므로,
-        // 지금 들어온 손님은 복제인간(자식 프로세스)에게 맡깁니다.
-        pid_t pid = fork();
+        // Fork 3: 접속한 클라이언트 처리 (1:1 Handler)
+        pid_t client_pid = fork();
 
-        if (pid == 0) {
-            // [자식 프로세스 영역]
-            // 자식은 리슨 소켓(입구)이 필요 없습니다.
-            close(server_sock);
-            // 클라이언트 담당 함수 실행 (여기서 무한루프 돌며 대화함)
-            handle_client(client_sock, client_addr);
-        }
-        else if (pid > 0) {
-            // [부모 프로세스 영역]
-            // 부모는 클라이언트와 대화할 필요가 없습니다(자식이 하니까).
-            // 따라서 클라이언트 소켓 핸들만 닫고, 다시 accept()하러 루프 위로 올라갑니다.
-            close(client_sock);
-        }
+        if (client_pid == 0) {
+            // [자식 프로세스]
+            close(server_sock); // 리슨 소켓 닫기 (메인 프로세스가 가지고 있음)
+            handle_client(client_sock, client_addr); // 통신 시작 (종료 시 exit)
+            // handle_client 내부에서 exit(0) 하므로 여기까지 안 옴
+        } 
+        else if (client_pid > 0) {
+            // [부모 프로세스]
+            close(client_sock); // 핸들러 소켓 닫기 (자식에게 넘김)
+            // 다시 루프 상단으로 이동하여 다음 접속 대기
+        } 
         else {
-            perror("fork error");
+            perror("Fork Client Failed");
         }
     }
 
-    // 서버 종료 시 리슨 소켓 닫기 (사실상 도달하지 않음)
     close(server_sock);
     return 0;
 }
