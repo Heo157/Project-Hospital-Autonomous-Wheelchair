@@ -1,5 +1,5 @@
 -- 작업 공간
-cd ~/turtlebot3_ws/src
+cd ~/ros_ws/src
 
 -- tcp_bridge 패키지 생성
 ros2 pkg create wc_server_bridge --build-type ament_python --dependencies rclpy
@@ -14,11 +14,16 @@ entry_points={
     ],
 },
 
+-- bringup launch 생성
+cd ~/ros_ws/src
+ros2 pkg create --build-type ament_python wc_bringup
+
+
 -- 빌드/실행
-cd ~/turtlebot3_ws
+cd ~/ros_ws
 colcon build
 source install/setup.bash
-ros2 run wc_server_bridge tcp_bridge
+ros2 launch wc_bringup bringup.launch.py
 
 
 //251223 임정민
