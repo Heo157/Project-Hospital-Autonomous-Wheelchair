@@ -41,7 +41,7 @@ STATE_FMT = "<ifffB"
 STATE_SIZE = struct.calcsize(STATE_FMT)
 
 # 목표 데이터 포맷
-GOAL_FMT = "<ff"
+GOAL_FMT = "<iff"
 GOAL_SIZE = struct.calcsize(GOAL_FMT)
 
 
@@ -95,7 +95,7 @@ class TcpBridge(Node):
         self.create_subscription(BatteryState, "/battery_state", self.batt_cb, 10)
         # 서버 goal -> ROS goal publish
         self.goal_pub = self.create_publisher(PoseStamped, self.goal_topic, 10)
-
+        self.order_pub = self.create_publisher(PoseStamped, "mission_order", 10)
 
         # ------------------------------------------
         # 5. 타이머 및 스레드 시작
@@ -165,7 +165,13 @@ class TcpBridge(Node):
 
     def batt_cb(self, msg: BatteryState):
         if msg.percentage is not None and msg.percentage >= 0.0:
-            p = int(msg.percentage * 100.0)
+            raw_val = msg.percentage
+
+            if raw_val > 1.0:
+                p = int(raw_val)
+            else:
+                p = int(raw_val * 100.0)
+                
             self.battery_percent = max(0, min(100, p))
 
     # ==========================================
@@ -285,15 +291,16 @@ class TcpBridge(Node):
             self.get_logger().warn("Goal payload size mismatch")
             return
 
-        gx, gy = struct.unpack(GOAL_FMT, payload)
+        order_val, gx, gy = struct.unpack(GOAL_FMT, payload)
         self.get_logger().info(f"★ NEW GOAL: x={gx:.2f}, y={gy:.2f}")
 
         goal = PoseStamped()
         goal.header.stamp = self.get_clock().now().to_msg()
         goal.header.frame_id = self.goal_frame
+
         goal.pose.position.x = float(gx)
         goal.pose.position.y = float(gy)
-        goal.pose.position.z = 0.0
+        goal.pose.position.z = float(order_val)
         goal.pose.orientation = self.yaw_to_quaternion(0.0)
 
         self.goal_pub.publish(goal)
@@ -301,8 +308,15 @@ class TcpBridge(Node):
             f"[TCP->ROS] publish {self.goal_topic}: x={gx:.2f}, y={gy:.2f}, frame={self.goal_frame}"
         )
 
-        if self.current_state == STATE_WAITING:
+        if order_val == 1:
+            if self.current_state == STATE_WAITING:
+                self.change_state(STATE_HEADING)
+        elif order_val == 2:
+            self.change_state(STATE_STOP)
+        elif order_val == 3:
             self.change_state(STATE_HEADING)
+        else:
+            self.change_state(STATE_CHARGING)
 
     # ==========================================
     # 메인 송신 로직

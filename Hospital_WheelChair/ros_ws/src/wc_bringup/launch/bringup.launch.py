@@ -21,7 +21,7 @@ def generate_launch_description():
         DeclareLaunchArgument('robot_name', default_value='wc1'),
         DeclareLaunchArgument('tx_hz', default_value='2.0'),
         DeclareLaunchArgument('use_amcl_pose', default_value='true'),
-        # [추가] 기본값 false, 시뮬레이션 시 true로 변경 가능
+        # 기본값 false, 시뮬레이션 시 true로 변경 가능
         DeclareLaunchArgument('use_sim_time', default_value='false'),
 
         # 3. 노드 실행 그룹 (namespace=/wc1 적용)

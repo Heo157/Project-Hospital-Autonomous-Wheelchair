@@ -4,3 +4,6 @@ source;share/wc_stm_driver/hook/pythonpath.sh
 source;share/wc_stm_driver/hook/ament_prefix_path.ps1
 source;share/wc_stm_driver/hook/ament_prefix_path.dsv
 source;share/wc_stm_driver/hook/ament_prefix_path.sh
+source;../../build/wc_stm_driver/share/wc_stm_driver/hook/pythonpath_develop.ps1
+source;../../build/wc_stm_driver/share/wc_stm_driver/hook/pythonpath_develop.dsv
+source;../../build/wc_stm_driver/share/wc_stm_driver/hook/pythonpath_develop.sh

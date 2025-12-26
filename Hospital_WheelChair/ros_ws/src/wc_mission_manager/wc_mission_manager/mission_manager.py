@@ -27,7 +27,7 @@ class WcMissionManager(Node):
         # -------- Parameters --------
         self.declare_parameter('goal_topic', 'goal')
         self.declare_parameter('status_topic', 'mission_status')
-        # [수정] 절대 경로 사용 (/를 붙여서 네임스페이스 영향 안 받게 설정)
+        # 절대 경로 사용 (/를 붙여서 네임스페이스 영향 안 받게 설정)
         self.declare_parameter('action_name', '/navigate_to_pose')
         self.declare_parameter('preempt_running_goal', True)
 
@@ -47,6 +47,7 @@ class WcMissionManager(Node):
         self.current_goal_handle = None
         self.pending_goal: Optional[PoseStamped] = None
         self.running = False
+        self.last_goal: Optional[PoseStamped] = None
 
         # 초기 상태 WAITING
         self.publish_status("WAITING")
@@ -62,7 +63,7 @@ class WcMissionManager(Node):
         msg.data = text
         self.status_pub.publish(msg)
         
-        # [수정] log 옵션이 True일 때만 콘솔 출력 (도배 방지)
+        # log 옵션이 True일 때만 콘솔 출력 (도배 방지)
         if log:
             self.get_logger().info(f"STATUS: {text}")
 
@@ -72,29 +73,64 @@ class WcMissionManager(Node):
             self.publish_status("READY (Nav2 action server up)")
             self.timer.cancel()
 
-    def on_goal(self, pose: PoseStamped):
-        self.get_logger().info(
-            f"[GOAL RX] frame={pose.header.frame_id} "
-            f"x={pose.pose.position.x:.3f}, y={pose.pose.position.y:.3f}"
-        )
+# 1. 기존 on_goal을 이걸로 대체 (Order 분기 처리)
+    def on_goal(self, msg: PoseStamped):
+        # TCP Bridge가 z 좌표에 숨겨 보낸 order 값을 추출 (int 변환)
+        order = int(msg.pose.position.z)
+        
+        self.get_logger().info(f"[RX] Order: {order}, x={msg.pose.position.x:.2f}, y={msg.pose.position.y:.2f}")
 
-        # Nav2 action server가 아직 안 떠있으면 무시(또는 큐잉)
+        if order == 1:
+            # [Order 1] 일반 이동
+            msg.pose.position.z = 0.0  
+            self.last_goal = msg       # 재개를 위해 저장
+            self._handle_nav_request(msg) 
+
+        elif order == 2:
+            # [Order 2] 정지 (취소)
+            self.get_logger().warn(">> Order 2 Received: STOPPING ROBOT")
+            self.cancel_current_goal()
+            self.publish_status("STOPPED_BY_ORDER")
+
+        elif order == 3:
+            # [Order 3] 동작 재개
+            if self.last_goal is not None:
+                self.get_logger().info(">> Order 3 Received: RESUMING last goal")
+                self._handle_nav_request(self.last_goal)
+            else:
+                self.get_logger().warn("Order 3 ignored: No last goal to resume")
+
+        elif order == 4:
+            # [Order 4] 대기 스테이션 귀환
+            self.get_logger().info(">> Order 4 Received: Return to Waiting Station")
+            self.go_to_station(msg)
+
+        elif order == 5:
+            # [Order 5] 충전 스테이션 이동
+            self.get_logger().info(">> Order 5 Received: Go to Charging Station")
+            self.go_to_station(msg)
+        
+        else:
+            self.get_logger().warn(f"Unknown Order ID: {order}")
+
+    def _handle_nav_request(self, pose: PoseStamped):
+        # Nav2 서버 체크
         if not self.nav_client.server_is_ready():
             self.publish_status("WAITING_NAV2 (action server not ready)")
             self.pending_goal = pose
             return
 
-        # RUNNING 중 처리
+        # 이미 주행 중일 때 처리 (Preempt 설정에 따름)
         if self.running:
             if self.preempt:
                 self.publish_status("PREEMPT (cancel current goal)")
-                self.pending_goal = pose
+                self.pending_goal = pose  
                 self.cancel_current_goal()
             else:
                 self.publish_status("IGNORED (already running)")
             return
 
-        # 바로 전송
+        # 아무 문제 없으면 전송
         self.send_goal(pose)
 
     def send_goal(self, pose: PoseStamped):
@@ -119,7 +155,7 @@ class WcMissionManager(Node):
         self.current_goal_handle = goal_handle
         self.running = True
         
-        # [확인] 여기서 "RUNNING"을 한 번만 출력합니다.
+        # 여기서 "RUNNING"을 한 번만 출력합니다.
         self.publish_status("RUNNING")
 
         result_future = goal_handle.get_result_async()
@@ -128,7 +164,7 @@ class WcMissionManager(Node):
     def feedback_cb(self, feedback_msg):
         fb = feedback_msg.feedback
         if hasattr(fb, 'distance_remaining'):
-            # [수정] log=False로 설정하여 이동 중에는 콘솔에 로그를 찍지 않고 토픽만 보냅니다.
+            # log=False로 설정하여 이동 중에는 콘솔에 로그를 찍지 않고 토픽만 보냅니다.
             self.publish_status(f"RUNNING dist_remaining={fb.distance_remaining:.2f}", log=False)
 
     def result_cb(self, future):
@@ -150,7 +186,7 @@ class WcMissionManager(Node):
         self._send_pending_if_any()
         
         if not self.running:
-            # [수정] 도착 후 대기 상태일 때 WAITING 출력
+            # 도착 후 대기 상태일 때 WAITING 출력
             self.publish_status("WAITING")
 
     def cancel_current_goal(self):
@@ -173,7 +209,6 @@ class WcMissionManager(Node):
         # cancel 직후라면 아직 running이 false가 아닐 수 있어, 안전하게 재시도
         if not self.running and self.nav_client.server_is_ready():
             self.send_goal(pose)
-
 
 def main(args=None):
     rclpy.init(args=args)
