@@ -336,7 +336,7 @@ int db_upsert_robot_status(
  * - name이 일치하고, order 컬럼 값이 1(명령 있음)인 행의 goal_x, goal_y를 조회
  * ============================================================================ */
 static const char *SQL_CHECK_ORDER_V2 = 
-    "SELECT `order`, start_x, start_y, goal_x, goal_y FROM robot_status WHERE name = ? AND `order` IN (1, 6)";
+    "SELECT `order`, start_x, start_y, goal_x, goal_y FROM robot_status WHERE name = ? AND `order` IN (1, 4, 5, 6)";
     
 /* ============================================================================
  * [주문 리셋 쿼리]
@@ -425,7 +425,7 @@ int db_check_new_order(DBContext *ctx, const char *name, double *target_x, doubl
             *target_y = sy;
             has_order = 1;
         } 
-        else if (order_val == 1) {
+        else if (order_val == 1 || order_val == 4 || order_val == 5) {
             // [일반 이동] 바로 '목적지'로 가야 함
             *target_x = gx;
             *target_y = gy;
@@ -538,10 +538,13 @@ int db_get_priority_call(DBContext *ctx, int *call_id, char *start_loc, char *de
 int db_get_available_robot(DBContext *ctx, char *robot_name) {
     if (!ctx || !ctx->conn) return -1;
 
-    // [수정] 오직 'WAITING' 상태인 로봇만 조회
+    // [핵심 수정] AND `order` = 0 추가
+    // 이 조건이 있어야 관리자가 방금 명령을 내린(order=1) 로봇을
+    // 배차 관리자가 납치해가는 일을 막을 수 있습니다.
     const char *query = "SELECT name FROM robot_status "
                         "WHERE op_status = 'WAITING' "
                         "AND battery_percent > 20 "
+                        "AND `order` = 0 "  
                         "LIMIT 1";
 
     if (mysql_query(ctx->conn, query)) {
