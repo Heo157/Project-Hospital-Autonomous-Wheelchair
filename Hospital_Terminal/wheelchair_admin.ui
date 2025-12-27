@@ -28,7 +28,7 @@
            <number>0</number>
           </property>
           <property name="columnCount">
-           <number>7</number>
+           <number>6</number>
           </property>
           <column>
            <property name="text">
@@ -52,17 +52,12 @@
           </column>
           <column>
            <property name="text">
-            <string>목표 위치</string>
+            <string>출발 위치</string>
            </property>
           </column>
           <column>
            <property name="text">
-            <string>X좌표</string>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>Y좌표</string>
+            <string>도착 위치</string>
            </property>
           </column>
          </widget>

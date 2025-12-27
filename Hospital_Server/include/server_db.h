@@ -73,8 +73,8 @@ int db_check_robot_exists(DBContext *ctx, const char *name);
  * (응급 > 질병위중도 > 대기시간 순)
  * @return 1: 찾음, 0: 대기열 없음, -1: 에러
  */
-int db_get_priority_call(DBContext *ctx, int *call_id, char *start_loc, char *caller_name);
-
+//int db_get_priority_call(DBContext *ctx, int *call_id, char *start_loc, char *caller_name);
+int db_get_priority_call(DBContext *ctx, int *call_id, char *start_loc, char *dest_loc, char *caller_name);
 /**
  * @brief 2. 가용한(WAITING/STOP) 로봇 하나 찾기
  * @return 1: 찾음, 0: 없음, -1: 에러
@@ -92,8 +92,8 @@ int db_get_location_coords(DBContext *ctx, const char *loc_name, double *x, doub
  * - robot_status 업데이트 (order=1, goal 설정)
  * - call_queue 업데이트 (배차완료 처리)
  */
-int db_assign_job_to_robot(DBContext *ctx, const char *robot_name, int call_id, double x, double y, const char *caller);
-
+//int db_assign_job_to_robot(DBContext *ctx, const char *robot_name, int call_id, double x, double y, const char *caller);
+int db_assign_job_to_robot(DBContext *ctx, const char *robot_name, int call_id, double start_x, double start_y, double goal_x, double goal_y, const char *caller);
 /**
  * @brief [메인 로직] 배차 사이클 실행
  * 위 함수들을 조합하여 실제 배차를 수행하는 함수
