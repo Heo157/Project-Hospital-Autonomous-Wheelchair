@@ -19,6 +19,9 @@ signals:
     void searchAccepted(QString name, QString id);
     void goBack();
 
+protected:
+    void showEvent(QShowEvent *event) override;
+
 private:
     Ui::kiosk_search *ui;
 };
