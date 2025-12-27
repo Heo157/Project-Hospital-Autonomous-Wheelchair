@@ -19,6 +19,9 @@ signals:
     void loginAccepted(QString name);
     void goBack();
 
+protected:
+    void showEvent(QShowEvent *event) override;
+
 private:
     Ui::kiosk_login *ui;
 };

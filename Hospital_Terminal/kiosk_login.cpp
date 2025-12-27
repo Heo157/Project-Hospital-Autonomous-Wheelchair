@@ -1,6 +1,6 @@
 #include "kiosk_login.h"
 #include "ui_kiosk_login.h"
-
+#include <QShowEvent>
 #include <QMessageBox>
 
 kiosk_login::kiosk_login(QWidget *parent)
@@ -34,6 +34,13 @@ kiosk_login::kiosk_login(QWidget *parent)
                 emit loginAccepted(name);
 
             });
+}
+
+void kiosk_login::showEvent(QShowEvent *event)
+{
+    QWidget::showEvent(event);
+
+    ui->edit_name->clear();
 }
 
 kiosk_login::~kiosk_login()

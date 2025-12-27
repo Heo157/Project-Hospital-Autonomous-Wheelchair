@@ -1,7 +1,7 @@
 #include "kiosk_search.h"
 #include "ui_kiosk_search.h"
 #include "database_manager.h" // [필수] DB 매니저 헤더 포함
-
+#include <QShowEvent>
 #include <QMessageBox>
 #include <QTableWidgetItem>
 
@@ -113,6 +113,15 @@ kiosk_search::kiosk_search(QWidget *parent)
         // 3. 다음 화면으로 신호 전송 (인자 포함)
         emit searchAccepted(name, id);
     });
+}
+
+void kiosk_search::showEvent(QShowEvent *event)
+{
+    QWidget::showEvent(event);
+
+    ui->edit_search->clear();
+
+    ui->table_basic->setRowCount(0);
 }
 
 kiosk_search::~kiosk_search()
