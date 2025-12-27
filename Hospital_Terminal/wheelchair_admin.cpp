@@ -13,6 +13,7 @@
 #include <QLineEdit>
 #include <QDoubleSpinBox>
 #include <QDialogButtonBox>
+#include <QFrame>
 
 #include "add_robot_dialog.h"
 #include "database_manager.h"
@@ -147,9 +148,7 @@ void wheelchair_admin::refreshCallLog()
     }
 }
 
-// ... (resizeEvent, on_twRobotStatus_cellClicked 등 기존 코드는 그대로 유지) ...
 
-// [요구사항 2] 휠체어 직접 호출 버튼
 void wheelchair_admin::on_pbDirectCall_clicked()
 {
     // 1. 로봇 선택 확인
@@ -160,11 +159,13 @@ void wheelchair_admin::on_pbDirectCall_clicked()
 
     // 2. 다이얼로그 생성
     QDialog dialog(this);
-    dialog.setWindowTitle("목적지 선택 (DB 좌표 연동)");
-    dialog.resize(350, 250);
+    dialog.setWindowTitle("목적지 선택 및 좌표 입력");
+    dialog.resize(400, 350); // 높이를 좀 더 키움
 
     QVBoxLayout *mainLayout = new QVBoxLayout(&dialog);
-    QLabel *label = new QLabel("이동할 목적지를 선택하세요:", &dialog);
+
+    // --- [섹션 1] 기존 장소 버튼 ---
+    QLabel *label = new QLabel("저장된 장소로 이동:", &dialog);
     label->setAlignment(Qt::AlignCenter);
     QFont font = label->font();
     font.setBold(true);
@@ -172,74 +173,107 @@ void wheelchair_admin::on_pbDirectCall_clicked()
     label->setFont(font);
     mainLayout->addWidget(label);
 
-    // 버튼들을 격자 형태로 배치
     QGridLayout *gridLayout = new QGridLayout();
     mainLayout->addLayout(gridLayout);
 
-    // 버튼 이름 목록 (DB의 map_location 테이블에 있는 이름과 일치해야 함)
     QStringList locations = {"정형외과", "재활의학과", "식당", "입원실", "키오스크"};
-
-    // 버튼 스타일
     QString btnStyle = "QPushButton { padding: 15px; font-size: 14px; font-weight: bold; background-color: #E0E0E0; border-radius: 5px; }"
-                       "QPushButton:hover { backgrou실nd-color: #D0D0D0; }"
+                       "QPushButton:hover { background-color: #D0D0D0; }"
                        "QPushButton:pressed { background-color: #B0B0B0; }";
 
-    bool commandSent = false; // 명령 전송 여부
+    bool commandSent = false;
 
-    // 버튼 동적 생성
+    // 버튼 생성 및 연결
     for(int i=0; i<locations.size(); ++i) {
         QString locName = locations[i];
         QPushButton *btn = new QPushButton(locName, &dialog);
         btn->setStyleSheet(btnStyle);
-
-        // 2열로 배치
         gridLayout->addWidget(btn, i / 2, i % 2);
 
         connect(btn, &QPushButton::clicked, [&, locName]() {
-            // [핵심 로직] DB에서 좌표 조회
             QPair<double, double> coord = DatabaseManager::instance().getLocation(locName);
-
-            // 좌표가 유효한지 확인 (-1.0은 에러값으로 간주)
             if (coord.first < 0 && coord.second < 0) {
-                QMessageBox::critical(&dialog, "오류", QString("'%1'의 좌표를 DB에서 찾을 수 없습니다.").arg(locName));
+                QMessageBox::critical(&dialog, "오류", QString("'%1' 좌표 없음").arg(locName));
                 return;
             }
 
-            // DB 업데이트 (명령 전송)
-            // orderVal = 1 (호출/이동)
             QString who = "admin";
-            bool success = DatabaseManager::instance().updateRobotGoal(
-                m_selectedRobotId,
-                coord.first,
-                coord.second,
-                1,
-                who
-            );
-
-            if (success) {
-                QMessageBox::information(this, "명령 전송",
-                    QString("로봇 %1번이 '%2'(%3, %4)로 이동합니다.")
-                    .arg(m_selectedRobotId)
-                    .arg(locName)
-                    .arg(coord.first, 0, 'f', 1)   // 소수점 1자리 포맷팅
-                    .arg(coord.second, 0, 'f', 1)); // 소수점 1자리 포맷팅
+            if (DatabaseManager::instance().updateRobotGoal(m_selectedRobotId, coord.first, coord.second, 1, who)) {
+                QMessageBox::information(&dialog, "명령 전송", QString("'%1'(%2, %3)로 이동").arg(locName).arg(coord.first).arg(coord.second));
                 commandSent = true;
-                dialog.accept(); // 창 닫기
+                dialog.accept();
             } else {
-                QMessageBox::critical(this, "오류", "DB 업데이트 실패");
+                QMessageBox::critical(&dialog, "오류", "DB 업데이트 실패");
             }
         });
     }
 
-    // 취소 버튼 (하단)
+    // --- 구분선 추가 ---
+    QFrame *line = new QFrame(&dialog);
+    line->setFrameShape(QFrame::HLine);
+    line->setFrameShadow(QFrame::Sunken);
+    mainLayout->addSpacing(10);
+    mainLayout->addWidget(line);
+    mainLayout->addSpacing(10);
+
+    // --- [섹션 2] 수동 좌표 입력 ---
+    QLabel *manualLabel = new QLabel("좌표 직접 입력:", &dialog);
+    manualLabel->setFont(font);
+    manualLabel->setAlignment(Qt::AlignCenter);
+    mainLayout->addWidget(manualLabel);
+
+    QHBoxLayout *inputLayout = new QHBoxLayout();
+
+    // X 좌표 입력
+    QLabel *lblX = new QLabel("X:", &dialog);
+    QDoubleSpinBox *sbX = new QDoubleSpinBox(&dialog);
+    sbX->setRange(-100.0, 100.0); // 맵 크기에 맞게 범위 설정
+    sbX->setDecimals(2);
+    sbX->setSingleStep(0.1);
+
+    // Y 좌표 입력
+    QLabel *lblY = new QLabel("Y:", &dialog);
+    QDoubleSpinBox *sbY = new QDoubleSpinBox(&dialog);
+    sbY->setRange(-100.0, 100.0);
+    sbY->setDecimals(2);
+    sbY->setSingleStep(0.1);
+
+    // 이동 버튼
+    QPushButton *btnManualGo = new QPushButton("좌표 이동", &dialog);
+    btnManualGo->setStyleSheet("QPushButton { padding: 5px 15px; background-color: #4CAF50; color: white; font-weight: bold; border-radius: 4px; }");
+
+    inputLayout->addWidget(lblX);
+    inputLayout->addWidget(sbX);
+    inputLayout->addSpacing(10);
+    inputLayout->addWidget(lblY);
+    inputLayout->addWidget(sbY);
+    inputLayout->addWidget(btnManualGo);
+
+    mainLayout->addLayout(inputLayout);
+
+    // 수동 이동 버튼 이벤트 연결
+    connect(btnManualGo, &QPushButton::clicked, [&]() {
+        double x = sbX->value();
+        double y = sbY->value();
+        QString who = "admin";
+
+        if (DatabaseManager::instance().updateRobotGoal(m_selectedRobotId, x, y, 1, who)) {
+            QMessageBox::information(&dialog, "명령 전송", QString("좌표 (%1, %2)로 이동합니다.").arg(x).arg(y));
+            commandSent = true;
+            dialog.accept();
+        } else {
+            QMessageBox::critical(&dialog, "오류", "DB 업데이트 실패");
+        }
+    });
+
+    // --- [하단] 취소 버튼 ---
+    mainLayout->addSpacing(10);
     QPushButton *btnCancel = new QPushButton("취소", &dialog);
-    btnCancel->setStyleSheet("padding: 10px;");
     connect(btnCancel, &QPushButton::clicked, &dialog, &QDialog::reject);
     mainLayout->addWidget(btnCancel);
 
     dialog.exec();
 
-    // 명령을 보냈다면 테이블 즉시 갱신
     if (commandSent) {
         refreshAll();
     }
@@ -249,7 +283,6 @@ void wheelchair_admin::on_pbDirectCall_clicked()
 // 기존 코드에서 selectRobot, refreshRobotTable, updateMapMarkers 등도 그대로 유지
 // 단, refreshRobotTable 안에서 refreshCallLog()를 호출하도록 refreshAll()로 구조 변경함에 주의
 
-// 기존 코드 복붙용 (나머지 부분)
 void wheelchair_admin::on_pbStop_clicked() {
     if (m_selectedRobotId == -1) { QMessageBox::warning(this, "알림", "선택 필요"); return; }
     if (QMessageBox::Yes == QMessageBox::question(this, "정지", "즉시 정지하시겠습니까?")) {
@@ -269,20 +302,70 @@ void wheelchair_admin::on_pbResume_clicked() {
 }
 
 void wheelchair_admin::on_pbGoWait_clicked() {
-    if (m_selectedRobotId == -1) { QMessageBox::warning(this, "알림", "선택 필요"); return; }
-    if (QMessageBox::Yes == QMessageBox::question(this, "복귀", "대기 장소로 복귀하시겠습니까?")) {
+    // 1. 로봇 선택 확인
+    if (m_selectedRobotId == -1) {
+        QMessageBox::warning(this, "알림", "선택 필요");
+        return;
+    }
+
+    // 2. 확인 메시지
+    if (QMessageBox::Yes == QMessageBox::question(this, "복귀", "대기 장소(키오스크)로 복귀하시겠습니까?")) {
+
+        // 3. DB에서 '키오스크' 좌표 조회
+        QString targetName = "키오스크";
+        QPair<double, double> coord = DatabaseManager::instance().getLocation(targetName);
+
+        // 4. DB 업데이트 (이동 명령 전송: order=1)
         QString who = "admin";
-        DatabaseManager::instance().updateRobotOrder(m_selectedRobotId, 4, who); // 4: WAIT
-        refreshAll();
+        bool success = DatabaseManager::instance().updateRobotGoal(
+            m_selectedRobotId,
+            coord.first,
+            coord.second,
+            4, // order 1: MOVE/CALL
+            who
+        );
+
+        if (success) {
+            // 성공 시 테이블 갱신
+            refreshAll();
+            QMessageBox::information(this, "명령 전송", QString("로봇이 '%1'로 이동합니다.").arg(targetName));
+        } else {
+            QMessageBox::critical(this, "오류", "DB 업데이트 실패");
+        }
     }
 }
 
 void wheelchair_admin::on_pbGoCharge_clicked() {
-    if (m_selectedRobotId == -1) { QMessageBox::warning(this, "알림", "선택 필요"); return; }
-    if (QMessageBox::Yes == QMessageBox::question(this, "충전", "충전소로 이동하시겠습니까?")) {
+    // 1. 로봇 선택 확인
+    if (m_selectedRobotId == -1) {
+        QMessageBox::warning(this, "알림", "선택 필요");
+        return;
+    }
+
+    // 2. 확인 메시지
+    if (QMessageBox::Yes == QMessageBox::question(this, "충전", "충전소(충전스테이션)로 이동하시겠습니까?")) {
+
+        // 3. DB에서 '충전스테이션' 좌표 조회
+        QString targetName = "충전스테이션";
+        QPair<double, double> coord = DatabaseManager::instance().getLocation(targetName);
+
+
+        // 4. DB 업데이트 (이동 명령 전송: order=1)
         QString who = "admin";
-        DatabaseManager::instance().updateRobotOrder(m_selectedRobotId, 5, who); // 5: CHARGE
-        refreshAll();
+        bool success = DatabaseManager::instance().updateRobotGoal(
+            m_selectedRobotId,
+            coord.first,
+            coord.second,
+            5, // order 1: MOVE/CALL
+            who
+        );
+
+        if (success) {
+            refreshAll();
+            QMessageBox::information(this, "명령 전송", QString("로봇이 '%1'로 이동합니다.").arg(targetName));
+        } else {
+            QMessageBox::critical(this, "오류", "DB 업데이트 실패");
+        }
     }
 }
 
