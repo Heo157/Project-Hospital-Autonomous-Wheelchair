@@ -335,8 +335,8 @@ int db_upsert_robot_status(
  * - 주의: 'order'는 SQL 예약어이므로 백틱(`)으로 감싸야 합니다.
  * - name이 일치하고, order 컬럼 값이 1(명령 있음)인 행의 goal_x, goal_y를 조회
  * ============================================================================ */
-static const char *SQL_CHECK_ORDER = 
-    "SELECT goal_x, goal_y FROM robot_status WHERE name = ? AND `order` = 1";
+static const char *SQL_CHECK_ORDER_V2 = 
+    "SELECT `order`, start_x, start_y, goal_x, goal_y FROM robot_status WHERE name = ? AND `order` IN (1, 6)";
     
 /* ============================================================================
  * [주문 리셋 쿼리]
@@ -350,22 +350,20 @@ static const char *SQL_RESET_ORDER =
  * @param goal_x, goal_y : 결과를 담을 변수의 주소
  * @return 1: 주문 있음, 0: 주문 없음, -1: 에러
  */
-int db_check_new_order(DBContext *ctx, const char *name, double *goal_x, double *goal_y) {
+int db_check_new_order(DBContext *ctx, const char *name, double *target_x, double *target_y) {
     // 1. 기본 검사
     if (!ctx || !ctx->connected || !name) return -1;
 
-    // 2. Statement 초기화
     MYSQL_STMT *stmt = mysql_stmt_init(ctx->conn);
     if (!stmt) return -1;
 
-    // 3. 쿼리 준비
-    if (mysql_stmt_prepare(stmt, SQL_CHECK_ORDER, strlen(SQL_CHECK_ORDER)) != 0) {
-        // fprintf(stderr, "[DB] prepare error: %s\n", mysql_stmt_error(stmt));
+    // 2. 쿼리 준비 (수정된 V2 쿼리 사용)
+    if (mysql_stmt_prepare(stmt, SQL_CHECK_ORDER_V2, strlen(SQL_CHECK_ORDER_V2)) != 0) {
         mysql_stmt_close(stmt);
         return -1;
     }
 
-    // 4. 파라미터 바인딩 (WHERE name = ?)
+    // 3. 파라미터 바인딩 (WHERE name = ?)
     MYSQL_BIND bind_param[1];
     memset(bind_param, 0, sizeof(bind_param));
     unsigned long name_len = strlen(name);
@@ -379,42 +377,60 @@ int db_check_new_order(DBContext *ctx, const char *name, double *goal_x, double 
         return -1;
     }
 
-    // 5. 결과 바인딩 (SELECT goal_x, goal_y)
-    MYSQL_BIND bind_res[2];
+    // 4. 결과 바인딩 (order, start_x, start_y, goal_x, goal_y)
+    MYSQL_BIND bind_res[5];
     memset(bind_res, 0, sizeof(bind_res));
-    double x_val = 0.0, y_val = 0.0;
     
-    // 첫 번째 컬럼: goal_x
-    bind_res[0].buffer_type = MYSQL_TYPE_DOUBLE;
-    bind_res[0].buffer = &x_val;
+    int order_val = 0;
+    double sx = 0, sy = 0, gx = 0, gy = 0;
+
+    // Col 0: order
+    bind_res[0].buffer_type = MYSQL_TYPE_LONG;
+    bind_res[0].buffer = &order_val;
     
-    // 두 번째 컬럼: goal_y
+    // Col 1: start_x
     bind_res[1].buffer_type = MYSQL_TYPE_DOUBLE;
-    bind_res[1].buffer = &y_val;
+    bind_res[1].buffer = &sx;
+
+    // Col 2: start_y
+    bind_res[2].buffer_type = MYSQL_TYPE_DOUBLE;
+    bind_res[2].buffer = &sy;
+
+    // Col 3: goal_x
+    bind_res[3].buffer_type = MYSQL_TYPE_DOUBLE;
+    bind_res[3].buffer = &gx;
+
+    // Col 4: goal_y
+    bind_res[4].buffer_type = MYSQL_TYPE_DOUBLE;
+    bind_res[4].buffer = &gy;
 
     if (mysql_stmt_bind_result(stmt, bind_res) != 0) {
         mysql_stmt_close(stmt);
         return -1;
     }
 
-    // 6. 실행
-    if (mysql_stmt_execute(stmt) != 0) {
-        mysql_stmt_close(stmt);
-        return -1;
-    }
-
-    // 7. 결과 저장 및 Fetch
-    if (mysql_stmt_store_result(stmt) != 0) {
+    // 5. 실행 및 결과 저장
+    if (mysql_stmt_execute(stmt) != 0 || mysql_stmt_store_result(stmt) != 0) {
         mysql_stmt_close(stmt);
         return -1;
     }
 
     int has_order = 0;
-    // 행을 하나 가져와서 성공하면 주문이 있다는 뜻
+    
+    // 6. 데이터 Fetch 및 좌표 결정 로직
     if (mysql_stmt_fetch(stmt) == 0) {
-        *goal_x = x_val;
-        *goal_y = y_val;
-        has_order = 1; // 주문 발견!
+        if (order_val == 6) {
+            // [배차 명령] 환자가 있는 '출발지'로 가야 함
+            *target_x = sx;
+            *target_y = sy;
+            has_order = 1;
+        } 
+        else if (order_val == 1) {
+            // [일반 이동] 바로 '목적지'로 가야 함
+            *target_x = gx;
+            *target_y = gy;
+            has_order = 1;
+        }
     }
 
     mysql_stmt_close(stmt);
@@ -464,13 +480,12 @@ int db_reset_order(DBContext *ctx, const char *name) {
  * 3. c.call_time ASC     : 먼저 호출한 순서
  * * IFNULL/COALESCE: 환자 정보가 없으면 0점 처리하여 맨 뒤로 보냄
  */
-int db_get_priority_call(DBContext *ctx, int *call_id, char *start_loc, char *caller_name) {
+int db_get_priority_call(DBContext *ctx, int *call_id, char *start_loc, char *dest_loc, char *caller_name) {
     char query[1024];
 
-    // 복잡한 쿼리이므로 snprintf 대신 문자열 상수로 작성하거나 안전하게 복사
-    // 주의: call_queue의 caller_name과 patient_info의 name을 조인 조건으로 사용
+    // [수정] SELECT 절에 c.dest_loc 추가
     const char *sql = 
-        "SELECT c.call_id, c.start_loc, c.caller_name "
+        "SELECT c.call_id, c.start_loc, c.dest_loc, c.caller_name "
         "FROM call_queue c "
         "LEFT JOIN patient_info p ON c.caller_name = p.name "
         "LEFT JOIN disease_types d ON p.disease_code = d.disease_code "
@@ -494,19 +509,24 @@ int db_get_priority_call(DBContext *ctx, int *call_id, char *start_loc, char *ca
     
     if (row) {
         *call_id = atoi(row[0]);
+        
         // 안전한 문자열 복사
         if(row[1]) strncpy(start_loc, row[1], 63); else start_loc[0] = '\0';
-        if(row[2]) strncpy(caller_name, row[2], 63); else caller_name[0] = '\0';
+        // [수정] dest_loc 가져오기 (row[2])
+        if(row[2]) strncpy(dest_loc, row[2], 63); else dest_loc[0] = '\0';
+        // caller_name은 row[3]으로 밀림
+        if(row[3]) strncpy(caller_name, row[3], 63); else caller_name[0] = '\0';
         
         // Null termination 보장
         start_loc[63] = '\0';
+        dest_loc[63] = '\0';
         caller_name[63] = '\0';
         
         found = 1;
     }
 
     mysql_free_result(res);
-    return found; // 1: 찾음, 0: 대기열 없음
+    return found; 
 }
 
 /**
@@ -587,17 +607,28 @@ int db_get_location_coords(DBContext *ctx, const char *loc_name, double *x, doub
  * 1) robot_status 업데이트 (order=1, goal 설정)
  * 2) call_queue 업데이트 (배차완료 처리)
  */
-int db_assign_job_to_robot(DBContext *ctx, const char *robot_name, int call_id, double x, double y, const char *caller) {
+int db_assign_job_to_robot(DBContext *ctx, const char *robot_name, int call_id, 
+                           double start_x, double start_y, 
+                           double goal_x, double goal_y, 
+                           const char *caller) {
     if (!ctx || !ctx->conn) return -1;
 
     char query[1024];
     
-    // 1) 로봇 상태 업데이트: order=1, goal 좌표 설정, 상태=BUSY
-    // 주의: `order`는 SQL 예약어이므로 백틱(`)으로 감싸야 합니다.
+    // 1) 로봇 상태 업데이트: 
+    // - order = 6 (배차 명령)
+    // - start_x, start_y (출발지 좌표)
+    // - goal_x, goal_y (목적지 좌표)
+    // - op_status = 'BUSY'
+    // - who_called 업데이트
     snprintf(query, sizeof(query),
-             "UPDATE robot_status SET `order` = 1, goal_x = %f, goal_y = %f, "
-             "who_called = '%s' WHERE name = '%s'",
-             x, y, caller, robot_name);
+             "UPDATE robot_status SET "
+             "`order` = 6, "
+             "start_x = %f, start_y = %f, "
+             "goal_x = %f, goal_y = %f, "
+             "op_status = 'BUSY', who_called = '%s' "
+             "WHERE name = '%s'",
+             start_x, start_y, goal_x, goal_y, caller, robot_name);
     
     if (mysql_query(ctx->conn, query)) {
         fprintf(stderr, "[Dispatch] Update Robot Failed: %s\n", mysql_error(ctx->conn));
@@ -605,7 +636,6 @@ int db_assign_job_to_robot(DBContext *ctx, const char *robot_name, int call_id, 
     }
 
     // 2) 대기열 상태 업데이트: is_dispatched=1
-    // 필요하다면 eta 컬럼에 '이동중' 등의 텍스트를 넣을 수 있음
     snprintf(query, sizeof(query),
              "UPDATE call_queue SET is_dispatched = 1, eta = '이동중' WHERE call_id = %d",
              call_id);
@@ -624,28 +654,33 @@ int db_assign_job_to_robot(DBContext *ctx, const char *robot_name, int call_id, 
  */
 void db_process_dispatch_cycle(DBContext *ctx) {
     int call_id;
-    char start_loc[64], caller[64];
+    char start_loc[64], dest_loc[64], caller[64]; // [수정] dest_loc 추가
     char robot_name[64];
-    double goal_x, goal_y;
+    double start_x, start_y; // [수정] 출발지 좌표 변수
+    double goal_x, goal_y;   // [수정] 목적지 좌표 변수
 
-    // 1. 우선순위 높은 대기 호출 확인 (에러(-1)가 아니고 찾았을 때(1)만 진입)
-    if (db_get_priority_call(ctx, &call_id, start_loc, caller) == 1) {
+    // 1. 우선순위 높은 대기 호출 확인 (dest_loc도 받아옴)
+    if (db_get_priority_call(ctx, &call_id, start_loc, dest_loc, caller) == 1) {
         
         // 2. 가용한 로봇 확인
-        // [수정] 단순히 if(...)라고 쓰면 -1(에러)도 true가 됩니다. == 1을 꼭 붙여주세요.
         if (db_get_available_robot(ctx, robot_name) == 1) {
             
-            // 3. 좌표 변환
-            if (db_get_location_coords(ctx, start_loc, &goal_x, &goal_y) == 1) {
-                
-                printf("[Dispatch] Matched! Call #%d (%s) -> Robot '%s' (Goal: %.2f, %.2f)\n",
-                       call_id, start_loc, robot_name, goal_x, goal_y);
+            // 3. 좌표 변환 (출발지 & 목적지 둘 다 성공해야 함)
+            int s_ok = db_get_location_coords(ctx, start_loc, &start_x, &start_y);
+            int d_ok = db_get_location_coords(ctx, dest_loc, &goal_x, &goal_y);
 
-                // 4. 배차 실행
-                db_assign_job_to_robot(ctx, robot_name, call_id, goal_x, goal_y, caller);
+            if (s_ok == 1 && d_ok == 1) {
+                
+                printf("[Dispatch] Matched! Call #%d (%s -> %s) assigned to '%s'\n",
+                       call_id, start_loc, dest_loc, robot_name);
+                printf("           Path: (%.2f, %.2f) -> (%.2f, %.2f)\n", 
+                       start_x, start_y, goal_x, goal_y);
+
+                // 4. 배차 실행 (order 6 전송)
+                db_assign_job_to_robot(ctx, robot_name, call_id, start_x, start_y, goal_x, goal_y, caller);
                 
             } else {
-                printf("[Dispatch] Error: Coordinates not found for location '%s'\n", start_loc);
+                printf("[Dispatch] Error: Coordinates missing for location '%s' or '%s'\n", start_loc, dest_loc);
             }
         } 
     }

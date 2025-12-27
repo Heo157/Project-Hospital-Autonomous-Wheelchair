@@ -60,12 +60,25 @@ void wheelchair_admin::initRobotTable()
     t->setSelectionMode(QAbstractItemView::SingleSelection);
     t->setEditTriggers(QAbstractItemView::NoEditTriggers);
     t->verticalHeader()->setVisible(false);
+
+    // [수정] 컬럼 수 6개로 증가 (ID, 배터리, 상태, 현재위치, 출발위치, 도착위치)
+    t->setColumnCount(6);
+
+    // [수정] 헤더 이름 명시적 설정
+    QStringList headers;
+    headers << "ID" << "배터리" << "상태" << "현재 위치" << "출발 위치" << "도착 위치";
+    t->setHorizontalHeaderLabels(headers);
+
     t->horizontalHeader()->setStretchLastSection(true);
 
+    // 컬럼 너비 설정
     t->setColumnWidth(0, 80);   // ID
     t->setColumnWidth(1, 90);   // 배터리
     t->setColumnWidth(2, 100);  // 상태
-    t->setColumnWidth(3, 150);  // 위치
+    t->setColumnWidth(3, 150);  // 현재 위치
+    // [추가] 새로운 컬럼 너비
+    t->setColumnWidth(4, 150);  // 출발 위치
+    t->setColumnWidth(5, 150);  // 도착 위치
 
     t->setContextMenuPolicy(Qt::CustomContextMenu);
     disconnect(t, &QTableWidget::customContextMenuRequested, this, &wheelchair_admin::onCustomContextMenuRequested);
@@ -420,29 +433,34 @@ void wheelchair_admin::updateMapMarkers(const QList<RobotInfo> &robotList) {
 }
 
 void wheelchair_admin::refreshRobotTable() {
-    // (기존 코드와 동일, 단 마지막에 selectRobot 호출 유지)
-    // ... DB 쿼리 ...
-    // ... 테이블 채우기 ...
-    // ... 맵 마커 업데이트 ...
-
-    // 편의상 핵심 부분만 재작성 (위의 코드 참고)
     QSqlQuery query = DatabaseManager::instance().getRobotStatusQuery();
     QList<RobotInfo> robotList;
+
+    // [1] DB 데이터 읽기
     while(query.next()) {
         RobotInfo info;
         info.id = query.value("robot_id").toInt();
         info.name = query.value("name").toString();
-        // [신규] IP 주소 가져오기 (DB 컬럼명이 ip_address라고 가정)
         info.ip = query.value("ip_address").toString();
         info.status = query.value("op_status").toString();
         info.battery = query.value("battery_percent").toInt();
+
+        // 좌표 읽기 (소수점)
         info.current_x = query.value("current_x").toDouble();
         info.current_y = query.value("current_y").toDouble();
+
+        // [추가] 출발지, 목적지 좌표 읽기
+        // (DB 컬럼명이 start_x, start_y, goal_x, goal_y 라고 가정)
+        info.start_x = query.value("start_x").toDouble();
+        info.start_y = query.value("start_y").toDouble();
+        info.goal_x = query.value("goal_x").toDouble();
+        info.goal_y = query.value("goal_y").toDouble();
+
         robotList.append(info);
-        m_robotCache.insert(info.id, info); // [신규] 캐시에 저장
+        m_robotCache.insert(info.id, info);
     }
 
-    // 콤보박스 갱신
+    // 콤보박스 갱신 로직 (기존 코드 유지)
     QString currentCombo = ui->cbSelectedRobot->currentText();
     ui->cbSelectedRobot->blockSignals(true);
     ui->cbSelectedRobot->clear();
@@ -451,14 +469,42 @@ void wheelchair_admin::refreshRobotTable() {
     if(idx != -1) ui->cbSelectedRobot->setCurrentIndex(idx);
     ui->cbSelectedRobot->blockSignals(false);
 
-    // 테이블 갱신
+    // [2] 테이블 갱신
     auto *t = ui->twRobotStatus;
     t->setRowCount(robotList.size());
+
     for(int i=0; i<robotList.size(); ++i) {
+        // Col 0: ID
         t->setItem(i, 0, new QTableWidgetItem(QString::number(robotList[i].id)));
+
+        // Col 1: 배터리
         t->setItem(i, 1, new QTableWidgetItem(QString("%1%").arg(robotList[i].battery)));
+
+        // Col 2: 상태
         t->setItem(i, 2, new QTableWidgetItem(robotList[i].status));
-        t->setItem(i, 3, new QTableWidgetItem(QString("(%1, %2)").arg(robotList[i].current_x, 0, 'f', 1).arg(robotList[i].current_y, 0, 'f', 1)));
+
+        // Col 3: 현재 위치 (0.0, 0.0) 형식
+        t->setItem(i, 3, new QTableWidgetItem(
+            QString("(%1, %2)")
+            .arg(robotList[i].current_x, 0, 'f', 1)
+            .arg(robotList[i].current_y, 0, 'f', 1)));
+
+        // [추가] Col 4: 출발 위치
+        t->setItem(i, 4, new QTableWidgetItem(
+            QString("(%1, %2)")
+            .arg(robotList[i].start_x, 0, 'f', 1)
+            .arg(robotList[i].start_y, 0, 'f', 1)));
+
+        // [추가] Col 5: 도착 위치
+        t->setItem(i, 5, new QTableWidgetItem(
+            QString("(%1, %2)")
+            .arg(robotList[i].goal_x, 0, 'f', 1)
+            .arg(robotList[i].goal_y, 0, 'f', 1)));
+
+        // 가운데 정렬 (옵션)
+        for(int col=0; col<6; col++) {
+            if(t->item(i, col)) t->item(i, col)->setTextAlignment(Qt::AlignCenter);
+        }
     }
 
     updateMapMarkers(robotList);

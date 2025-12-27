@@ -32,6 +32,10 @@ struct RobotInfo{
     double current_x;
     double current_y;
     double theta;
+    // [추가됨] 출발지 좌표
+    double start_x;
+    double start_y;
+    // [기존] 도착지 좌표
     double goal_x;
     double goal_y;
     int sensor;
