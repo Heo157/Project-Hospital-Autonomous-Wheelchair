@@ -142,6 +142,18 @@ MainWindow::MainWindow(QWidget *parent)
     if (ui->label_status) {
         ui->label_status->setText("Hospital");
     }
+
+    if (ui->centralwidget->layout()) {
+        ui->centralwidget->layout()->setSizeConstraint(QLayout::SetNoConstraint);
+    }
+
+    // 2. 창 크기 정책을 '무조건 늘어날 수 있음'으로 설정합니다.
+    this->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+    // 3. 최소 크기를 작게 잡고, 기본 크기를 재설정합니다.
+    this->setMinimumSize(QSize(100, 100)); // 최소 크기 제한 해제
+    this->setMaximumSize(QSize(16777215, 16777215)); // 최대 크기 제한 해제
+    this->resize(800, 600); // 원하는 초기 크기 강제 적용
 }
 
 MainWindow::~MainWindow()
