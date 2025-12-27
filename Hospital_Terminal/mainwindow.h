@@ -6,8 +6,8 @@
 #include "keyboard.h" 
 #include "login.h"
 
- #include "tab_admin.h"
- #include "tab_medical.h"
+#include "tab_admin.h"
+#include "tab_medical.h"
 #include "kiosk_main.h"
 #include "kiosk_search.h"
 #include "kiosk_login.h"

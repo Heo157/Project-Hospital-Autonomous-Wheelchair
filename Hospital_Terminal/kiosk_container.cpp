@@ -6,10 +6,12 @@
 #include "kiosk_login.h"
 #include "kiosk_wheel.h"
 #include "kiosk_back.h"
+#include "keyboard.h"
 
-kiosk_container::kiosk_container(QWidget *parent)
+kiosk_container::kiosk_container(QMainWindow *mw, QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::kiosk_container)
+    , mainWindow(mw)
 {
     ui->setupUi(this);
 
@@ -21,6 +23,20 @@ kiosk_container::kiosk_container(QWidget *parent)
     kiosk_login  *pageLogin  = new kiosk_login(this);
     kiosk_wheel  *pageWheel  = new kiosk_wheel(this);
     kiosk_back   *pageBack   = new kiosk_back(this);
+
+
+    // ---------------------------------
+    // 1-1. (핵심) 키오스크 내부 모든 QLineEdit을 MainWindow eventFilter에 등록
+    // ---------------------------------
+    if (mainWindow) {
+        // container 전체에서 찾아도 되고, 필요한 페이지만 찾아도 됨
+        // (너는 kiosk_login, kiosk_search만 필요하다고 했으니 아래처럼)
+        const QList<QLineEdit*> edits1 = pageLogin->findChildren<QLineEdit*>();
+        for (QLineEdit *e : edits1) e->installEventFilter(mainWindow);
+
+        const QList<QLineEdit*> edits2 = pageSearch->findChildren<QLineEdit*>();
+        for (QLineEdit *e : edits2) e->installEventFilter(mainWindow);
+    }
 
     // ---------------------------------
     // 2. stackedWidget 교체
@@ -97,6 +113,18 @@ kiosk_container::kiosk_container(QWidget *parent)
     connect(pageBack, &kiosk_back::goMain, this, [=]() {
         ui->stackedWidget->setCurrentWidget(pageMain);
     });
+
+    connect(ui->stackedWidget, &QStackedWidget::currentChanged,
+        this, [=](int){
+            // MainWindow에 있는 키보드 숨김
+            QMainWindow *mw = qobject_cast<QMainWindow*>(window());
+            if (!mw) return;
+
+            Keyboard *kbd = mw->findChild<Keyboard*>();
+            if (kbd) {
+                kbd->hide();
+            }
+        });
 }
 
 kiosk_container::~kiosk_container()

@@ -236,18 +236,30 @@ bool MainWindow::isPhysicalKeyboardConnected()
 // ---------------------------------------------------------
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
-    if (event->type() == QEvent::FocusIn || event->type() == QEvent::MouseButtonPress) {
+    //  마우스로 눌렀을 때 기준 처리
+    if (event->type() == QEvent::MouseButtonPress) {
+
         QLineEdit *lineEdit = qobject_cast<QLineEdit*>(obj);
-        if (lineEdit) {
-            
-            // 가상 키보드가 생성된 경우(nullptr가 아님)에만 동작
-            // 즉, 시작할 때 물리 키보드가 없었던 경우에만 띄움
-            if (virtualKeyboard != nullptr) {
-                virtualKeyboard->setLineEdit(lineEdit);
-                virtualKeyboard->show();
-            }
+
+        if (lineEdit && virtualKeyboard) {
+            //  LineEdit 클릭 → 키보드 표시
+            virtualKeyboard->setLineEdit(lineEdit);
+            virtualKeyboard->show();
+        }
+        else if (virtualKeyboard) {
+            //  LineEdit 아닌 곳 클릭 → 키보드 숨김
+            virtualKeyboard->hide();
         }
     }
+
+    //  포커스 인 (키보드 포커스 이동용 보조)
+    if (event->type() == QEvent::FocusIn) {
+        QLineEdit *lineEdit = qobject_cast<QLineEdit*>(obj);
+        if (lineEdit && virtualKeyboard) {
+            virtualKeyboard->setLineEdit(lineEdit);
+        }
+    }
+
     return QMainWindow::eventFilter(obj, event);
 }
 
@@ -288,7 +300,7 @@ void MainWindow::onLoginSuccess(QString role)
             if (ui->label_status)
                 ui->label_status->setText("키오스크 모드");
             ui->mainTabWidget->clear();
-            ui->mainTabWidget->addTab(new kiosk_container(this), "키오스크");
+            ui->mainTabWidget->addTab(new kiosk_container(this, this), "키오스크");
             ui->mainTabWidget->setCurrentIndex(0);
         }
     }
