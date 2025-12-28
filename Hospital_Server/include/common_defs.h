@@ -14,7 +14,7 @@
 #define COMMON_DEFS_H
 
 #include <stdint.h> // uint8_t, uint16_t 등 고정 크기 정수형 사용
-
+ㄴ
 /* ============================================================================
  * [시스템 상수 정의]
  * ============================================================================ */
@@ -94,8 +94,11 @@ typedef struct __attribute__((packed)) {
 } PacketHeader;
 
 typedef struct __attribute__((packed)) {
-    float x;
-    float y;
+    int   order;     // 명령 종류 
+    float start_x;   // 출발지 X (환자 위치)
+    float start_y;   // 출발지 Y
+    float goal_x;    // 목적지 X (병실 위치)
+    float goal_y;    // 목적지 Y
 } GoalAssignData;
 
 /**

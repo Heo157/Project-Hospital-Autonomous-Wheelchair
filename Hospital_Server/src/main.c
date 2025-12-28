@@ -121,29 +121,40 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
                                                (double)st->current_y, 
                                                (double)st->theta);
 
-                        // B. [중요] 배차된 새 명령(Order)이 있는지 확인
-                        double gx, gy;
-                        // 주문이 있고(1), 그 목표 좌표를 gx, gy에 받아옴
-                        if (db_check_new_order(&db, robot_name, &gx, &gy) == 1) {
-                            printf(">> [Command] New Goal for %s: (%.2f, %.2f)\n", robot_name, gx, gy);
+                        // ---------------------------------------------------------
+                        // B. [수정됨] 배차된 새 명령(Order)이 있는지 확인 (Start + Goal)
+                        // ---------------------------------------------------------
+                        int new_order = 0;
+                        double sx = 0, sy = 0; // 출발지 (Start)
+                        double gx = 0, gy = 0; // 목적지 (Goal)
+
+                        // 주의: db_check_new_order 함수도 server_db.c에서 매개변수를 5개 받도록 수정되어야 합니다.
+                        if (db_check_new_order(&db, robot_name, &new_order, &sx, &sy, &gx, &gy) == 1) {
+                            
+                            printf(">> [Command] Order %d for %s: Start(%.2f, %.2f) -> Goal(%.2f, %.2f)\n", 
+                                   new_order, robot_name, sx, sy, gx, gy);
 
                             // B-1. 명령 패킷 생성 (MSG_ASSIGN_GOAL)
                             PacketHeader res_header;
-                            GoalAssignData goal_data;
+                            GoalAssignData goal_data; // 구조체 정의가 수정되어 있어야 함 (20바이트)
 
                             res_header.magic = MAGIC_NUMBER;
                             res_header.device_type = DEVICE_ADMIN_QT; // 서버 권한
                             res_header.msg_type = MSG_ASSIGN_GOAL;
                             res_header.payload_len = sizeof(GoalAssignData);
 
-                            goal_data.x = (float)gx;
-                            goal_data.y = (float)gy;
+                            // B-2. 데이터 채우기 (Order + Start + Goal)
+                            goal_data.order   = new_order;
+                            goal_data.start_x = (float)sx;
+                            goal_data.start_y = (float)sy;
+                            goal_data.goal_x  = (float)gx;
+                            goal_data.goal_y  = (float)gy;
 
-                            // B-2. 전송
+                            // B-3. 전송
                             send(client_sock, &res_header, sizeof(PacketHeader), 0);
                             send(client_sock, &goal_data, sizeof(GoalAssignData), 0);
 
-                            // B-3. DB 주문 상태 초기화 (중복 전송 방지)
+                            // B-4. DB 주문 상태 초기화 (중복 전송 방지)
                             db_reset_order(&db, robot_name);
                         }
                     }
