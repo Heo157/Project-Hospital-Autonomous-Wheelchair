@@ -2,6 +2,7 @@
 #include "ui_login.h"
 #include "database_manager.h"
 #include <QMessageBox>
+#include <QShowEvent>
 
 Login::Login(QWidget *parent) :
     QWidget(parent),
@@ -35,4 +36,17 @@ void Login::on_pushButton_clicked()
         // 로그인 실패 시 경고창 (인자 3개 필수: 부모, 제목, 내용)
         QMessageBox::warning(this, "Login Failed", "Wrong ID or Password.");
     }
+}
+
+void Login::showEvent(QShowEvent *event)
+{
+    QWidget::showEvent(event);
+
+    // 로그인 입력창 초기화
+    ui->lineEdit->clear();
+    ui->lineEdit_2->clear();
+
+    // 포커스도 같이 정리 (선택)
+    ui->lineEdit->clearFocus();
+    ui->lineEdit_2->clearFocus();
 }
