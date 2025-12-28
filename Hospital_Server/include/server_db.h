@@ -73,7 +73,6 @@ int db_check_robot_exists(DBContext *ctx, const char *name);
  * (응급 > 질병위중도 > 대기시간 순)
  * @return 1: 찾음, 0: 대기열 없음, -1: 에러
  */
-//int db_get_priority_call(DBContext *ctx, int *call_id, char *start_loc, char *caller_name);
 int db_get_priority_call(DBContext *ctx, int *call_id, char *start_loc, char *dest_loc, char *caller_name);
 
 /**
@@ -90,11 +89,13 @@ int db_get_location_coords(DBContext *ctx, const char *loc_name, double *x, doub
 
 /**
  * @brief 4. 로봇에게 작업 할당 및 대기열 상태 변경 (트랜잭션급 처리)
- * - robot_status 업데이트 (order=1, goal 설정)
+ * - robot_status 업데이트 (order=6, Start/Goal 설정)
  * - call_queue 업데이트 (배차완료 처리)
  */
-//int db_assign_job_to_robot(DBContext *ctx, const char *robot_name, int call_id, double x, double y, const char *caller);
-int db_assign_job_to_robot(DBContext *ctx, const char *robot_name, int call_id, double start_x, double start_y, double goal_x, double goal_y, const char *caller);
+int db_assign_job_to_robot(DBContext *ctx, const char *robot_name, int call_id, 
+                           double start_x, double start_y, 
+                           double goal_x, double goal_y, 
+                           const char *caller);
 
 
 /**
@@ -106,38 +107,21 @@ void db_process_dispatch_cycle(DBContext *ctx);
 
 /* ============================================================================
  * [4] 로봇 명령 확인 및 제어 (Robot Control)
- * - 로봇이 자신에게 할당된 명령을 확인하거나 완료 처리할 때 사용
+ * - 로봇 핸들러(handle_client)에서 사용
  * ============================================================================ */
 
 /**
- * @brief 로봇 이름으로 현재 할당된 order 및 goal 좌표 조회
- * @param goal_x, goal_y 결과값을 저장할 포인터
- * @return 0: 성공(order=1), 1: 대기중(order=0), -1: 에러
+ * @brief 특정 로봇에게 내려진 주문(order > 0)이 있는지 확인하고, 모든 정보 반환
+ * @param order_out: 주문 번호 (예: 6)
+ * @param sx, sy: 출발지 좌표
+ * @param gx, gy: 목적지 좌표
+ * @return 1: 주문 있음, 0: 주문 없음, -1: 에러
  */
-int db_get_order_and_goal(
-    DBContext *ctx,
-    const char *name,
-    double *goal_x,
-    double *goal_y
-);
-
-/**
- * @brief 로봇 임무 완료 처리 (order를 0으로 리셋)
- * @return 0: 성공, -1: 실패
- */
-int db_reset_order(DBContext *ctx, const char *name);
-
-/**
- * @brief 특정 로봇에게 내려진 주문(order=1)이 있는지 확인하고, 있으면 목표좌표 반환
- * @param goal_x, goal_y: 결과값을 담을 포인터
- * @return 1: 주문 있음(좌표 반환), 0: 주문 없음, -1: 에러
- */
-//int db_check_new_order(DBContext *ctx, int *order_out, const char *name, double *goal_x, double *goal_y);
-//int db_check_new_order(DBContext *ctx, const char *name, double *goal_x, double *goal_y);
 int db_check_new_order(DBContext *ctx, const char *robot_name, 
                        int *order_out,      
                        double *sx, double *sy, 
                        double *gx, double *gy);
+
 /**
  * @brief 주문 처리가 완료되었으므로 order 컬럼을 0으로 초기화
  */

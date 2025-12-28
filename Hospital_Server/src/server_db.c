@@ -1,13 +1,11 @@
 /**
  * ============================================================================
  * @file    server_db.c
- * @brief   MariaDB/MySQL 데이터베이스 연동 모듈
- * @author  Team Hospital
- * @date    2025-12-04
+ * @brief   MariaDB/MySQL 데이터베이스 연동 모듈 (Final Version)
  * @details
- * - 로봇 상태 정보를 DB에 저장/업데이트하는 기능 제공
- * - Prepared Statement 방식으로 안전하고 효율적인 DB 작업 수행
- * - UPSERT 패턴으로 로봇이 처음이면 INSERT, 이미 있으면 UPDATE
+ * - is_new_order 컬럼 제거 버전 (order > 0 조건 사용)
+ * - 배차 시 출발지(Start)와 목적지(Goal) 좌표를 모두 계산하여 할당
+ * - 상세한 한글 주석 포함
  * ============================================================================
  */
 
@@ -18,89 +16,50 @@
 
 /* ============================================================================
  * [데이터베이스 접속 정보]
- * - 실제 운영 환경에서는 설정 파일(config.ini)로 분리하는 것을 권장
- * - 보안상 코드에 비밀번호를 하드코딩하는 것은 좋지 않음
  * ============================================================================ */
-#define DB_HOST "10.10.14.138"   // DB 서버 IP 주소 (localhost면 127.0.0.1)
-#define DB_PORT 3306             // MariaDB/MySQL 기본 포트 (표준)
-#define DB_USER "admin"          // DB 접속 사용자 이름
-#define DB_PASS "1234"           // DB 접속 비밀번호
-#define DB_NAME "hospital_db"    // 사용할 데이터베이스 이름
+#define DB_HOST "10.10.14.138"
+#define DB_PORT 3306
+#define DB_USER "admin"
+#define DB_PASS "1234"
+#define DB_NAME "hospital_db"
 
 /* ============================================================================
- * [UPSERT SQL 쿼리]
- * - UPSERT = INSERT + UPDATE 합성어
- * - 동작 방식:
- *   1) name이 처음이면 → INSERT (새로운 로봇 등록)
- *   2) name이 이미 있으면 → UPDATE (기존 로봇 정보 갱신)
- * - '?' 는 Placeholder로, 실행 시 실제 값으로 치환됨
- * - ON DUPLICATE KEY UPDATE: UNIQUE 제약 위반 시 UPDATE로 전환
+ * [UPSERT 쿼리]
+ * 로봇 상태 보고용 쿼리입니다.
+ * 중복된 키(name)가 있으면 UPDATE, 없으면 INSERT를 수행합니다.
  * ============================================================================ */
 static const char *SQL_UPSERT =
     "INSERT INTO robot_status "
-    // 삽입할 컬럼 목록 (7개)
     "(name, op_status, battery_percent, is_charging, current_x, current_y, current_theta) "
-    // 삽입할 값들 (? = 나중에 바인딩할 자리)
     "VALUES (?, ?, ?, ?, ?, ?, ?) "
-    // 중복 키(name)가 있으면 아래 UPDATE 실행
-    "ON DUPLICATE KEY UPDATE "               
-    "op_status=VALUES(op_status), "           // 운영 상태 갱신
-    "battery_percent=VALUES(battery_percent), " // 배터리 잔량 갱신
-    "is_charging=VALUES(is_charging), "       // 충전 상태 갱신
-    "current_x=VALUES(current_x), "           // X 좌표 갱신
-    "current_y=VALUES(current_y),"
-    "current_theta=VALUES(current_theta)";            // Y 좌표 갱신
+    "ON DUPLICATE KEY UPDATE "
+    "op_status=VALUES(op_status), "
+    "battery_percent=VALUES(battery_percent), "
+    "is_charging=VALUES(is_charging), "
+    "current_x=VALUES(current_x), "
+    "current_y=VALUES(current_y), "
+    "current_theta=VALUES(current_theta)";
 
-/**
- * ============================================================================
- * @brief DB 연결 및 Prepared Statement 초기화
- * @param ctx DB 컨텍스트 구조체 포인터 (연결 정보를 담을 곳)
- * @return 0: 성공, -1: 실패
- * 
- * @details
- * 1) MySQL 클라이언트 라이브러리 초기화
- * 2) DB 서버 연결
- * 3) SQL 쿼리를 미리 컴파일 (Prepared Statement)
- * 
- * [Prepared Statement란?]
- * - SQL 쿼리 구조를 미리 파싱/컴파일해서 메모리에 저장
- * - 실행 시마다 값만 바인딩해서 재사용 → 빠르고 안전
- * - SQL Injection 공격 완벽 차단 (문자열 조작 불가능)
- * ============================================================================
- */
+/* ============================================================================
+ * [함수: DB 연결 초기화]
+ * ============================================================================ */
 int db_open(DBContext *ctx)
 {
-    // 입력 검증: NULL 포인터면 에러
     if (!ctx) return -1;
-    
-    // 구조체 메모리 초기화 (쓰레기값 제거)
-    memset(ctx, 0, sizeof(*ctx));
+    memset(ctx, 0, sizeof(*ctx)); // 구조체 초기화
 
-    /* ------------------------------------------------------------------------
-     * 1단계: MySQL 클라이언트 핸들 생성
-     * - mysql_init(): MySQL 라이브러리 초기화 함수
-     * - NULL 전달 시 내부에서 메모리 자동 할당
-     * ------------------------------------------------------------------------ */
+    // 1. MySQL 핸들 생성
     ctx->conn = mysql_init(NULL);
     if (!ctx->conn) {
         fprintf(stderr, "[DB] mysql_init failed\n");
         return -1;
     }
 
-    /* ------------------------------------------------------------------------
-     * 2단계: 자동 재연결 옵션 설정
-     * - 네트워크 끊김이나 타임아웃 발생 시 자동으로 재연결 시도
-     * - 장시간 연결 유지하는 서버에 필수
-     * ------------------------------------------------------------------------ */
+    // 2. 재연결 옵션 설정 (네트워크 끊김 대비)
     my_bool reconnect = 1;
     mysql_options(ctx->conn, MYSQL_OPT_RECONNECT, &reconnect);
 
-    /* ------------------------------------------------------------------------
-     * 3단계: 실제 DB 서버 연결
-     * - mysql_real_connect(): TCP 소켓으로 DB 서버와 연결
-     * - 파라미터: (핸들, 호스트, 사용자, 비번, DB명, 포트, 유닉스소켓, 플래그)
-     * - 실패 시 mysql_error()로 에러 메시지 확인 가능
-     * ------------------------------------------------------------------------ */
+    // 3. DB 서버 연결
     if (!mysql_real_connect(ctx->conn, DB_HOST, DB_USER, DB_PASS, 
                             DB_NAME, DB_PORT, NULL, 0)) {
         fprintf(stderr, "[DB] connect error: %s\n", mysql_error(ctx->conn));
@@ -109,527 +68,288 @@ int db_open(DBContext *ctx)
         return -1;
     }
 
-    /* ------------------------------------------------------------------------
-     * 4단계: 문자 인코딩 설정
-     * - utf8mb4: 한글, 이모지 등 모든 유니코드 문자 지원
-     * - 기본 utf8은 3바이트까지만 지원 (이모지 X)
-     * ------------------------------------------------------------------------ */
+    // 4. 문자셋 설정 (한글 지원)
     mysql_set_character_set(ctx->conn, "utf8mb4");
 
-    /* ------------------------------------------------------------------------
-     * 5단계: Prepared Statement 초기화
-     * - mysql_stmt_init(): Statement 객체 생성
-     * - 이 객체로 SQL 쿼리를 컴파일하고 실행함
-     * ------------------------------------------------------------------------ */
+    // 5. UPSERT 쿼리 미리 준비 (Prepared Statement)
     ctx->upsert_stmt = mysql_stmt_init(ctx->conn);
     if (!ctx->upsert_stmt) {
-        fprintf(stderr, "[DB] stmt_init failed\n");
         db_close(ctx);
         return -1;
     }
 
-    /* ------------------------------------------------------------------------
-     * 6단계: SQL 쿼리 준비 (컴파일)
-     * - mysql_stmt_prepare(): SQL 문법 검사 및 실행 계획 생성
-     * - 한 번만 준비하면 여러 번 실행 가능 (성능 향상)
-     * - '?' 위치를 파악해서 나중에 값을 바인딩할 준비
-     * ------------------------------------------------------------------------ */
-    if (mysql_stmt_prepare(ctx->upsert_stmt, SQL_UPSERT, 
-                          (unsigned long)strlen(SQL_UPSERT)) != 0) {
-        fprintf(stderr, "[DB] stmt_prepare error: %s\n", 
-                mysql_stmt_error(ctx->upsert_stmt));
+    if (mysql_stmt_prepare(ctx->upsert_stmt, SQL_UPSERT, strlen(SQL_UPSERT)) != 0) {
+        fprintf(stderr, "[DB] stmt_prepare error: %s\n", mysql_stmt_error(ctx->upsert_stmt));
         db_close(ctx);
         return -1;
     }
 
-    // 연결 성공 플래그 설정
     ctx->connected = 1;
     return 0;
 }
 
-/**
- * ============================================================================
- * @brief DB 연결 종료 및 리소스 해제
- * @param ctx DB 컨텍스트 구조체 포인터
- * 
- * @details
- * - Prepared Statement 닫기
- * - DB 연결 닫기
- * - 메모리 누수 방지를 위해 반드시 호출 필요
- * ============================================================================
- */
+/* ============================================================================
+ * [함수: DB 연결 종료]
+ * ============================================================================ */
 void db_close(DBContext *ctx)
 {
     if (!ctx) return;
 
-    // Prepared Statement 리소스 해제
+    // Statement 해제
     if (ctx->upsert_stmt) {
         mysql_stmt_close(ctx->upsert_stmt);
-        ctx->upsert_stmt = NULL;  // 댕글링 포인터 방지
+        ctx->upsert_stmt = NULL;
     }
     
-    // DB 연결 종료
+    // 연결 해제
     if (ctx->conn) {
         mysql_close(ctx->conn);
-        ctx->conn = NULL;  // 댕글링 포인터 방지
+        ctx->conn = NULL;
     }
-    
-    // 연결 상태 플래그 초기화
     ctx->connected = 0;
 }
 
-/**
- * ============================================================================
- * @brief 로봇 상태 정보를 DB에 저장/업데이트 (UPSERT)
- * @param ctx          DB 컨텍스트
- * @param name         로봇 이름 (예: "wc1", "wc2") - UNIQUE KEY
- * @param op_status    운영 상태 ("RUNNING", "STOP", "ERROR")
- * @param battery_percent  배터리 잔량 (0~100)
- * @param is_charging  충전 중 여부 (0: 아님, 1: 충전중)
- * @param current_x    현재 X 좌표 (미터 단위)
- * @param current_y    현재 Y 좌표 (미터 단위)
- * @return 0: 성공, -1: 실패
- * 
- * @details
- * [동작 방식]
- * 1) name이 DB에 없으면 → INSERT (새 로봇 등록)
- * 2) name이 이미 있으면 → UPDATE (정보 갱신)
- * 
- * [바인딩 과정]
- * SQL의 '?'를 실제 값으로 치환하는 과정
- * - 타입 안정성: 각 값의 타입을 명시 (문자열, 정수, 실수 등)
- * - SQL Injection 방지: 문자열을 직접 쿼리에 넣지 않음
- * ============================================================================
- */
-int db_upsert_robot_status(
-    DBContext *ctx,
-    const char *name,
-    const char *op_status,
-    uint32_t battery_percent,
-    uint8_t is_charging,
-    double current_x,
-    double current_y,
-    double current_theta
-){
-    /* ------------------------------------------------------------------------
-     * 입력값 검증
-     * - ctx: DB 컨텍스트가 유효한지
-     * - connected: DB에 연결되어 있는지
-     * - upsert_stmt: Prepared Statement가 준비되었는지
-     * - name, op_status: 필수 문자열이 NULL이 아닌지
-     * ------------------------------------------------------------------------ */
-    if (!ctx || !ctx->connected || !ctx->upsert_stmt || !name || !op_status) {
-        return -1;
-    }
+/* ============================================================================
+ * [함수: 로봇 상태 저장 (UPSERT)]
+ * 로봇이 보내온 하트비트 정보를 DB에 씁니다.
+ * ============================================================================ */
+int db_upsert_robot_status(DBContext *ctx, const char *name, const char *op_status,
+                           uint32_t battery_percent, uint8_t is_charging,
+                           double current_x, double current_y, double current_theta)
+{
+    if (!ctx || !ctx->connected || !ctx->upsert_stmt) return -1;
 
-    /* ------------------------------------------------------------------------
-     * MYSQL_BIND 구조체 배열 준비
-     * - SQL의 6개 '?'에 각각 대응하는 값 정보를 담음
-     * - 각 원소는 (타입, 데이터 주소, 길이) 정보를 포함
-     * ------------------------------------------------------------------------ */
+    // 파라미터 바인딩 구조체 준비 (7개)
     MYSQL_BIND b[7];
-    memset(b, 0, sizeof(b));  // 구조체 초기화 (중요!)
+    memset(b, 0, sizeof(b));
 
-    // 문자열 길이 미리 계산 (바인딩 시 필요)
     unsigned long name_len = (unsigned long)strlen(name);
     unsigned long st_len   = (unsigned long)strlen(op_status);
 
-    /* ========================================================================
-     * 바인딩 1: name (문자열)
-     * - VALUES의 첫 번째 '?'에 해당
-     * - 예: "wc1", "wc2" 등 로봇 이름
-     * ======================================================================== */
-    b[0].buffer_type   = MYSQL_TYPE_STRING;  // 타입: 문자열
-    b[0].buffer        = (char*)name;        // 데이터가 있는 메모리 주소
-    b[0].buffer_length = name_len;           // 버퍼 크기
-    b[0].length        = &name_len;          // 실제 데이터 길이 포인터
-
-    /* ========================================================================
-     * 바인딩 2: op_status (문자열)
-     * - VALUES의 두 번째 '?'에 해당
-     * - 예: "RUNNING", "STOP", "ERROR"
-     * ======================================================================== */
-    b[1].buffer_type   = MYSQL_TYPE_STRING;
-    b[1].buffer        = (char*)op_status;
-    b[1].buffer_length = st_len;
-    b[1].length        = &st_len;
-
-    /* ========================================================================
-     * 바인딩 3: battery_percent (부호 없는 정수)
-     * - VALUES의 세 번째 '?'에 해당
-     * - MYSQL_TYPE_LONG: 4바이트 정수 (int32)
-     * - 예: 0, 50, 100
-     * ======================================================================== */
-    b[2].buffer_type = MYSQL_TYPE_LONG;
-    b[2].buffer      = &battery_percent;  // 주소만 전달 (복사 안 함)
-
-    /* ========================================================================
-     * 바인딩 4: is_charging (작은 정수, boolean)
-     * - VALUES의 네 번째 '?'에 해당
-     * - MYSQL_TYPE_TINY: 1바이트 정수 (int8)
-     * - 예: 0 (충전 안 함), 1 (충전 중)
-     * ======================================================================== */
-    b[3].buffer_type = MYSQL_TYPE_TINY;
-    b[3].buffer      = &is_charging;
-
-    /* ========================================================================
-     * 바인딩 5: current_x (실수, 좌표)
-     * - VALUES의 다섯 번째 '?'에 해당
-     * - MYSQL_TYPE_DOUBLE: 8바이트 부동소수점 (double)
-     * - 예: 1.5, -3.2, 0.0
-     * ======================================================================== */
-    b[4].buffer_type = MYSQL_TYPE_DOUBLE;
-    b[4].buffer      = &current_x;
-
-    /* ========================================================================
-     * 바인딩 6: current_y (실수, 좌표)
-     * - VALUES의 여섯 번째 '?'에 해당
-     * - MYSQL_TYPE_DOUBLE: 8바이트 부동소수점
-     * ======================================================================== */
-    b[5].buffer_type = MYSQL_TYPE_DOUBLE;
-    b[5].buffer      = &current_y;
-
-    /* ========================================================================
-     * 바인딩 7: current_theta (실수, 방향)
-     * - VALUES의 일곱 번째 '?'에 해당
-     * - MYSQL_TYPE_DOUBLE: 8바이트 부동소수점
-     * ======================================================================== */
-    b[6].buffer_type = MYSQL_TYPE_DOUBLE;
-    b[6].buffer      = &current_theta;
-
-    /* ------------------------------------------------------------------------
-     * Statement에 바인딩 정보 등록
-     * - mysql_stmt_bind_param(): 준비된 Statement에 값 연결
-     * - 이제 '?'들이 실제 값으로 치환될 준비 완료
-     * ------------------------------------------------------------------------ */
-    if (mysql_stmt_bind_param(ctx->upsert_stmt, b) != 0) {
-        fprintf(stderr, "[DB] bind error: %s\n", 
-                mysql_stmt_error(ctx->upsert_stmt));
-        return -1;
-    }
-
-    /* ------------------------------------------------------------------------
-     * 쿼리 실행
-     * - mysql_stmt_execute(): 바인딩된 값으로 SQL 실행
-     * - 실제로 DB에 데이터가 저장/업데이트됨
-     * - INSERT 또는 UPDATE가 내부적으로 결정됨
-     * ------------------------------------------------------------------------ */
-    if (mysql_stmt_execute(ctx->upsert_stmt) != 0) {
-        fprintf(stderr, "[DB] execute error: %s\n", 
-                mysql_stmt_error(ctx->upsert_stmt));
-        return -1;
-    }
-
-    /* ------------------------------------------------------------------------
-     * Statement 초기화 (다음 실행을 위한 준비)
-     * - mysql_stmt_reset(): 바인딩 정보 지우고 재사용 가능 상태로
-     * - 메모리 효율: Statement 객체를 재생성 안 하고 재사용
-     * ------------------------------------------------------------------------ */
-    mysql_stmt_reset(ctx->upsert_stmt);
+    // 1. Name
+    b[0].buffer_type = MYSQL_TYPE_STRING; 
+    b[0].buffer = (char*)name; 
+    b[0].length = &name_len;
     
-    return 0;  // 성공
+    // 2. Status
+    b[1].buffer_type = MYSQL_TYPE_STRING; 
+    b[1].buffer = (char*)op_status; 
+    b[1].length = &st_len;
+    
+    // 3. Battery
+    b[2].buffer_type = MYSQL_TYPE_LONG;   
+    b[2].buffer = &battery_percent;
+    
+    // 4. Charging
+    b[3].buffer_type = MYSQL_TYPE_TINY;   
+    b[3].buffer = &is_charging;
+    
+    // 5. X
+    b[4].buffer_type = MYSQL_TYPE_DOUBLE; 
+    b[4].buffer = &current_x;
+    
+    // 6. Y
+    b[5].buffer_type = MYSQL_TYPE_DOUBLE; 
+    b[5].buffer = &current_y;
+    
+    // 7. Theta
+    b[6].buffer_type = MYSQL_TYPE_DOUBLE; 
+    b[6].buffer = &current_theta;
+
+    if (mysql_stmt_bind_param(ctx->upsert_stmt, b) != 0) return -1;
+    
+    // 쿼리 실행
+    if (mysql_stmt_execute(ctx->upsert_stmt) != 0) return -1;
+    
+    // 다음 실행을 위해 리셋
+    mysql_stmt_reset(ctx->upsert_stmt);
+    return 0;
 }
 
 /* ============================================================================
- * [주문 확인 쿼리]
- * - 주의: 'order'는 SQL 예약어이므로 백틱(`)으로 감싸야 합니다.
- * - name이 일치하고, order 컬럼 값이 1(명령 있음)인 행의 goal_x, goal_y를 조회
+ * [함수: 새 명령 확인]
+ * 로봇 핸들러(handle_client)가 호출합니다.
+ * order 값이 0보다 크면 "명령이 있다"고 판단하여 모든 좌표를 반환합니다.
  * ============================================================================ */
-static const char *SQL_CHECK_ORDER_V2 = 
-    "SELECT `order`, start_x, start_y, goal_x, goal_y FROM robot_status WHERE name = ? AND `order` IN (1, 4, 5, 6)";
-    
-/* ============================================================================
- * [주문 리셋 쿼리]
- * - 로봇에게 명령을 보냈으므로 order를 0으로 되돌림
- * ============================================================================ */
-static const char *SQL_RESET_ORDER = 
-    "UPDATE robot_status SET `order` = 0 WHERE name = ?";
+int db_check_new_order(DBContext *ctx, const char *robot_name, 
+                       int *order_out, 
+                       double *sx, double *sy, 
+                       double *gx, double *gy)
+{
+    if (!ctx || !ctx->connected) return -1;
 
-/**
- * @brief 로봇에게 내려진 새 주문(order=1)이 있는지 확인
- * @param goal_x, goal_y : 결과를 담을 변수의 주소
- * @return 1: 주문 있음, 0: 주문 없음, -1: 에러
- */
-int db_check_new_order(DBContext *ctx, const char *name, double *target_x, double *target_y) {
-    // 1. 기본 검사
-    if (!ctx || !ctx->connected || !name) return -1;
+    // [핵심] order > 0 조건을 사용하여 새 명령 감지
+    const char *query = "SELECT `order`, start_x, start_y, goal_x, goal_y "
+                        "FROM robot_status WHERE name = ? AND `order` > 0";
 
     MYSQL_STMT *stmt = mysql_stmt_init(ctx->conn);
     if (!stmt) return -1;
 
-    // 2. 쿼리 준비 (수정된 V2 쿼리 사용)
-    if (mysql_stmt_prepare(stmt, SQL_CHECK_ORDER_V2, strlen(SQL_CHECK_ORDER_V2)) != 0) {
+    if (mysql_stmt_prepare(stmt, query, strlen(query)) != 0) {
         mysql_stmt_close(stmt);
         return -1;
     }
 
-    // 3. 파라미터 바인딩 (WHERE name = ?)
+    // 파라미터 바인딩 (WHERE name = ?)
     MYSQL_BIND bind_param[1];
     memset(bind_param, 0, sizeof(bind_param));
-    unsigned long name_len = strlen(name);
-    
+    unsigned long name_len = strlen(robot_name);
     bind_param[0].buffer_type = MYSQL_TYPE_STRING;
-    bind_param[0].buffer = (char*)name;
+    bind_param[0].buffer = (char*)robot_name;
     bind_param[0].length = &name_len;
+    mysql_stmt_bind_param(stmt, bind_param);
 
-    if (mysql_stmt_bind_param(stmt, bind_param) != 0) {
-        mysql_stmt_close(stmt);
-        return -1;
-    }
-
-    // 4. 결과 바인딩 (order, start_x, start_y, goal_x, goal_y)
+    // 결과 바인딩 (5개 컬럼)
     MYSQL_BIND bind_res[5];
     memset(bind_res, 0, sizeof(bind_res));
     
-    int order_val = 0;
-    double sx = 0, sy = 0, gx = 0, gy = 0;
+    bind_res[0].buffer_type = MYSQL_TYPE_LONG;   bind_res[0].buffer = order_out;
+    bind_res[1].buffer_type = MYSQL_TYPE_DOUBLE; bind_res[1].buffer = sx;
+    bind_res[2].buffer_type = MYSQL_TYPE_DOUBLE; bind_res[2].buffer = sy;
+    bind_res[3].buffer_type = MYSQL_TYPE_DOUBLE; bind_res[3].buffer = gx;
+    bind_res[4].buffer_type = MYSQL_TYPE_DOUBLE; bind_res[4].buffer = gy;
+    mysql_stmt_bind_result(stmt, bind_res);
 
-    // Col 0: order
-    bind_res[0].buffer_type = MYSQL_TYPE_LONG;
-    bind_res[0].buffer = &order_val;
-    
-    // Col 1: start_x
-    bind_res[1].buffer_type = MYSQL_TYPE_DOUBLE;
-    bind_res[1].buffer = &sx;
-
-    // Col 2: start_y
-    bind_res[2].buffer_type = MYSQL_TYPE_DOUBLE;
-    bind_res[2].buffer = &sy;
-
-    // Col 3: goal_x
-    bind_res[3].buffer_type = MYSQL_TYPE_DOUBLE;
-    bind_res[3].buffer = &gx;
-
-    // Col 4: goal_y
-    bind_res[4].buffer_type = MYSQL_TYPE_DOUBLE;
-    bind_res[4].buffer = &gy;
-
-    if (mysql_stmt_bind_result(stmt, bind_res) != 0) {
-        mysql_stmt_close(stmt);
-        return -1;
-    }
-
-    // 5. 실행 및 결과 저장
-    if (mysql_stmt_execute(stmt) != 0 || mysql_stmt_store_result(stmt) != 0) {
-        mysql_stmt_close(stmt);
-        return -1;
-    }
+    mysql_stmt_execute(stmt);
+    mysql_stmt_store_result(stmt);
 
     int has_order = 0;
-    
-    // 6. 데이터 Fetch 및 좌표 결정 로직
+    // 결과가 있으면(fetch 성공) order > 0 이므로 명령 존재
     if (mysql_stmt_fetch(stmt) == 0) {
-        if (order_val == 6) {
-            // [배차 명령] 환자가 있는 '출발지'로 가야 함
-            *target_x = sx;
-            *target_y = sy;
-            has_order = 1;
-        } 
-        else if (order_val == 1 || order_val == 4 || order_val == 5) {
-            // [일반 이동] 바로 '목적지'로 가야 함
-            *target_x = gx;
-            *target_y = gy;
-            has_order = 1;
-        }
+        has_order = 1;
     }
 
     mysql_stmt_close(stmt);
     return has_order;
 }
 
-/**
- * @brief 주문 처리 완료 후 order를 0으로 초기화
- */
+/* ============================================================================
+ * [함수: 명령 초기화]
+ * 로봇이 명령을 수신한 후 호출하여 order를 0으로 되돌립니다.
+ * ============================================================================ */
 int db_reset_order(DBContext *ctx, const char *name) {
-    if (!ctx || !ctx->connected || !name) return -1;
-
+    if (!ctx || !ctx->connected) return -1;
+    
+    // order를 0으로 설정하여 명령 처리 완료 표시
+    const char *query = "UPDATE robot_status SET `order` = 0 WHERE name = ?";
+    
     MYSQL_STMT *stmt = mysql_stmt_init(ctx->conn);
     if (!stmt) return -1;
-
-    if (mysql_stmt_prepare(stmt, SQL_RESET_ORDER, strlen(SQL_RESET_ORDER)) != 0) {
-        mysql_stmt_close(stmt);
-        return -1;
-    }
+    mysql_stmt_prepare(stmt, query, strlen(query));
 
     MYSQL_BIND bind[1];
     memset(bind, 0, sizeof(bind));
     unsigned long name_len = strlen(name);
-
     bind[0].buffer_type = MYSQL_TYPE_STRING;
     bind[0].buffer = (char*)name;
     bind[0].length = &name_len;
+    mysql_stmt_bind_param(stmt, bind);
 
-    if (mysql_stmt_bind_param(stmt, bind) != 0) {
-        mysql_stmt_close(stmt);
-        return -1;
-    }
-
-    if (mysql_stmt_execute(stmt) != 0) {
-        mysql_stmt_close(stmt);
-        return -1;
-    }
-
+    int ret = mysql_stmt_execute(stmt);
     mysql_stmt_close(stmt);
-    return 0; // 성공
+    return ret;
 }
-/**
- * @brief 1. 우선순위 공식에 따라 대기 호출 1개 조회
- * * [정렬 기준]
- * 1. p.is_emergency DESC : 응급 환자(1) 우선
- * 2. d.base_priority DESC : 질병 점수가 높은 순 (뇌졸중 > 골절 > 타박상)
- * 3. c.call_time ASC     : 먼저 호출한 순서
- * * IFNULL/COALESCE: 환자 정보가 없으면 0점 처리하여 맨 뒤로 보냄
- */
-int db_get_priority_call(DBContext *ctx, int *call_id, char *start_loc, char *dest_loc, char *caller_name) {
-    char query[1024];
 
-    // [수정] SELECT 절에 c.dest_loc 추가
+/* ============================================================================
+ * [함수: 우선순위 호출 조회]
+ * 대기 중인 호출 중 가장 급한 건을 가져옵니다.
+ * ============================================================================ */
+int db_get_priority_call(DBContext *ctx, int *call_id, char *start_loc, char *dest_loc, char *caller_name) {
+    // 응급환자 > 질병점수 > 호출시간 순으로 정렬
     const char *sql = 
         "SELECT c.call_id, c.start_loc, c.dest_loc, c.caller_name "
         "FROM call_queue c "
         "LEFT JOIN patient_info p ON c.caller_name = p.name "
         "LEFT JOIN disease_types d ON p.disease_code = d.disease_code "
         "WHERE c.is_dispatched = 0 "
-        "ORDER BY "
-        "  COALESCE(p.is_emergency, 0) DESC, "
-        "  COALESCE(d.base_priority, 0) DESC, "
-        "  c.call_time ASC "
+        "ORDER BY COALESCE(p.is_emergency, 0) DESC, COALESCE(d.base_priority, 0) DESC, c.call_time ASC "
         "LIMIT 1";
 
-    if (mysql_query(ctx->conn, sql)) {
-        fprintf(stderr, "[DB] Select Priority Call Error: %s\n", mysql_error(ctx->conn));
-        return -1;
-    }
-
+    if (mysql_query(ctx->conn, sql)) return -1;
     MYSQL_RES *res = mysql_store_result(ctx->conn);
     if (!res) return -1;
 
     MYSQL_ROW row = mysql_fetch_row(res);
     int found = 0;
-    
     if (row) {
         *call_id = atoi(row[0]);
-        
         // 안전한 문자열 복사
         if(row[1]) strncpy(start_loc, row[1], 63); else start_loc[0] = '\0';
-        // [수정] dest_loc 가져오기 (row[2])
-        if(row[2]) strncpy(dest_loc, row[2], 63); else dest_loc[0] = '\0';
-        // caller_name은 row[3]으로 밀림
+        if(row[2]) strncpy(dest_loc, row[2], 63);  else dest_loc[0] = '\0';
         if(row[3]) strncpy(caller_name, row[3], 63); else caller_name[0] = '\0';
-        
-        // Null termination 보장
-        start_loc[63] = '\0';
-        dest_loc[63] = '\0';
-        caller_name[63] = '\0';
-        
         found = 1;
     }
-
     mysql_free_result(res);
-    return found; 
+    return found;
 }
 
-/**
- * @brief 2. 'WAITING' 상태인 로봇 하나 찾기
- * 조건: 
- * 1) op_status가  'WAITING' (놀고 있는 상태)
- * 2) 배터리가 20% 이상 (작업 수행 가능)
- */
+/* ============================================================================
+ * [함수: 가용 로봇 조회]
+ * 쉬고 있고(WAITING), 배터리 충분하며(>20%), 현재 명령이 없는(order=0) 로봇 조회
+ * ============================================================================ */
 int db_get_available_robot(DBContext *ctx, char *robot_name) {
-    if (!ctx || !ctx->conn) return -1;
-
-    // [핵심 수정] AND `order` = 0 추가
-    // 이 조건이 있어야 관리자가 방금 명령을 내린(order=1) 로봇을
-    // 배차 관리자가 납치해가는 일을 막을 수 있습니다.
     const char *query = "SELECT name FROM robot_status "
                         "WHERE op_status = 'WAITING' "
                         "AND battery_percent > 20 "
-                        "AND `order` = 0 "  
+                        "AND COALESCE(`order`, 0) = 0 " // 방금 명령받은 로봇은 제외
                         "LIMIT 1";
 
-    if (mysql_query(ctx->conn, query)) {
-        fprintf(stderr, "[DB] Select Robot Error: %s\n", mysql_error(ctx->conn));
-        return -1;
-    }
-
+    if (mysql_query(ctx->conn, query)) return -1;
     MYSQL_RES *res = mysql_store_result(ctx->conn);
     if (!res) return -1;
 
     MYSQL_ROW row = mysql_fetch_row(res);
     int found = 0;
-    
     if (row) {
         strncpy(robot_name, row[0], 63);
         robot_name[63] = '\0';
         found = 1;
     }
-    
     mysql_free_result(res);
     return found;
 }
 
-/**
- * @brief 3. 장소 이름("정형외과")을 좌표(x, y)로 변환
- * map_location 테이블에서 조회
- */
+/* ============================================================================
+ * [함수: 장소 -> 좌표 변환]
+ * map_location 테이블에서 (x, y) 좌표를 조회합니다.
+ * ============================================================================ */
 int db_get_location_coords(DBContext *ctx, const char *loc_name, double *x, double *y) {
-    if (!ctx || !ctx->conn) return -1;
-
     char query[512];
-    // map_location 테이블이 존재해야 합니다.
-    snprintf(query, sizeof(query), 
-             "SELECT x, y FROM map_location WHERE location_name = '%s'", loc_name);
+    snprintf(query, sizeof(query), "SELECT x, y FROM map_location WHERE location_name = '%s'", loc_name);
 
-    if (mysql_query(ctx->conn, query)) {
-        // 테이블이 없거나 쿼리 오류 시
-        fprintf(stderr, "[DB] Get Location Error: %s\n", mysql_error(ctx->conn));
-        return -1;
-    }
-
+    if (mysql_query(ctx->conn, query)) return -1;
     MYSQL_RES *res = mysql_store_result(ctx->conn);
     if (!res) return -1;
 
     MYSQL_ROW row = mysql_fetch_row(res);
     int found = 0;
-    
     if (row) {
         *x = atof(row[0]);
         *y = atof(row[1]);
         found = 1;
-    } else {
-        // 맵에 없는 장소일 경우
-        fprintf(stderr, "[DB Warning] Unknown location: %s\n", loc_name);
     }
-    
     mysql_free_result(res);
     return found;
 }
 
-/**
- * @brief 4. 로봇에게 작업 할당 및 대기열 상태 변경 (트랜잭션급 처리)
- * 1) robot_status 업데이트 (order=1, goal 설정)
- * 2) call_queue 업데이트 (배차완료 처리)
- */
+/* ============================================================================
+ * [함수: 배차 실행 (DB 업데이트)]
+ * 로봇 테이블에 명령(Order 6)과 좌표를 넣고, 호출 대기열을 '배차됨'으로 변경
+ * ============================================================================ */
 int db_assign_job_to_robot(DBContext *ctx, const char *robot_name, int call_id, 
                            double start_x, double start_y, 
                            double goal_x, double goal_y, 
-                           const char *caller) {
-    if (!ctx || !ctx->conn) return -1;
-
+                           const char *caller) 
+{
     char query[1024];
-    
-    // 1) 로봇 상태 업데이트: 
-    // - order = 6 (배차 명령)
-    // - start_x, start_y (출발지 좌표)
-    // - goal_x, goal_y (목적지 좌표)
-    // - op_status = 'BUSY'
-    // - who_called 업데이트
+
+    // 1) 로봇 상태 업데이트 (Order 6 부여)
     snprintf(query, sizeof(query),
              "UPDATE robot_status SET "
              "`order` = 6, "
              "start_x = %f, start_y = %f, "
              "goal_x = %f, goal_y = %f, "
-             "op_status = 'BUSY', who_called = '%s' "
+             "op_status = 'HEADING', who_called = '%s' "
              "WHERE name = '%s'",
              start_x, start_y, goal_x, goal_y, caller, robot_name);
     
@@ -638,54 +358,49 @@ int db_assign_job_to_robot(DBContext *ctx, const char *robot_name, int call_id,
         return -1;
     }
 
-    // 2) 대기열 상태 업데이트: is_dispatched=1
+    // 2) 호출 대기열 업데이트 (배차 완료 처리)
     snprintf(query, sizeof(query),
              "UPDATE call_queue SET is_dispatched = 1, eta = '이동중' WHERE call_id = %d",
              call_id);
              
-    if (mysql_query(ctx->conn, query)) {
-        fprintf(stderr, "[Dispatch] Update Queue Failed: %s\n", mysql_error(ctx->conn));
-        return -1;
-    }
+    if (mysql_query(ctx->conn, query)) return -1;
 
     return 0; // 성공
 }
 
-/**
- * @brief [메인 로직] 배차 사이클 실행
- * 배차 관리자 프로세스가 이 함수를 반복 호출합니다.
- */
+/* ============================================================================
+ * [함수: 배차 사이클 메인]
+ * 이 함수가 배차 관리자(Dispatch Manager)에 의해 주기적으로 호출됩니다.
+ * ============================================================================ */
 void db_process_dispatch_cycle(DBContext *ctx) {
     int call_id;
-    char start_loc[64], dest_loc[64], caller[64]; // [수정] dest_loc 추가
+    char start_loc[64], dest_loc[64], caller[64];
     char robot_name[64];
-    double start_x, start_y; // [수정] 출발지 좌표 변수
-    double goal_x, goal_y;   // [수정] 목적지 좌표 변수
+    double start_x, start_y;
+    double goal_x, goal_y;
 
-    // 1. 우선순위 높은 대기 호출 확인 (dest_loc도 받아옴)
+    // 1. 가장 급한 호출 확인 (출발지, 목적지 정보 포함)
     if (db_get_priority_call(ctx, &call_id, start_loc, dest_loc, caller) == 1) {
         
-        // 2. 가용한 로봇 확인
+        // 2. 일할 수 있는 로봇 찾기
         if (db_get_available_robot(ctx, robot_name) == 1) {
             
-            // 3. 좌표 변환 (출발지 & 목적지 둘 다 성공해야 함)
+            // 3. 출발지와 목적지의 (x,y) 좌표 조회
             int s_ok = db_get_location_coords(ctx, start_loc, &start_x, &start_y);
             int d_ok = db_get_location_coords(ctx, dest_loc, &goal_x, &goal_y);
 
+            // 두 좌표 모두 찾았을 때만 배차 진행
             if (s_ok == 1 && d_ok == 1) {
-                
                 printf("[Dispatch] Matched! Call #%d (%s -> %s) assigned to '%s'\n",
                        call_id, start_loc, dest_loc, robot_name);
-                printf("           Path: (%.2f, %.2f) -> (%.2f, %.2f)\n", 
-                       start_x, start_y, goal_x, goal_y);
 
-                // 4. 배차 실행 (order 6 전송)
+                // 4. 배차 확정 및 DB 업데이트
                 db_assign_job_to_robot(ctx, robot_name, call_id, start_x, start_y, goal_x, goal_y, caller);
                 
             } else {
-                printf("[Dispatch] Error: Coordinates missing for location '%s' or '%s'\n", start_loc, dest_loc);
+                printf("[Dispatch] Error: Unknown location '%s' or '%s' (Check map_location table)\n", start_loc, dest_loc);
             }
         } 
+        // 로봇이 없으면 다음 사이클 대기
     }
 }
-
