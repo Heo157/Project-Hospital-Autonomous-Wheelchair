@@ -20,6 +20,9 @@ signals:
     // login success
     void loginSuccess(QString role);
 
+protected:
+    void showEvent(QShowEvent *event) override;
+
 private slots:
     void on_pushButton_clicked();
 
