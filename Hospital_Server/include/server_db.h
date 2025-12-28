@@ -133,8 +133,11 @@ int db_reset_order(DBContext *ctx, const char *name);
  * @return 1: 주문 있음(좌표 반환), 0: 주문 없음, -1: 에러
  */
 //int db_check_new_order(DBContext *ctx, int *order_out, const char *name, double *goal_x, double *goal_y);
-int db_check_new_order(DBContext *ctx, const char *name, double *goal_x, double *goal_y);
-
+//int db_check_new_order(DBContext *ctx, const char *name, double *goal_x, double *goal_y);
+int db_check_new_order(DBContext *ctx, const char *robot_name, 
+                       int *order_out,      
+                       double *sx, double *sy, 
+                       double *gx, double *gy);
 /**
  * @brief 주문 처리가 완료되었으므로 order 컬럼을 0으로 초기화
  */

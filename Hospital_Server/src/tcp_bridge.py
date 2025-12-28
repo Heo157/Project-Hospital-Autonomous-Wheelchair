@@ -359,7 +359,7 @@ class TcpBridge(Node):
             # [FSM 전이 1] 픽업 이동 중(HEADING) -> 출발지 도착 -> 탑승 대기(BOARDING)
             # -----------------------------------------------------------------
             # 조건: 상태가 HEADING이고, 목표까지 거리가 0.5m 이내일 때
-            if self.current_state == STATE_HEADING and dist < 0.5:
+            if self.current_state == STATE_HEADING and dist < 0.2:
                 self.get_logger().info("🚩 Arrived at Start. Boarding (Wait 5s)...")
                 self.change_state(STATE_BOARDING)
                 
@@ -370,7 +370,7 @@ class TcpBridge(Node):
             # [FSM 전이 2] 주행 중(RUNNING) -> 목적지 도착 -> 다음 행동 분기
             # -----------------------------------------------------------------
             # 조건: 상태가 RUNNING이고, 목표까지 거리가 0.5m 이내일 때
-            elif self.current_state == STATE_RUNNING and dist < 0.5:
+            elif self.current_state == STATE_RUNNING and dist < 0.2:
                 self.get_logger().info("🚩 Arrived at Destination.")
                 self.change_state(STATE_ARRIVED) # 일단 '도착' 상태로 변경
 
