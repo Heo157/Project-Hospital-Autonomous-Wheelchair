@@ -60,7 +60,7 @@ CREATE TABLE `call_queue` (
   `is_dispatched` int(11) DEFAULT 0,
   `eta` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`call_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=50 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=90 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -111,7 +111,7 @@ CREATE TABLE `map_location` (
   `y` double DEFAULT NULL,
   PRIMARY KEY (`location_id`),
   UNIQUE KEY `location_name` (`location_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -177,6 +177,8 @@ CREATE TABLE `robot_status` (
   `current_x` double NOT NULL DEFAULT 0,
   `current_y` double NOT NULL DEFAULT 0,
   `current_theta` double NOT NULL DEFAULT 0,
+  `start_x` double DEFAULT 0,
+  `start_y` double DEFAULT 0,
   `goal_x` double DEFAULT NULL,
   `goal_y` double DEFAULT NULL,
   `sensor` int(11) DEFAULT NULL,
@@ -184,7 +186,7 @@ CREATE TABLE `robot_status` (
   `who_called` char(20) DEFAULT NULL,
   PRIMARY KEY (`robot_id`),
   UNIQUE KEY `uk_robot_name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=341077 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=448491 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -212,4 +214,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;
 
--- Dump completed on 2025-12-23 18:45:43
+-- Dump completed on 2025-12-28 17:12:55
