@@ -328,6 +328,52 @@ QList<PatientFullInfo> DatabaseManager::searchPatients(const QString &searchName
     return list;
 }
 
+//키오스크용 환자 검색
+PatientFullInfo DatabaseManager::getPatientById(const QString &patientId, bool *ok)
+{
+    PatientFullInfo info;
+    if (ok) *ok = false;
+
+    if (!db.isOpen()) {
+        if (!connectToDb()) return info;
+    }
+
+    QSqlQuery query;
+    query.prepare(
+        "SELECT p.patient_id, p.name, p.disease_code, d.name_kr, d.name_en, "
+        "       p.is_emergency, p.type, p.ward, p.bed, p.admission_date "
+        "FROM patient_info p "
+        "LEFT JOIN disease_types d ON p.disease_code = d.disease_code "
+        "WHERE p.patient_id = :pid"
+        );
+    query.bindValue(":pid", patientId);
+
+    if (!query.exec()) {
+        qDebug() << "getPatientById exec error:" << query.lastError().text();
+        return info;
+    }
+
+    if (!query.next()) {
+        // 조회 결과 없음
+        return info;
+    }
+
+    info.id = query.value(0).toString();
+    info.name = query.value(1).toString();
+    info.diseaseCode = query.value(2).toString();
+    info.diseaseNameKR = query.value(3).toString();
+    info.diseaseNameEN = query.value(4).toString();
+    info.isEmergency = query.value(5).toBool();
+    info.type = query.value(6).toString();
+    info.ward = query.value(7).toString();
+    info.bed = query.value(8).toInt();
+    info.admissionDate = query.value(9).toDateTime();
+
+    if (ok) *ok = true;
+    return info;
+}
+
+
 //환자 추가 (트랜잭션 중요)
 bool DatabaseManager::addPatient(const PatientFullInfo &info)
 {
