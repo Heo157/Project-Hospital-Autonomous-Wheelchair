@@ -47,7 +47,7 @@ private:
     // -----------------------------
     kiosk_main   *kioskMain   = nullptr;
     kiosk_search *kioskSearch = nullptr;
-    kiosk_login  *kioskLogin  = nullptr;
+ //   kiosk_login  *kioskLogin  = nullptr;
     kiosk_wheel  *kioskWheel  = nullptr;
     kiosk_back   *kioskBack   = nullptr;
 

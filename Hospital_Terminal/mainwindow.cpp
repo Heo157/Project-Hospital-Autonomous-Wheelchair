@@ -118,7 +118,7 @@ MainWindow::MainWindow(QWidget *parent)
     // ---------------------------------------------------------
     kioskMain   = new kiosk_main(this);
     kioskSearch = new kiosk_search(this);
-    kioskLogin  = new kiosk_login(this);
+//   kioskLogin  = new kiosk_login(this);
     kioskWheel  = new kiosk_wheel(this);
     kioskBack   = new kiosk_back(this);
 
@@ -128,7 +128,7 @@ MainWindow::MainWindow(QWidget *parent)
     // ---------------------------------------------------------
     ui->stackedWidget->addWidget(kioskMain);
     ui->stackedWidget->addWidget(kioskSearch);
-    ui->stackedWidget->addWidget(kioskLogin);
+//    ui->stackedWidget->addWidget(kioskLogin);
     ui->stackedWidget->addWidget(kioskWheel);
     ui->stackedWidget->addWidget(kioskBack);
 
