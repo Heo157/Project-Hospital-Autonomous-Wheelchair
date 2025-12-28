@@ -66,6 +66,8 @@ public:
     //환자 관리용 함수들
     // 1. 환자 검색 (이름으로 검색, 빈칸이면 전체)
     QList<PatientFullInfo> searchPatients(const QString &name);
+    // [추가] 환자번호(patient_id)로 정확 조회 (키오스크용)
+    PatientFullInfo getPatientById(const QString &patientId, bool *ok = nullptr);
 
     // 2. 환자 추가 (트랜잭션)
     bool addPatient(const PatientFullInfo &info);

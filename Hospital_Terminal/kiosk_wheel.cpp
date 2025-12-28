@@ -20,69 +20,81 @@ kiosk_wheel::kiosk_wheel(QWidget *parent)
     // 0.5초(500ms)마다 호출 버튼 색상 변경
     connect(blinkTimer, &QTimer::timeout, this, [=]() {
         if (isRed) {
-            // 눈에 띄는 노란색 (또는 원하시는 색)
-            ui->btn_call->setStyleSheet("background-color: #FF9E9E; color: black; border-radius: 10px; font-weight: bold; font-size: 24px;");
+            ui->btn_call->setStyleSheet(
+                "background-color: #FF9E9E; color: black; "
+                "border-radius: 10px; font-weight: bold; font-size: 24px;"
+                );
         } else {
-            // 원래 붉은색 (강조)
-            ui->btn_call->setStyleSheet("background-color: #FF6B6B; color: white; border-radius: 10px; font-weight: bold; font-size: 24px;");
+            ui->btn_call->setStyleSheet(
+                "background-color: #FF6B6B; color: white; "
+                "border-radius: 10px; font-weight: bold; font-size: 24px;"
+                );
         }
-        isRed = !isRed; // 상태 반전
+        isRed = !isRed;
     });
 
     // ---------------------------------
     // 2. 기본 버튼 스타일 정의 (선택 안됐을 때)
     // ---------------------------------
-    // Qt Designer에서 설정한 스타일이 있다면 그것을 기본값으로 쓰면 됩니다.
-    // 여기서는 예시로 '살구색' 정도를 기본으로 잡겠습니다.
-    QString defaultStyle = "background-color: #FFC0CB; color: black; border-radius: 10px; font-size: 18px;";
-    QString selectedStyle = "background-color: #FF1493; color: white; border: 3px solid red; border-radius: 10px; font-size: 18px; font-weight: bold;";
+    QString defaultStyle =
+        "background-color: #FFC0CB; color: black; "
+        "border-radius: 10px; font-size: 18px;";
 
-    // 초기화 시 모든 버튼 기본 스타일 적용
+    QString selectedStyle =
+        "background-color: #FF1493; color: white; "
+        "border: 3px solid red; border-radius: 10px; "
+        "font-size: 18px; font-weight: bold;";
+
     ui->btn_dest_food->setStyleSheet(defaultStyle);
     ui->btn_dest_jung->setStyleSheet(defaultStyle);
     ui->btn_dest_room->setStyleSheet(defaultStyle);
     ui->btn_dest_jae->setStyleSheet(defaultStyle);
 
     // ---------------------------------
-    // 3. 목적지 선택 공통 처리 함수 (팝업 제거됨)
+    // 3. 목적지 선택 공통 처리 함수
     // ---------------------------------
-    // [중요] 어떤 버튼이 눌렸는지 알기 위해 QPushButton* 인자를 받습니다.
     auto selectDest = [=](const QString &dest, QPushButton* btn) {
 
-        // (1) 데이터 저장
+        // (1) 선택된 목적지 저장
         selectedDestination = dest;
 
-        // (2) 모든 버튼 색상 초기화 (하나만 선택된 효과)
+        // (2) 모든 버튼 초기화
         ui->btn_dest_food->setStyleSheet(defaultStyle);
         ui->btn_dest_jung->setStyleSheet(defaultStyle);
         ui->btn_dest_room->setStyleSheet(defaultStyle);
         ui->btn_dest_jae->setStyleSheet(defaultStyle);
 
-        // (3) 방금 누른 버튼만 '진하게' 변경
-        if(btn) {
+        // (3) 선택된 버튼 강조
+        if (btn) {
             btn->setStyleSheet(selectedStyle);
         }
 
-        // (4) 휠체어 호출 버튼 깜빡임 시작!
+        // (4) 호출 버튼 깜빡임 시작
         if (!blinkTimer->isActive()) {
-            blinkTimer->start(500); // 500ms 간격
+            blinkTimer->start(500);
         }
     };
 
     // ---------------------------------
-    // 4. 목적지 버튼 연결 (인자 추가)
+    // 4. 목적지 버튼 연결
     // ---------------------------------
-    connect(ui->btn_dest_food, &QPushButton::clicked, this, [=]() { selectDest("식당", ui->btn_dest_food); });
-    connect(ui->btn_dest_jung, &QPushButton::clicked, this, [=]() { selectDest("정형외과", ui->btn_dest_jung); });
-    connect(ui->btn_dest_room, &QPushButton::clicked, this, [=]() { selectDest("입원실", ui->btn_dest_room); });
-    connect(ui->btn_dest_jae,  &QPushButton::clicked, this, [=]() { selectDest("재활의학과", ui->btn_dest_jae); });
+    connect(ui->btn_dest_food, &QPushButton::clicked,
+            this, [=]() { selectDest("식당", ui->btn_dest_food); });
+
+    connect(ui->btn_dest_jung, &QPushButton::clicked,
+            this, [=]() { selectDest("정형외과", ui->btn_dest_jung); });
+
+    connect(ui->btn_dest_room, &QPushButton::clicked,
+            this, [=]() { selectDest("입원실", ui->btn_dest_room); });
+
+    connect(ui->btn_dest_jae, &QPushButton::clicked,
+            this, [=]() { selectDest("재활의학과", ui->btn_dest_jae); });
 
     // ---------------------------------
     // 뒤로가기
     // ---------------------------------
-    connect(ui->btn_back, &QPushButton::clicked, this, [=](){
-        blinkTimer->stop(); // 타이머 끄기
-        // 버튼 스타일 초기화 필요하면 여기서 수행
+    connect(ui->btn_back, &QPushButton::clicked, this, [=]() {
+        blinkTimer->stop();
         emit goBack();
     });
 
@@ -96,34 +108,41 @@ kiosk_wheel::kiosk_wheel(QWidget *parent)
             return;
         }
 
-        // [중요] 호출을 눌렀으니 깜빡임 멈춤 & 색상 고정
         blinkTimer->stop();
-        ui->btn_call->setStyleSheet("background-color: #FF6B6B; color: white; border-radius: 10px; font-weight: bold; font-size: 24px;");
+        ui->btn_call->setStyleSheet(
+            "background-color: #FF6B6B; color: white; "
+            "border-radius: 10px; font-weight: bold; font-size: 24px;"
+            );
 
         // ---------------------------------------------------------
-        // 기존 DB 로직 (그대로 유지)
+        // DB 로직
         // ---------------------------------------------------------
         QString finalName = m_patientName;
-//        if (m_patientID == "NULL") finalName = "외래";
-//        else finalName = m_patientName;
 
-        QPair<double, double> loc = DatabaseManager::instance().getLocation(selectedDestination);
+        QPair<double, double> loc =
+            DatabaseManager::instance().getLocation(selectedDestination);
 
         if (loc.first == -1.0 && loc.second == -1.0) {
             QMessageBox::critical(this, "오류", "좌표 데이터 없음");
             return;
         }
 
-        bool queueOk = DatabaseManager::instance().addCallToQueue(finalName, "키오스크", selectedDestination);
+        bool queueOk =
+            DatabaseManager::instance().addCallToQueue(
+                finalName, "키오스크", selectedDestination
+                );
+
         if (!queueOk) {
-             QMessageBox::warning(this, "오류", "대기열 추가 실패");
-             return;
+            QMessageBox::warning(this, "오류", "대기열 추가 실패");
+            return;
         }
 
-        bool robotOk = DatabaseManager::instance().updateRobotGoal(1, loc.first, loc.second, 2, finalName);
+        bool robotOk =
+            DatabaseManager::instance().updateRobotGoal(
+                1, loc.first, loc.second, 2, finalName
+                );
 
         if (robotOk) {
-
             emit wheelConfirmed();
         } else {
             QMessageBox::critical(this, "오류", "로봇 통신 실패");
@@ -141,19 +160,41 @@ void kiosk_wheel::setPatientInfo(QString name, QString id)
     m_patientName = name;
     m_patientID = id;
 
-    // 화면 들어올 때마다 초기화 (선택 정보 리셋)
+    // =================================================
+    // [추가] 선택된 환자 정보 표시
+    // =================================================
+    if (m_patientID.isEmpty()) {
+        // 외래환자
+        ui->label_patient->setText(
+            QString("%1 님").arg(m_patientName)
+            );
+    } else {
+        // 일반 환자
+        ui->label_patient->setText(
+            QString("%1 (%2) 님").arg(m_patientName, m_patientID)
+            );
+    }
+    // ---------------------------------
+    // 화면 진입 시 상태 초기화
+    // ---------------------------------
     selectedDestination.clear();
-    if(blinkTimer->isActive()) blinkTimer->stop();
 
-    // 버튼 색상 초기화 (살구색)
-    QString defaultStyle = "background-color: #FFC0CB; color: black; border-radius: 10px; font-size: 18px;";
+    if (blinkTimer->isActive())
+        blinkTimer->stop();
+
+    QString defaultStyle =
+        "background-color: #FFC0CB; color: black; "
+        "border-radius: 10px; font-size: 18px;";
+
     ui->btn_dest_food->setStyleSheet(defaultStyle);
     ui->btn_dest_jung->setStyleSheet(defaultStyle);
     ui->btn_dest_room->setStyleSheet(defaultStyle);
     ui->btn_dest_jae->setStyleSheet(defaultStyle);
 
-    // 호출 버튼 초기화
-    ui->btn_call->setStyleSheet("background-color: #FF6B6B; color: white; border-radius: 10px; font-weight: bold; font-size: 24px;");
+    ui->btn_call->setStyleSheet(
+        "background-color: #FF6B6B; color: white; "
+        "border-radius: 10px; font-weight: bold; font-size: 24px;"
+        );
 
     qDebug() << "Kiosk_Wheel Init -> Name:" << name << ", ID:" << id;
 }

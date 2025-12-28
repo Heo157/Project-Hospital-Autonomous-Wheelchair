@@ -26,7 +26,7 @@ kiosk_main::kiosk_main(QWidget *parent)
     //  → 로그인 화면으로 이동
     // ---------------------------------
     connect(ui->pbkioskwheel, &QPushButton::clicked,
-            this, &kiosk_main::goLogin);
+            this, &kiosk_main::goWheel);
 
     // ---------------------------------
     // 환자 조회 버튼

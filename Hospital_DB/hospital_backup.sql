@@ -91,7 +91,7 @@ CREATE TABLE `call_queue` (
   `is_dispatched` int(11) DEFAULT 0,
   `eta` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`call_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=50 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=90 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -101,8 +101,6 @@ CREATE TABLE `call_queue` (
 LOCK TABLES `call_queue` WRITE;
 /*!40000 ALTER TABLE `call_queue` DISABLE KEYS */;
 set autocommit=0;
-INSERT INTO `call_queue` VALUES
-(49,'2025-12-23 17:21:36','강송구','키오스크','재활의학과',1,'이동중');
 /*!40000 ALTER TABLE `call_queue` ENABLE KEYS */;
 UNLOCK TABLES;
 commit;
@@ -188,7 +186,7 @@ CREATE TABLE `map_location` (
   `y` double DEFAULT NULL,
   PRIMARY KEY (`location_id`),
   UNIQUE KEY `location_name` (`location_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -199,11 +197,12 @@ LOCK TABLES `map_location` WRITE;
 /*!40000 ALTER TABLE `map_location` DISABLE KEYS */;
 set autocommit=0;
 INSERT INTO `map_location` VALUES
-(1,'정형외과',10.5,5),
-(2,'식당',2,3.5),
+(1,'정형외과',0.372,-2.86),
+(2,'식당',1.38,-0.65),
 (3,'키오스크',0,0),
-(4,'재활의학과',15,8),
-(5,'입원실',-5,10);
+(4,'재활의학과',0.4,-3.6),
+(5,'입원실',1.57,-2.8),
+(6,'충전스테이션',0,0);
 /*!40000 ALTER TABLE `map_location` ENABLE KEYS */;
 UNLOCK TABLES;
 commit;
@@ -305,6 +304,8 @@ CREATE TABLE `robot_status` (
   `current_x` double NOT NULL DEFAULT 0,
   `current_y` double NOT NULL DEFAULT 0,
   `current_theta` double NOT NULL DEFAULT 0,
+  `start_x` double DEFAULT 0,
+  `start_y` double DEFAULT 0,
   `goal_x` double DEFAULT NULL,
   `goal_y` double DEFAULT NULL,
   `sensor` int(11) DEFAULT NULL,
@@ -312,7 +313,7 @@ CREATE TABLE `robot_status` (
   `who_called` char(20) DEFAULT NULL,
   PRIMARY KEY (`robot_id`),
   UNIQUE KEY `uk_robot_name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=341843 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=448491 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -323,7 +324,7 @@ LOCK TABLES `robot_status` WRITE;
 /*!40000 ALTER TABLE `robot_status` DISABLE KEYS */;
 set autocommit=0;
 INSERT INTO `robot_status` VALUES
-(334580,'wc1',NULL,'HEADING',90,0,-0.06633184850215912,0.014849078841507435,-0.1171032264828682,0,0,NULL,0,'admin');
+(442826,'ubuntu','10.10.14.148','WAITING',8443,0,0.07394149899482727,-0.07017111033201218,-0.0229378379881382,0.372,-2.86,0,0,NULL,0,'admin');
 /*!40000 ALTER TABLE `robot_status` ENABLE KEYS */;
 UNLOCK TABLES;
 commit;
@@ -368,4 +369,4 @@ commit;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;
 
--- Dump completed on 2025-12-23 18:54:01
+-- Dump completed on 2025-12-28 17:08:25

@@ -1,3 +1,4 @@
+#if 0
 #ifndef KIOSK_LOGIN_H
 #define KIOSK_LOGIN_H
 
@@ -16,7 +17,7 @@ public:
     ~kiosk_login();
 
 signals:
-    void loginAccepted(QString name);
+    void loginAccepted(QString name, QString id);
     void goBack();
 
 protected:
@@ -27,3 +28,4 @@ private:
 };
 
 #endif // KIOSK_LOGIN_H
+#endif
