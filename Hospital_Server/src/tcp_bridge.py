@@ -168,8 +168,9 @@ class TcpBridge(Node):
         self.theta = self.quaternion_to_yaw(msg.pose.pose.orientation)
 
     def batt_cb(self, msg):
-        if msg.percentage is not None:
-            self.battery_percent = int(msg.percentage * 100)
+        if msg.percentage is not None and msg.percentage >= 0.0:
+            p = int(msg.percentage * 100.0) if msg.percentage <= 1.0 else int(msg.percentage)
+            self.battery_percent = max(0, min(100, p))
 
     # =========================================================
     # [Helper] 유틸리티 함수
