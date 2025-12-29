@@ -231,9 +231,9 @@ class TcpBridge(Node):
         self.theta = self.quaternion_to_yaw(msg.pose.pose.orientation)
 
     def batt_cb(self, msg):
-        """ 배터리 상태 수신 """
-        if msg.percentage is not None:
-            self.battery_percent = int(msg.percentage * 100)
+        if msg.percentage is not None and msg.percentage >= 0.0:
+            p = int(msg.percentage * 100.0) if msg.percentage <= 1.0 else int(msg.percentage)
+            self.battery_percent = max(0, min(100, p))
 
     def ultra_cb(self, msg):
         """ 초음파 센서 데이터 수신 (Int32) """

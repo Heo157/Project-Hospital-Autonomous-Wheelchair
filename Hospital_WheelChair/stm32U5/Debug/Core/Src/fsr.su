@@ -1,0 +1,4 @@
+../Core/Src/fsr.c:3:17:fsr_adc_read	24	static
+../Core/Src/fsr.c:12:6:FSR_Init	24	static
+../Core/Src/fsr.c:31:6:FSR_SetThresholds	16	static
+../Core/Src/fsr.c:37:6:FSR_Update	24	static

@@ -16,7 +16,7 @@ public:
     ~kiosk_main();
 
 signals:
-    void goLogin();
+    void goWheel();
     void goSearch();
 
 private:

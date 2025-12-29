@@ -3,7 +3,7 @@
 
 #include "kiosk_main.h"
 #include "kiosk_search.h"
-#include "kiosk_login.h"
+//#include "kiosk_login.h"
 #include "kiosk_wheel.h"
 #include "kiosk_back.h"
 #include "keyboard.h"
@@ -20,7 +20,7 @@ kiosk_container::kiosk_container(QMainWindow *mw, QWidget *parent)
     // ---------------------------------
     kiosk_main   *pageMain   = new kiosk_main(this);
     kiosk_search *pageSearch = new kiosk_search(this);
-    kiosk_login  *pageLogin  = new kiosk_login(this);
+//   kiosk_login  *pageLogin  = new kiosk_login(this);
     kiosk_wheel  *pageWheel  = new kiosk_wheel(this);
     kiosk_back   *pageBack   = new kiosk_back(this);
 
@@ -31,8 +31,8 @@ kiosk_container::kiosk_container(QMainWindow *mw, QWidget *parent)
     if (mainWindow) {
         // container 전체에서 찾아도 되고, 필요한 페이지만 찾아도 됨
         // (너는 kiosk_login, kiosk_search만 필요하다고 했으니 아래처럼)
-        const QList<QLineEdit*> edits1 = pageLogin->findChildren<QLineEdit*>();
-        for (QLineEdit *e : edits1) e->installEventFilter(mainWindow);
+//       const QList<QLineEdit*> edits1 = pageLogin->findChildren<QLineEdit*>();
+//      for (QLineEdit *e : edits1) e->installEventFilter(mainWindow);
 
         const QList<QLineEdit*> edits2 = pageSearch->findChildren<QLineEdit*>();
         for (QLineEdit *e : edits2) e->installEventFilter(mainWindow);
@@ -47,8 +47,8 @@ kiosk_container::kiosk_container(QMainWindow *mw, QWidget *parent)
     ui->stackedWidget->removeWidget(ui->stackedWidget->widget(1));
     ui->stackedWidget->insertWidget(1, pageSearch);
 
-    ui->stackedWidget->removeWidget(ui->stackedWidget->widget(2));
-    ui->stackedWidget->insertWidget(2, pageLogin);
+ //   ui->stackedWidget->removeWidget(ui->stackedWidget->widget(2));
+ //   ui->stackedWidget->insertWidget(2, pageLogin);
 
     ui->stackedWidget->removeWidget(ui->stackedWidget->widget(3));
     ui->stackedWidget->insertWidget(3, pageWheel);
@@ -65,9 +65,12 @@ kiosk_container::kiosk_container(QMainWindow *mw, QWidget *parent)
         ui->stackedWidget->setCurrentWidget(pageSearch);
     });
 
-    connect(pageMain, &kiosk_main::goLogin, this, [=]() {
-        ui->stackedWidget->setCurrentWidget(pageLogin);
+    connect(pageMain, &kiosk_main::goWheel, this, [=]() {
+        prevPage = pageMain;                      // back 기준을 main으로
+        pageWheel->setPatientInfo("외래환자", ""); // main에서 바로 들어간 경우 표시용
+        ui->stackedWidget->setCurrentWidget(pageWheel);
     });
+
 
     // ---------------------------------
     // kiosk_search
@@ -81,20 +84,20 @@ kiosk_container::kiosk_container(QMainWindow *mw, QWidget *parent)
     connect(pageSearch, &kiosk_search::goBack, this, [=]() {
         ui->stackedWidget->setCurrentWidget(pageMain);
     });
-
+/*
     // ---------------------------------
     // kiosk_login
     // ---------------------------------
-    connect(pageLogin, &kiosk_login::loginAccepted, this, [=](QString name) {
+    connect(pageLogin, &kiosk_login::loginAccepted, this, [=](QString name, QString id) {
         prevPage = pageLogin;
-        pageWheel->setPatientInfo(name, "NULL");
+        pageWheel->setPatientInfo(name, id);
         ui->stackedWidget->setCurrentWidget(pageWheel);
     });
 
     connect(pageLogin, &kiosk_login::goBack, this, [=]() {
         ui->stackedWidget->setCurrentWidget(pageMain);
     });
-
+*/
     // ---------------------------------
     // kiosk_wheel
     // ---------------------------------
@@ -103,8 +106,7 @@ kiosk_container::kiosk_container(QMainWindow *mw, QWidget *parent)
     });
 
     connect(pageWheel, &kiosk_wheel::goBack, this, [=]() {
-        if (prevPage)
-            ui->stackedWidget->setCurrentWidget(prevPage);
+        ui->stackedWidget->setCurrentWidget(prevPage ? prevPage : pageMain);
     });
 
     // ---------------------------------
