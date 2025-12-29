@@ -30,15 +30,17 @@
  * ============================================================================ */
 static const char *SQL_UPSERT =
     "INSERT INTO robot_status "
-    "(name, op_status, battery_percent, is_charging, current_x, current_y, current_theta) "
-    "VALUES (?, ?, ?, ?, ?, ?, ?) "
+    "(name, op_status, battery_percent, is_charging, current_x, current_y, current_theta, ultra_distance_cm, seat_detected) " // <-- 추가
+    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) " // <-- 물음표 2개 추가
     "ON DUPLICATE KEY UPDATE "
     "op_status=VALUES(op_status), "
     "battery_percent=VALUES(battery_percent), "
     "is_charging=VALUES(is_charging), "
     "current_x=VALUES(current_x), "
     "current_y=VALUES(current_y), "
-    "current_theta=VALUES(current_theta)";
+    "current_theta=VALUES(current_theta), "
+    "ultra_distance_cm=VALUES(ultra_distance_cm), " // <-- 추가
+    "seat_detected=VALUES(seat_detected)";
 
 /* ============================================================================
  * [함수: DB 연결 초기화]
@@ -115,12 +117,13 @@ void db_close(DBContext *ctx)
  * ============================================================================ */
 int db_upsert_robot_status(DBContext *ctx, const char *name, const char *op_status,
                            uint32_t battery_percent, uint8_t is_charging,
-                           double current_x, double current_y, double current_theta)
+                           double current_x, double current_y, double current_theta,
+                           int ultra_dist, uint8_t seat_detected)
 {
     if (!ctx || !ctx->connected || !ctx->upsert_stmt) return -1;
 
     // 파라미터 바인딩 구조체 준비 (7개)
-    MYSQL_BIND b[7];
+    MYSQL_BIND b[9];
     memset(b, 0, sizeof(b));
 
     unsigned long name_len = (unsigned long)strlen(name);
@@ -156,6 +159,14 @@ int db_upsert_robot_status(DBContext *ctx, const char *name, const char *op_stat
     b[6].buffer_type = MYSQL_TYPE_DOUBLE; 
     b[6].buffer = &current_theta;
 
+    // 8. Ultra Distance
+    b[7].buffer_type = MYSQL_TYPE_LONG;
+    b[7].buffer = &ultra_dist;
+
+    // 9. Seat Detected
+    b[8].buffer_type = MYSQL_TYPE_TINY;
+    b[8].buffer = &seat_detected;
+
     if (mysql_stmt_bind_param(ctx->upsert_stmt, b) != 0) return -1;
     
     // 쿼리 실행
@@ -174,12 +185,13 @@ int db_upsert_robot_status(DBContext *ctx, const char *name, const char *op_stat
 int db_check_new_order(DBContext *ctx, const char *robot_name, 
                        int *order_out, 
                        double *sx, double *sy, 
-                       double *gx, double *gy)
+                       double *gx, double *gy,
+                       char *caller_out)
 {
     if (!ctx || !ctx->connected) return -1;
 
     // [핵심] order > 0 조건을 사용하여 새 명령 감지
-    const char *query = "SELECT `order`, start_x, start_y, goal_x, goal_y "
+    const char *query = "SELECT `order`, start_x, start_y, goal_x, goal_y, who_called "
                         "FROM robot_status WHERE name = ? AND `order` > 0";
 
     MYSQL_STMT *stmt = mysql_stmt_init(ctx->conn);
@@ -199,8 +211,8 @@ int db_check_new_order(DBContext *ctx, const char *robot_name,
     bind_param[0].length = &name_len;
     mysql_stmt_bind_param(stmt, bind_param);
 
-    // 결과 바인딩 (5개 컬럼)
-    MYSQL_BIND bind_res[5];
+    // 결과 바인딩 (6개 컬럼)
+    MYSQL_BIND bind_res[6];
     memset(bind_res, 0, sizeof(bind_res));
     
     bind_res[0].buffer_type = MYSQL_TYPE_LONG;   bind_res[0].buffer = order_out;
@@ -208,6 +220,12 @@ int db_check_new_order(DBContext *ctx, const char *robot_name,
     bind_res[2].buffer_type = MYSQL_TYPE_DOUBLE; bind_res[2].buffer = sy;
     bind_res[3].buffer_type = MYSQL_TYPE_DOUBLE; bind_res[3].buffer = gx;
     bind_res[4].buffer_type = MYSQL_TYPE_DOUBLE; bind_res[4].buffer = gy;
+
+    bind_res[5].buffer_type = MYSQL_TYPE_STRING;
+    bind_res[5].buffer = caller_out;
+    bind_res[5].buffer_length = 64;
+    bind_res[5].length = &caller_len;
+
     mysql_stmt_bind_result(stmt, bind_res);
 
     mysql_stmt_execute(stmt);
@@ -403,4 +421,49 @@ void db_process_dispatch_cycle(DBContext *ctx) {
         } 
         // 로봇이 없으면 다음 사이클 대기
     }
+}
+
+/* ============================================================================
+ * [함수: 로봇 존재 여부 확인]
+ * DB에 해당 이름의 로봇이 있는지 확인 (1: 있음, 0: 없음)
+ * ============================================================================ */
+int db_check_robot_exists(DBContext *ctx, const char *name) {
+    if (!ctx || !ctx->connected) return -1;
+
+    const char *query = "SELECT 1 FROM robot_status WHERE name = ?";
+    
+    MYSQL_STMT *stmt = mysql_stmt_init(ctx->conn);
+    if (!stmt) return -1;
+
+    if (mysql_stmt_prepare(stmt, query, strlen(query)) != 0) {
+        mysql_stmt_close(stmt);
+        return -1;
+    }
+
+    // 파라미터 바인딩
+    MYSQL_BIND bind[1];
+    memset(bind, 0, sizeof(bind));
+    unsigned long name_len = strlen(name);
+    
+    bind[0].buffer_type = MYSQL_TYPE_STRING;
+    bind[0].buffer = (char*)name;
+    bind[0].length = &name_len;
+
+    if (mysql_stmt_bind_param(stmt, bind) != 0) {
+        mysql_stmt_close(stmt);
+        return -1;
+    }
+
+    if (mysql_stmt_execute(stmt) != 0) {
+        mysql_stmt_close(stmt);
+        return -1;
+    }
+
+    mysql_stmt_store_result(stmt);
+    
+    // 행(Row)이 있으면 존재하는 것
+    int exists = (mysql_stmt_num_rows(stmt) > 0) ? 1 : 0;
+
+    mysql_stmt_close(stmt);
+    return exists;
 }

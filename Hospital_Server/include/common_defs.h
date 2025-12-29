@@ -99,6 +99,7 @@ typedef struct __attribute__((packed)) {
     float start_y;   // 출발지 Y
     float goal_x;    // 목적지 X (병실 위치)
     float goal_y;    // 목적지 Y
+    char caller_name[64]; // 탑승자 이름
 } GoalAssignData;
 
 /**
@@ -121,6 +122,8 @@ typedef struct __attribute__((packed)) {
     float current_y;
     float theta;         // 로봇이 바라보는 방향 (라디안)
     uint8_t is_moving;   // 1:이동중, 0:정지
+    int ultra_distance_cm;
+    uint8_t seat_detected;
 } RobotStateData;
 
 #endif // COMMON_DEFS_H

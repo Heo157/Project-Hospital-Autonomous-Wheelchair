@@ -120,7 +120,8 @@ void db_process_dispatch_cycle(DBContext *ctx);
 int db_check_new_order(DBContext *ctx, const char *robot_name, 
                        int *order_out,      
                        double *sx, double *sy, 
-                       double *gx, double *gy);
+                       double *gx, double *gy,
+                       char *caller_out);
 
 /**
  * @brief 주문 처리가 완료되었으므로 order 컬럼을 0으로 초기화
