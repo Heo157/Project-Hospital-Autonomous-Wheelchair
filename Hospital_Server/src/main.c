@@ -112,6 +112,33 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
                     
                     // DB가 연결되어 있고, 로봇 이름이 식별된 경우에만 처리
                     if (db_ok && robot_name[0] != '\0') {
+                        
+                        // [수정 포인트] 1. 먼저 DB에 로봇이 존재하는지 확인!
+                        int exists = db_check_robot_exists(&db, robot_name);
+
+                        if (exists == 0) {
+                            // [상황: 로봇이 DB에서 삭제됨] -> "너 죽어(Kill)" 명령 전송
+                            printf("[Server] 🚫 Unknown Robot '%s' detected. Sending KILL command.\n", robot_name);
+                            
+                            PacketHeader kill_header;
+                            GoalAssignData kill_order;
+
+                            // 자폭 패킷 준비
+                            kill_header.magic = MAGIC_NUMBER;
+                            kill_header.device_type = DEVICE_ADMIN_QT;
+                            kill_header.msg_type = MSG_ASSIGN_GOAL;
+                            kill_header.payload_len = sizeof(GoalAssignData);
+
+                            memset(&kill_order, 0, sizeof(kill_order));
+                            kill_order.order = 99; // 99번 = 자폭 코드
+
+                            send(client_sock, &kill_header, sizeof(PacketHeader), 0);
+                            send(client_sock, &kill_order, sizeof(GoalAssignData), 0);
+                            
+                            // DB에 저장하지 않고 루프 탈출 (소켓 종료)
+                            break; 
+                        }
+
                         // A. 로봇 상태 DB 업데이트 (UPSERT)
                         const char* op_str = get_state_str(st->is_moving);
                         
@@ -119,7 +146,9 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
                                                st->battery_level, 0,
                                                (double)st->current_x, 
                                                (double)st->current_y, 
-                                               (double)st->theta);
+                                               (double)st->theta,
+                                               st->ultra_distance_cm,  // <-- 추가
+                                               st->seat_detected);
 
                         // ---------------------------------------------------------
                         // B. [수정됨] 배차된 새 명령(Order)이 있는지 확인 (Start + Goal)
@@ -127,34 +156,34 @@ void handle_client(int client_sock, struct sockaddr_in client_addr) {
                         int new_order = 0;
                         double sx = 0, sy = 0; // 출발지 (Start)
                         double gx = 0, gy = 0; // 목적지 (Goal)
+                        char caller_buf[64] = {0};
 
                         // 주의: db_check_new_order 함수도 server_db.c에서 매개변수를 5개 받도록 수정되어야 합니다.
-                        if (db_check_new_order(&db, robot_name, &new_order, &sx, &sy, &gx, &gy) == 1) {
+                        if (db_check_new_order(&db, robot_name, &new_order, &sx, &sy, &gx, &gy, caller_buf) == 1) {
                             
-                            printf(">> [Command] Order %d for %s: Start(%.2f, %.2f) -> Goal(%.2f, %.2f)\n", 
-                                   new_order, robot_name, sx, sy, gx, gy);
+                            printf(">> [Command] Order %d (%s): %s\n", new_order, robot_name, caller_buf);
 
-                            // B-1. 명령 패킷 생성 (MSG_ASSIGN_GOAL)
                             PacketHeader res_header;
-                            GoalAssignData goal_data; // 구조체 정의가 수정되어 있어야 함 (20바이트)
+                            GoalAssignData goal_data;
+                            memset(&goal_data, 0, sizeof(goal_data)); // 안전하게 0 초기화
 
                             res_header.magic = MAGIC_NUMBER;
-                            res_header.device_type = DEVICE_ADMIN_QT; // 서버 권한
+                            res_header.device_type = DEVICE_ADMIN_QT;
                             res_header.msg_type = MSG_ASSIGN_GOAL;
-                            res_header.payload_len = sizeof(GoalAssignData);
+                            res_header.payload_len = sizeof(GoalAssignData); // 이제 84바이트가 됨
 
-                            // B-2. 데이터 채우기 (Order + Start + Goal)
                             goal_data.order   = new_order;
                             goal_data.start_x = (float)sx;
                             goal_data.start_y = (float)sy;
                             goal_data.goal_x  = (float)gx;
                             goal_data.goal_y  = (float)gy;
+                            
+                            // [추가] 이름 복사 (버퍼 오버플로우 방지)
+                            strncpy(goal_data.caller_name, caller_buf, 63);
 
-                            // B-3. 전송
                             send(client_sock, &res_header, sizeof(PacketHeader), 0);
                             send(client_sock, &goal_data, sizeof(GoalAssignData), 0);
 
-                            // B-4. DB 주문 상태 초기화 (중복 전송 방지)
                             db_reset_order(&db, robot_name);
                         }
                     }
