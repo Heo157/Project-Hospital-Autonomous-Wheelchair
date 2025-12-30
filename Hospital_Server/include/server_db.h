@@ -45,16 +45,12 @@ void db_close(DBContext *ctx);
  * @param current_theta 현재 방향(각도)
  * @return 0: 성공, -1: 실패
  */
-int db_upsert_robot_status(
-    DBContext *ctx,
-    const char *name,
-    const char *op_status,
-    uint32_t battery_percent,
-    uint8_t is_charging,
-    double current_x,
-    double current_y,
-    double current_theta
-);
+
+
+int db_upsert_robot_status(DBContext *ctx, const char *name, const char *op_status,
+                           uint32_t battery_percent, uint8_t is_charging,
+                           double current_x, double current_y, double current_theta,
+                           int ultra_dist, uint8_t seat_detected);
 
 /**
  * @brief 로봇 이름이 DB에 존재하는지 확인
