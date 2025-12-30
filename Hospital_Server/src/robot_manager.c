@@ -49,7 +49,7 @@ static pid_t spawn_python_bridge(const char* robot_name) {
         // [자식 프로세스]
         // 실행 명령: python3 ./tcp_bridge.py [robot_name]
         // 주의: tcp_bridge.py 경로가 정확해야 함
-        execlp("python3", "python3", "./tcp_bridge.py", robot_name, (char *)NULL);
+        execlp("python3", "python3", "./tcp_bridge.py", robot_name, "map_graph.json", (char *)NULL);
         
         // 실패 시
         perror("[RobotManager] execlp failed");
@@ -161,6 +161,9 @@ void run_robot_manager_loop() {
         fprintf(stderr, "[RobotManager] DB Connect Failed.\n");
         exit(1);
     }
+
+    //프로세스 시작 전 최신 맵 파일 생성
+    db_export_map_json(&db_ctx, "map_graph.json");
 
     printf("[RobotManager] Service Started (PID: %d)\n", getpid());
 

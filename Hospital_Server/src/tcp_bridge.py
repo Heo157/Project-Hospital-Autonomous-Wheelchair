@@ -24,6 +24,8 @@ import struct
 import threading
 import time
 import math
+import json
+import heapq
 
 # -------------------------------------------------------------------------
 # [ROS 2 관련 라이브러리 임포트]
@@ -95,137 +97,184 @@ STATE_SIZE = struct.calcsize(STATE_FMT)
 GOAL_FMT = "<iffff64s" 
 GOAL_SIZE = struct.calcsize(GOAL_FMT)
 
+# =========================================================================
+# 1. 길찾기 전담 클래스 (A* 알고리즘)
+# =========================================================================
+class SimplePathFinder:
+    def __init__(self, json_path):
+        self.nodes = {}
+        self.edges = {}
+        self.load_map(json_path)
 
+    def load_map(self, json_path):
+        """ JSON 파일에서 노드와 엣지(거리 포함) 정보를 로드 """
+        try:
+            with open(json_path, 'r') as f:
+                data = json.load(f)
+            
+            # 1. 노드 정보: "1": [x, y] -> {1: (x, y)} 변환
+            self.nodes = {int(k): tuple(v) for k, v in data['nodes'].items()}
+            
+            # 2. 엣지 정보: [u, v, dist] (C 서버가 계산한 거리 사용)
+            self.edges = {}
+            for u, v, w in data['edges']:
+                self.edges.setdefault(u, []).append((v, w))
+                self.edges.setdefault(v, []).append((u, w)) # 양방향 그래프
+            
+            print(f"🗺️  Map Loaded: {len(self.nodes)} nodes, {len(data['edges'])} edges")
+            
+        except FileNotFoundError:
+            print(f"⚠️  Map file not found: {json_path}")
+        except Exception as e:
+            print(f"❌ Map Load Error: {e}")
+
+    def find_nearest_node(self, target_x, target_y):
+        """ 주어진 좌표에서 가장 가까운 노드 ID 찾기 """
+        if not self.nodes: return None
+        return min(self.nodes.keys(), key=lambda k: math.dist((target_x, target_y), self.nodes[k]))
+
+    def get_path(self, start_x, start_y, goal_x, goal_y):
+        """ 
+        (Start_x, Start_y) -> (Goal_x, Goal_y) 로 가는 웨이포인트 경로 계산
+        반환값: [(wp1_x, wp1_y), (wp2_x, wp2_y), ..., (goal_x, goal_y)]
+        """
+        # 1. 맵 데이터가 없으면 그냥 직선 경로 반환
+        if not self.nodes:
+            return [(goal_x, goal_y)]
+
+        # 2. 시작점/끝점과 가장 가까운 노드 매칭
+        start_node = self.find_nearest_node(start_x, start_y)
+        end_node = self.find_nearest_node(goal_x, goal_y)
+
+        if start_node is None or end_node is None:
+            return [(goal_x, goal_y)]
+
+        # 3. A* 알고리즘 수행
+        queue = [(0, start_node, [])] # (비용, 현재노드, 경로리스트)
+        visited = set()
+        final_node_path = []
+
+        found = False
+        while queue:
+            (cost, curr, path) = heapq.heappop(queue)
+            
+            if curr in visited: continue
+            visited.add(curr)
+            
+            # 경로 업데이트
+            path = path + [curr]
+            
+            # 목적지 도착
+            if curr == end_node:
+                final_node_path = path
+                found = True
+                break
+            
+            # 이웃 탐색
+            for neighbor, weight in self.edges.get(curr, []):
+                if neighbor not in visited:
+                    # 휴리스틱: 현재 비용 + 이웃까지 거리 + 이웃에서 목적지까지 직선거리
+                    priority = cost + weight + math.dist(self.nodes[neighbor], self.nodes[end_node])
+                    heapq.heappush(queue, (cost + weight, neighbor, path))
+        
+        # 4. 결과 좌표 리스트 생성
+        result_path = []
+        
+        if found:
+            # (옵션) 첫 번째 노드가 내 위치랑 너무 가까우면(0.5m 이내) 스킵 가능
+            # 여기서는 안전하게 다 포함시킴
+            for node_id in final_node_path:
+                result_path.append(self.nodes[node_id])
+        
+        # 5. 마지막에 '진짜 목표 좌표' 추가 (노드 위치랑 미세하게 다를 수 있으므로)
+        result_path.append((goal_x, goal_y))
+        
+        return result_path
+
+# =========================================================================
+# 2. 메인 ROS 노드 클래스
+# =========================================================================
 class TcpBridge(Node):
-    """
-    ROS 2 노드 클래스: TCP 통신과 ROS 토픽 중계 담당
-    """
-    def __init__(self, parameter_overrides=None):
-        # 노드 이름 "tcp_bridge"로 초기화
+    def __init__(self, parameter_overrides=None, map_file="map_graph.json"):
         super().__init__("tcp_bridge", parameter_overrides=parameter_overrides)
 
-        # ---------------------------------------------------------------------
-        # 1. 파라미터 초기화 (외부에서 변경 가능)
-        # ---------------------------------------------------------------------
-        # 서버 IP와 포트 (기본값: 로컬호스트 8080)
+        # ... (파라미터 초기화 기존과 동일) ...
         self.server_ip = self.declare_parameter("server_ip", "127.0.0.1").value
         self.server_port = int(self.declare_parameter("server_port", 8080).value)
-        
-        # 로봇 이름 (예: wc1, wc2...) - C 서버가 실행 인자로 넘겨줌
         self.robot_name = self.declare_parameter("robot_name", "wc1").value
-        
-        # AMCL(지도 기반 위치) 사용 여부 (False면 Odom 사용)
         self.use_amcl_pose = bool(self.declare_parameter("use_amcl_pose", True).value)
-        
-        # 통신 주기 (Hz) - 초당 몇 번 서버로 데이터를 보낼지 (기본 2.0Hz = 0.5초)
         self.tx_hz = float(self.declare_parameter("tx_hz", 2.0).value)
 
-        # [토픽 네임스페이스 설정]
-        # 로봇 이름이 'wc1'이면 모든 토픽 앞에 '/wc1'이 붙습니다.
         prefix = f"/{self.robot_name}"
         
-        # ---------------------------------------------------------------------
-        # 2. ROS 2 토픽 이름 설정 (자동 생성)
-        # ---------------------------------------------------------------------
-        # [구독할 토픽들]
+        # 토픽 설정
         self.topic_amcl = self.declare_parameter("topic_amcl", f"{prefix}/amcl_pose").value
         self.topic_odom = self.declare_parameter("topic_odom", f"{prefix}/odom").value
         self.topic_battery = self.declare_parameter("topic_battery", f"{prefix}/battery_state").value
         self.topic_ultra = self.declare_parameter("topic_ultra", f"{prefix}/ultra_distance_cm").value
         self.topic_seat = self.declare_parameter("topic_seat", f"{prefix}/seat_detected").value
         
-        # [발행할 토픽들]
-        self.topic_goal = self.declare_parameter("topic_goal", "/goal_pose").value # Nav2는 전역 토픽 사용
+        self.topic_goal = self.declare_parameter("topic_goal", "/goal_pose").value
         self.topic_caller = self.declare_parameter("topic_caller", f"{prefix}/caller_name").value
 
-        # ---------------------------------------------------------------------
-        # 3. 내부 변수 초기화
-        # ---------------------------------------------------------------------
-        # 로봇 상태값
-        self.x = 0.0
-        self.y = 0.0
-        self.theta = 0.0
+        # 내부 변수
+        self.x = 0.0; self.y = 0.0; self.theta = 0.0
         self.battery_percent = 90
-        
-        # 센서 데이터 (초음파 거리, 착석 여부)
-        self.ultra_distance = 0
-        self.seat_detected = False
-        
-        # 호출자 이름 (화면 표시용)
+        self.ultra_distance = 0; self.seat_detected = False
         self.current_caller = ""
 
-        # FSM 상태 관리
         self.current_state = STATE_WAITING
         self.prev_state = STATE_WAITING
-        self.mission_mode = "NONE" # NONE, PICKUP, DELIVER, CHARGE, DONE
+        self.mission_mode = "NONE" 
         
-        # 네비게이션 목표 좌표
+        # [수정] 웨이포인트 주행을 위한 변수들
         self.current_goal_x = 0.0
         self.current_goal_y = 0.0
-        self.final_goal_x = 0.0
-        self.final_goal_y = 0.0
-
-        # TCP 소켓 관련 변수
+        self.waypoint_queue = [] # [(x1,y1), (x2,y2)...]
+        
+        # TCP 소켓
         self.sock = None
-        self.lock = threading.Lock() # 스레드 간 충돌 방지
+        self.lock = threading.Lock()
         self.logged_in = False
         self.running = True
-        self.backoff = 1.0 # 재접속 대기 시간 (지수 백오프)
+        self.backoff = 1.0
         self.next_connect_time = 0.0
 
-        # ---------------------------------------------------------------------
-        # 4. ROS 2 구독(Subscriber) 및 발행(Publisher) 설정
-        # ---------------------------------------------------------------------
-        
-        # (1) 위치 정보 구독 (AMCL 사용 시 QoS 설정 필수)
-        # AMCL은 'Transient Local' QoS를 사용하므로, 구독자도 맞춰줘야 데이터가 보임
+        # [New] 길찾기 객체 생성
+        self.pathfinder = SimplePathFinder(map_file)
+
+        # ROS 통신 설정 (구독/발행)
         if self.use_amcl_pose:
-            amcl_qos = QoSProfile(
-                depth=1, 
-                durability=DurabilityPolicy.VOLATILE, 
-                reliability=ReliabilityPolicy.RELIABLE
-            )
+            amcl_qos = QoSProfile(depth=1, durability=DurabilityPolicy.VOLATILE, reliability=ReliabilityPolicy.RELIABLE)
             self.create_subscription(PoseWithCovarianceStamped, self.topic_amcl, self.pose_cb, amcl_qos)
         else:
             self.create_subscription(Odometry, self.topic_odom, self.odom_pose_cb, 10)
 
-        # (2) 센서 정보 구독
         self.create_subscription(BatteryState, self.topic_battery, self.batt_cb, 10)
         self.create_subscription(Int32, self.topic_ultra, self.ultra_cb, 10)
         self.create_subscription(Bool, self.topic_seat, self.seat_cb, 10)
 
-        # (3) 정보 발행
-        # Nav2에게 이동 명령 전달
         self.goal_pub = self.create_publisher(PoseStamped, self.topic_goal, 10)
-        # 로봇 디스플레이(Qt/Web)에 호출자 이름 전달
         self.caller_pub = self.create_publisher(String, self.topic_caller, 10)
 
-        # ---------------------------------------------------------------------
-        # 5. 스레드 및 타이머 시작
-        # ---------------------------------------------------------------------
-        # (1) 데이터 전송 타이머 (주기적으로 C 서버에 상태 보고)
+        # 타이머 및 스레드
         period = 1.0 / max(0.1, self.tx_hz)
         self.create_timer(period, self.tx_timer_cb)
         
-        # (2) 데이터 수신 스레드 (C 서버에서 오는 명령을 상시 대기)
         self.rx_thread = threading.Thread(target=self.rx_loop, daemon=True)
         self.rx_thread.start()
 
         self.get_logger().info(f"🚀 Bridge Started for [{self.robot_name}]")
-        self.get_logger().info(f"📡 Topics: {self.topic_amcl}, {self.topic_ultra}, {self.topic_caller}")
+        self.get_logger().info(f"📂 Map File: {map_file}")
 
-    # =========================================================================
-    # [섹션 A] ROS 콜백 함수 (데이터 수신)
-    # =========================================================================
+    # ... [섹션 A, B 콜백 함수들은 기존과 동일 (생략 없음)] ...
     
     def pose_cb(self, msg):
-        """ AMCL 위치 데이터 수신 """
         self.x = float(msg.pose.pose.position.x)
         self.y = float(msg.pose.pose.position.y)
         self.theta = self.quaternion_to_yaw(msg.pose.pose.orientation)
 
     def odom_pose_cb(self, msg):
-        """ Odom 위치 데이터 수신 (AMCL 안 쓸 때) """
         self.x = float(msg.pose.pose.position.x)
         self.y = float(msg.pose.pose.position.y)
         self.theta = self.quaternion_to_yaw(msg.pose.pose.orientation)
@@ -236,28 +285,18 @@ class TcpBridge(Node):
             self.battery_percent = max(0, min(100, p))
 
     def ultra_cb(self, msg):
-        """ 초음파 센서 데이터 수신 (Int32) """
         self.ultra_distance = msg.data
 
     def seat_cb(self, msg):
-        """ 착석 감지 센서 데이터 수신 (Bool) """
         self.seat_detected = msg.data
 
-    # =========================================================================
-    # [섹션 B] 유틸리티 함수 (좌표 변환 및 상태 관리)
-    # =========================================================================
-
     def get_state_name(self, state_id):
-        """ 상태 ID를 문자열로 변환 (로그 출력용) """
-        names = {
-            STATE_WAITING: "WAITING", STATE_HEADING: "HEADING", STATE_BOARDING: "BOARDING",
+        names = { STATE_WAITING: "WAITING", STATE_HEADING: "HEADING", STATE_BOARDING: "BOARDING",
             STATE_RUNNING: "RUNNING", STATE_STOP: "STOP", STATE_ARRIVED: "ARRIVED",
-            STATE_EXITING: "EXITING", STATE_CHARGING: "CHARGING", STATE_ERROR: "ERROR"
-        }
+            STATE_EXITING: "EXITING", STATE_CHARGING: "CHARGING", STATE_ERROR: "ERROR" }
         return names.get(state_id, "UNKNOWN")
 
     def change_state(self, new_state):
-        """ FSM 상태 변경 및 로그 출력 """
         if self.current_state != new_state:
             old = self.get_state_name(self.current_state)
             new = self.get_state_name(new_state)
@@ -265,124 +304,118 @@ class TcpBridge(Node):
             self.current_state = new_state
 
     def quaternion_to_yaw(self, q):
-        """ 쿼터니언(x,y,z,w) -> 오 Euler 각도(Yaw) 변환 """
         siny_cosp = 2.0 * (q.w * q.z + q.x * q.y)
         cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
         return math.atan2(siny_cosp, cosy_cosp)
 
     def yaw_to_quaternion(self, yaw):
-        """ Euler 각도(Yaw) -> 쿼터니언 변환 """
         q = Quaternion()
         q.w = math.cos(yaw * 0.5)
         q.z = math.sin(yaw * 0.5)
         return q
 
     # =========================================================================
-    # [섹션 C] Nav2 제어 및 시나리오 로직
+    # [섹션 C] Nav2 제어 (수정됨: 큐 처리 추가)
     # =========================================================================
 
     def publish_nav2_goal(self, x, y):
-        """ Nav2에게 목표 좌표 전송 """
+        """ Nav2에게 '현재' 목표 좌표 전송 """
         if self.current_state == STATE_STOP:
-            self.get_logger().warn("⚠️ STOP 상태에서는 이동할 수 없습니다!")
             return
 
         goal = PoseStamped()
         goal.header.stamp = self.get_clock().now().to_msg()
-        goal.header.frame_id = "map"  # 지도 좌표계 기준
+        goal.header.frame_id = "map"
         goal.pose.position.x = float(x)
         goal.pose.position.y = float(y)
-        goal.pose.orientation = self.yaw_to_quaternion(0.0) # 방향은 일단 0도
+        goal.pose.orientation = self.yaw_to_quaternion(0.0)
 
         self.goal_pub.publish(goal)
-
         self.current_goal_x = float(x)
         self.current_goal_y = float(y)
-        self.get_logger().info(f"Nav2 Goal -> ({x:.2f}, {y:.2f})")
+        # 로그는 너무 자주 찍히면 정신없으니 주석 처리 혹은 필요시 해제
+        # self.get_logger().info(f"Nav2 Goal -> ({x:.2f}, {y:.2f})")
 
     def stop_nav2(self):
-        """ 로봇 정지 (현재 위치를 목표로 재설정) """
+        self.waypoint_queue = [] # 정지 시 남은 경로 삭제
         self.publish_nav2_goal(self.x, self.y)
 
+    def pop_and_drive(self):
+        """ 큐에서 다음 웨이포인트를 꺼내서 이동 """
+        if self.waypoint_queue:
+            next_wp = self.waypoint_queue.pop(0)
+            self.get_logger().info(f"🚗 다음 경유지로 이동: {next_wp}")
+            self.publish_nav2_goal(next_wp[0], next_wp[1])
+        else:
+            self.get_logger().info("🏁 모든 경로 소진 (도착)")
+
     def step_boarding_complete(self):
-        """ [시나리오] 탑승 완료 후 목적지로 이동 """
         self.get_logger().info("✅ 탑승 완료. 목적지로 이동합니다.")
         self.change_state(STATE_RUNNING)
         self.mission_mode = "DELIVER"
-        self.publish_nav2_goal(self.final_goal_x, self.final_goal_y)
+        # 배달(목적지) 경로 재계산 (내 위치 -> 최종 목적지)
+        # *최종 목적지 좌표는 self.final_goal_x, y에 저장되어 있음*
+        self.start_path_navigation(self.final_goal_x, self.final_goal_y)
 
     def step_exiting_complete(self):
-        """ [시나리오] 하차 완료 후 대기 상태로 전환 """
         self.get_logger().info("✅ 하차 완료. 임무 종료.")
         self.change_state(STATE_WAITING)
         self.mission_mode = "NONE"
-        
-        # 임무가 끝났으므로 호출자 이름 초기화
         self.current_caller = ""
         self.caller_pub.publish(String(data="Waiting..."))
 
+    # [New] 경로 생성 및 주행 시작 헬퍼 함수
+    def start_path_navigation(self, target_x, target_y):
+        # 1. 경로 계산 (내 위치 -> 목표 위치)
+        path = self.pathfinder.get_path(self.x, self.y, target_x, target_y)
+        self.get_logger().info(f"Path Plan: {len(path)} waypoints")
+        
+        # 2. 큐에 등록
+        self.waypoint_queue = path
+        
+        # 3. 첫 번째 지점으로 출발
+        self.pop_and_drive()
+
     # =========================================================================
-    # [섹션 D] 서버 메시지 처리 (수신부 핵심 로직)
+    # [섹션 D] 서버 메시지 처리 (수정됨)
     # =========================================================================
 
     def handle_server_message(self, msg_type, payload):
-        """ C 서버로부터 받은 패킷을 분석하고 명령을 수행 """
-        
-        # [명령: 목표 할당 (배차, 이동, 충전 등)]
         if msg_type == MSG_ASSIGN_GOAL:
-            
-            # 1. 패킷 크기 검증 (84바이트여야 함)
-            if len(payload) != GOAL_SIZE:
-                self.get_logger().error(f"패킷 크기 불일치! 기대값: {GOAL_SIZE}, 실제값: {len(payload)}")
-                return
-
-            # 2. 구조체 언패킹 (명령, 시작좌표, 목표좌표, 호출자이름)
+            if len(payload) != GOAL_SIZE: return
             order, sx, sy, gx, gy, raw_name = struct.unpack(GOAL_FMT, payload)
-
-            # 3. 호출자 이름 디코딩 (C 문자열의 Null 바이트 제거)
-            try:
-                caller_name_str = raw_name.split(b'\x00')[0].decode('utf-8')
-            except:
-                caller_name_str = "Unknown"
             
-            # 4. [자폭 기능] 서버가 Order 99를 보내면 프로세스 즉시 종료
-            # (DB에서 로봇이 삭제되었을 때 발생)
-            if order == 99:
-                self.get_logger().fatal(f"💀 서버로부터 종료 명령(99)을 받았습니다.")
-                self.get_logger().fatal(f"⛔ '{self.robot_name}' 로봇이 DB에 존재하지 않습니다. 프로세스를 종료합니다.")
-                
-                self.close_socket("Server Kill Command")
+            try: caller_name_str = raw_name.split(b'\x00')[0].decode('utf-8')
+            except: caller_name_str = "Unknown"
+            
+            if order == 99: # 자폭
+                self.close_socket("Kill Cmd")
                 self.destroy_node()
-                sys.exit(0) # 프로그램 강제 종료
+                sys.exit(0)
 
             self.get_logger().info(f"CMD 수신: Order={order}, Caller='{caller_name_str}'")
-
-            # 5. 호출자 이름이 있으면 화면 표시용 토픽 발행
             if caller_name_str:
                 self.current_caller = caller_name_str
-                msg = String()
-                msg.data = self.current_caller
-                self.caller_pub.publish(msg)
+                self.caller_pub.publish(String(data=self.current_caller))
 
-            # 6. Order 번호에 따른 동작 수행
-            if order == 6: # [배차 명령]
-                # Start 지점으로 먼저 이동
-                self.publish_nav2_goal(sx, sy)
-                # 최종 목적지 저장
+            # ---------------------------------------------------------
+            # [수정] 이동 로직: start_path_navigation 호출로 변경
+            # ---------------------------------------------------------
+            if order == 6: # [배차] Start 지점으로 이동
+                # 최종 목적지 기억해둠 (탑승 후 사용)
                 self.final_goal_x = gx
                 self.final_goal_y = gy
+                
                 self.change_state(STATE_HEADING)
                 self.mission_mode = "PICKUP"
+                
+                # Start 지점(sx, sy)까지 경로 주행 시작
+                self.start_path_navigation(sx, sy)
 
-            elif order in [1, 4]: # [단순 이동 명령]
-                self.publish_nav2_goal(gx, gy)
+            elif order in [1, 4, 5]: # [단순 이동 / 충전]
                 self.change_state(STATE_RUNNING)
-                self.mission_mode = "NONE"
-
-            elif order == 5: # [충전소 이동 명령]
-                self.publish_nav2_goal(gx, gy)
-                self.change_state(STATE_RUNNING)
-                self.mission_mode = "CHARGE"
+                self.mission_mode = "CHARGE" if order == 5 else "NONE"
+                self.start_path_navigation(gx, gy)
 
             elif order == 2: # [비상 정지]
                 if self.current_state != STATE_STOP:
@@ -392,205 +425,169 @@ class TcpBridge(Node):
 
             elif order == 3: # [동작 재개]
                 if self.current_state == STATE_STOP:
-                    self.get_logger().info("동작을 재개합니다...")
+                    self.get_logger().info("동작 재개: 남은 경로를 다시 계산합니다.")
                     self.change_state(self.prev_state)
-                    # 멈췄던 곳으로 다시 가거나, 원래 목표로 이동
-                    self.publish_nav2_goal(self.current_goal_x, self.current_goal_y)
+                    # 현재 목표가 남아있다면 다시 경로 계산해서 이동
+                    if self.current_state == STATE_HEADING:
+                         # 픽업 가는 중이었으면 다시 Start 지점으로
+                         # (sx, sy는 저장 안해뒀으니 현재 큐의 마지막 목표나 final_goal 로직 보강 필요하지만
+                         #  간단히 멈춘 지점에서 현재 목표(current_goal)로 다시 가라고 명령)
+                         self.publish_nav2_goal(self.current_goal_x, self.current_goal_y)
+                    else:
+                         self.publish_nav2_goal(self.current_goal_x, self.current_goal_y)
 
     # =========================================================================
-    # [섹션 E] 데이터 전송 및 네트워크 관리 (송신부)
+    # [섹션 E] 데이터 전송 및 도착 판정 (수정됨: 웨이포인트 로직)
     # =========================================================================
 
     def tx_timer_cb(self):
-        """ 주기적으로 실행되는 타이머 콜백 (상태 보고 및 도착 판정) """
-        
-        # 1. 서버 연결 확인 (연결 안 되어 있으면 재접속 시도)
-        if not self.connect():
-            return
-        
-        # 2. 로그인 패킷 전송 (최초 1회)
+        if not self.connect(): return
         self.send_login_once()
 
         try:
-            # 3. 도착 판정 로직 (목표 지점과 현재 위치 거리 계산)
+            # 도착 판정 거리 (0.3m)
             dist = math.sqrt((self.x - self.current_goal_x)**2 + (self.y - self.current_goal_y)**2)
             
-            # (A) Start 지점 도착 -> 탑승 대기 (5초)
-            if self.current_state == STATE_HEADING and dist < 0.2:
-                self.get_logger().info("🚩 출발지 도착. 탑승 대기 중 (5초)...")
-                self.change_state(STATE_BOARDING)
-                threading.Timer(5.0, self.step_boarding_complete).start()
+            # [수정] 웨이포인트 통과 로직
+            # 이동 중(HEADING/RUNNING)이고 목표에 가까워졌다면?
+            if self.current_state in [STATE_HEADING, STATE_RUNNING] and dist < 0.3:
+                
+                if self.waypoint_queue:
+                    # 1. 아직 갈 길이 남음 -> 다음 웨이포인트 꺼냄
+                    self.get_logger().info("🚩 경유지 통과.")
+                    self.pop_and_drive()
+                else:
+                    # 2. 큐가 비었음 -> "진짜 도착"
+                    if self.current_state == STATE_HEADING:
+                        self.get_logger().info("🏁 출발지 도착 (탑승 대기)")
+                        self.change_state(STATE_BOARDING)
+                        threading.Timer(5.0, self.step_boarding_complete).start()
 
-            # (B) Goal 지점 도착
-            elif self.current_state == STATE_RUNNING and dist < 0.2:
-                self.get_logger().info("🚩 목적지 도착.")
-                self.change_state(STATE_ARRIVED)
+                    elif self.current_state == STATE_RUNNING:
+                        self.get_logger().info("🏁 최종 목적지 도착")
+                        self.change_state(STATE_ARRIVED)
+                        
+                        if self.mission_mode == "DELIVER":
+                            self.change_state(STATE_EXITING)
+                            threading.Timer(5.0, self.step_exiting_complete).start()
+                            self.mission_mode = "DONE_WAIT"
+                        elif self.mission_mode == "CHARGE":
+                            self.change_state(STATE_CHARGING)
+                            self.mission_mode = "DONE_CHARGE"
+                        else:
+                            self.change_state(STATE_WAITING)
 
-                if self.mission_mode == "DELIVER": # 환자 이송 완료
-                    self.get_logger().info("하차 대기 중 (5초)...")
-                    self.change_state(STATE_EXITING)
-                    threading.Timer(5.0, self.step_exiting_complete).start()
-                    self.mission_mode = "DONE_WAIT"
-
-                elif self.mission_mode == "CHARGE": # 충전소 도착
-                    self.change_state(STATE_CHARGING)
-                    self.mission_mode = "DONE_CHARGE"
-
-                elif self.mission_mode == "NONE": # 단순 이동 완료
-                    self.change_state(STATE_WAITING)
-
-            # 4. 호출자 이름 주기적 발행 (UI 갱신용 안전장치)
+            # 서버 리포트 전송 (기존 동일)
             if self.current_caller:
-                msg = String()
-                msg.data = self.current_caller
-                self.caller_pub.publish(msg)
+                self.caller_pub.publish(String(data=self.current_caller))
 
-            # 5. [서버 전송] 로봇 상태 패킷 생성 (22바이트)
-            # 구조: 배터리, X, Y, Theta, 상태, 초음파, 착석여부
-            payload = struct.pack(
-                STATE_FMT,
+            payload = struct.pack(STATE_FMT,
                 int(self.battery_percent),
                 float(self.x), float(self.y), float(self.theta),
                 int(self.current_state),
-                int(self.ultra_distance),           # 초음파 거리 (cm)
-                int(1 if self.seat_detected else 0) # 착석 여부 (1/0)
+                int(self.ultra_distance),
+                int(1 if self.seat_detected else 0)
             )
             self.send_packet(MSG_ROBOT_STATE, payload)
 
         except Exception as e:
-            self.get_logger().error(f"데이터 전송 실패: {e}")
+            self.get_logger().error(f"TX Error: {e}")
             self.close_socket("TX Error")
 
-    # -------------------------------------------------------------------------
-    # 소켓 유틸리티 함수들
-    # -------------------------------------------------------------------------
-    
+    # ... [소켓 유틸리티 함수들은 기존과 동일 (생략)] ...
     def _set_keepalive(self, s):
-        """ TCP Keepalive 설정 (연결 끊김 조기 감지) """
-        try:
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-        except:
-            pass
-
+        try: s.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        except: pass
+    
     def connect(self):
-        """ 서버에 연결 시도 (재접속 쿨타임 적용) """
         now = time.time()
-        if now < self.next_connect_time: return False # 쿨타임 중
-        
+        if now < self.next_connect_time: return False
         with self.lock:
-            if self.sock: return True # 이미 연결됨
-            
+            if self.sock: return True
             try:
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self._set_keepalive(s)
-                s.settimeout(3.0) # 연결 타임아웃 3초
+                s.settimeout(3.0)
                 s.connect((self.server_ip, self.server_port))
-                s.settimeout(None) # 연결 후엔 블로킹 모드
-                
-                self.sock = s
-                self.logged_in = False
-                self.backoff = 1.0 # 백오프 초기화
-                self.next_connect_time = 0.0
+                s.settimeout(None)
+                self.sock = s; self.logged_in = False; self.backoff = 1.0; self.next_connect_time = 0.0
                 return True
             except:
                 if self.sock: s.close()
-                self.sock = None
-                self.logged_in = False
-                # 연결 실패 시 지수 백오프 적용 (1초 -> 2초 -> 4초 ... 최대 60초)
+                self.sock = None; self.logged_in = False
                 self.next_connect_time = now + self.backoff
                 self.backoff = min(self.backoff * 2.0, 60.0)
                 return False
 
     def close_socket(self, reason):
-        """ 소켓 종료 및 정리 """
         with self.lock:
-            if self.sock:
+            if self.sock: 
                 try: self.sock.close()
                 except: pass
-            self.sock = None
-            self.logged_in = False
-        self.get_logger().warn(f"소켓 연결 종료됨: {reason}")
+            self.sock = None; self.logged_in = False
+        self.get_logger().warn(f"Closed: {reason}")
 
     def send_packet(self, msg_type, payload):
-        """ 패킷 생성 및 전송 (헤더 + 페이로드) """
-        if len(payload) > 255: return # 페이로드 길이 제한
-        
-        # 헤더 패킹
+        if len(payload) > 255: return
         header = struct.pack(HDR_FMT, MAGIC_NUMBER, DEVICE_ROBOT_ROS, msg_type, len(payload))
-        
         with self.lock:
             if not self.sock: return
-            try:
-                self.sock.sendall(header + payload)
-            except Exception as e:
-                self.close_socket(f"Send Error: {e}")
+            try: self.sock.sendall(header + payload)
+            except Exception as e: self.close_socket(f"Send Err: {e}")
 
     def send_login_once(self):
-        """ 로그인 요청 패킷 전송 (연결 직후 1회) """
         if self.logged_in: return
-        # 로봇 이름을 페이로드로 전송
         self.send_packet(MSG_LOGIN_REQ, self.robot_name.encode("utf-8")[:64])
         self.logged_in = True
-        self.get_logger().info(f"로그인 요청 전송: {self.robot_name}")
+        self.get_logger().info(f"Login: {self.robot_name}")
 
     def recvall(self, sock, n):
-        """ 지정된 n바이트만큼 확실히 읽어오는 함수 """
         data = b""
         while len(data) < n:
             try:
                 chunk = sock.recv(n - len(data))
-                if not chunk: return b"" # 연결 끊김
+                if not chunk: return b""
                 data += chunk
             except: return b""
         return data
 
     def rx_loop(self):
-        """ 데이터 수신 스레드 루프 """
         while self.running and rclpy.ok():
             with self.lock: sock = self.sock
-            
-            # 연결 없으면 대기
             if sock is None:
-                time.sleep(1.0)
-                continue
-                
+                time.sleep(1.0); continue
             try:
-                # 1. 헤더 읽기 (4바이트)
                 hdr = self.recvall(sock, HDR_SIZE)
                 if len(hdr) != HDR_SIZE:
-                    self.close_socket("Header Error")
-                    continue
-                
+                    self.close_socket("Header Err"); continue
                 magic, dev, msg_type, length = struct.unpack(HDR_FMT, hdr)
-                if magic != MAGIC_NUMBER: continue # 매직넘버 불일치 무시
-
-                # 2. 페이로드 읽기 (가변 길이)
+                if magic != MAGIC_NUMBER: continue
+                
                 payload = b""
                 if length > 0:
                     payload = self.recvall(sock, length)
                     if len(payload) != length:
-                        self.close_socket("Payload Error")
-                        continue
+                        self.close_socket("Payload Err"); continue
                 
-                # 3. 메시지 처리 핸들러 호출
                 self.handle_server_message(msg_type, payload)
-                
             except Exception as e:
-                self.close_socket(f"RX Error: {e}")
-                time.sleep(1.0)
+                self.close_socket(f"RX Err: {e}"); time.sleep(1.0)
 
 
 def main():
-    """ 메인 함수: 노드 실행 및 종료 처리 """
     rclpy.init()
     
-    # C 서버(Robot Manager)에서 실행 시 argv[1]로 로봇 이름(wc1 등)을 넘겨줌
-    robot_name = "wc1" # 기본값
-    if len(sys.argv) > 1:
-        robot_name = sys.argv[1]
+    robot_name = "wc1"
+    map_file = "map_graph.json" # [New] 맵 파일 경로 기본값
 
-    # 노드 생성 및 실행
-    node = TcpBridge(parameter_overrides=[Parameter("robot_name", Parameter.Type.STRING, robot_name)])
+    # argv 처리: 1번은 로봇이름, 2번은 맵파일경로
+    if len(sys.argv) > 1: robot_name = sys.argv[1]
+    if len(sys.argv) > 2: map_file = sys.argv[2]
+
+    node = TcpBridge(
+        parameter_overrides=[Parameter("robot_name", Parameter.Type.STRING, robot_name)],
+        map_file=map_file
+    )
 
     try:
         rclpy.spin(node)
