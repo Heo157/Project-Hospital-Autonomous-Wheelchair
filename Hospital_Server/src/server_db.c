@@ -214,6 +214,8 @@ int db_check_new_order(DBContext *ctx, const char *robot_name,
     // 결과 바인딩 (6개 컬럼)
     MYSQL_BIND bind_res[6];
     memset(bind_res, 0, sizeof(bind_res));
+
+    unsigned long caller_len = 0;
     
     bind_res[0].buffer_type = MYSQL_TYPE_LONG;   bind_res[0].buffer = order_out;
     bind_res[1].buffer_type = MYSQL_TYPE_DOUBLE; bind_res[1].buffer = sx;
