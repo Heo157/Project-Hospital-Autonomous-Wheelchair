@@ -40,6 +40,8 @@ struct RobotInfo{
     double goal_y;
     int sensor;
     bool order;
+    int ultra_distance; // ultra_distance_cm
+    int seat_detected;  // seat_detected (0 or 1)
 };
 
 namespace Ui {
@@ -105,6 +107,14 @@ private:
 
     // 실제 터미널을 여는 함수
     void launchSshTerminal(const QString &sshTarget);
+
+    void updateMapPixmapToLabel();
+
+    void updateSelectionUI(); // 모든 UI 선택 상태 동기화 함수
+
+    QPixmap m_mapOriginal;   // 원본 맵 (리소스에서 로드한 그대로)
+    QSize   m_mapDrawSize;   // 라벨에 실제로 그려진 맵 픽스맵 크기
+    QPoint  m_mapOffset;     // 라벨 내부에서 맵이 시작되는 오프셋(레터박스 여백)
 
     // 맵 상수
     const double MAP_REAL_WIDTH = 20.0;

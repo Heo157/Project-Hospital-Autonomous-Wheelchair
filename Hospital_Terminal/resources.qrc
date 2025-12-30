@@ -7,6 +7,6 @@
         <file>icons/caution.png</file>
         <file>icons/HJK_1.png</file>
         <file>icons/HJK_2.png</file>
-        <file>icons/map_hospital.pgm</file>
+        <file>icons/Hospital.pgm</file>
     </qresource>
 </RCC>
