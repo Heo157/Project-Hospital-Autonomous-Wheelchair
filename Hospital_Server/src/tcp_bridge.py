@@ -182,7 +182,7 @@ class TcpBridge(Node):
         if self.use_amcl_pose:
             amcl_qos = QoSProfile(
                 depth=1, 
-                durability=DurabilityPolicy.TRANSIENT_LOCAL, 
+                durability=DurabilityPolicy.VOLATILE, 
                 reliability=ReliabilityPolicy.RELIABLE
             )
             self.create_subscription(PoseWithCovarianceStamped, self.topic_amcl, self.pose_cb, amcl_qos)
