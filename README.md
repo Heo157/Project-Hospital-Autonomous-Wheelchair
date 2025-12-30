@@ -95,8 +95,7 @@
 - LiDAR는 보통 바닥 가까운 낮은 장애물을 놓칠 수 있음
 - STM32U5 초음파를 하단에 장착하여 `/ultra_distance_cm` publish
 - 임계 거리 이하면:
-  - 즉시 정지(`/cmd_vel` 0)
-  - 또는 Nav2 goal cancel/재계획(설계에 따라)
+    -Nav2 goal cancel/재계획(설계에 따라)
 
 ---
 
@@ -143,14 +142,14 @@ STM32U5 TFT-OLED(또는 관리자 UI)에 표시할 토픽들:
 
 ### ✅ STM32U5 Sensor Module
 - STM32U5 보드(내장 TFT-OLED)
-- HC-SR04 초음파 센서 (하단 장애물 감지)
+- IUM-100 초음파 센서 (하단 장애물 감지)
 - FSR 압력 센서(탑승 감지)
 
 ---
 
 ## 🧰 8. 기술 스택 (Tech Stack)
 
-- **Robot**: ROS2, Nav2, SLAM(예: SLAM Toolbox/Cartographer), AMCL
+- **Robot**: ROS2, Nav2, SLAM, AMCL
 - **Edge**: Raspberry Pi 4
 - **Sensor Module**: STM32U5 + UART/Serial + TFT UI
 - **Server**: C Socket Server(Multi-process), MariaDB/MySQL
@@ -158,16 +157,4 @@ STM32U5 TFT-OLED(또는 관리자 UI)에 표시할 토픽들:
 
 ---
 
-## 📁 9. 권장 레포 구조 (Suggested Repo Structure)
 
-```bash
-.
-├── README.md
-├── docs/
-│   └── images/
-├── ros2_ws/                   # ROS2 workspace (Nav2, custom nodes, launch)
-├── stm32u5/                   # STM32U5 firmware (ultrasonic, FSR, TFT UI)
-├── server/                    # C server sources (dispatch, db, robot manager)
-├── db/                        # SQL schema & backup
-├── qt_admin/                  # Qt Admin Dashboard
-└── qt_kiosk/                  # Qt Touch Kiosk (Outpatient calling)
