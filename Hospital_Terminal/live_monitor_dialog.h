@@ -37,7 +37,7 @@ public:
         // 3. 타이머 설정 (1초 = 1000ms)
         timer = new QTimer(this);
         connect(timer, &QTimer::timeout, this, &LiveMonitorDialog::refreshData);
-        timer->start(1000); // 1초마다 실행
+        timer->start(500); // 0.2초마다 실행
 
         // 처음에 한 번 로딩
         refreshData();

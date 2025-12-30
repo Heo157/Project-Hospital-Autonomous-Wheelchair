@@ -14,9 +14,15 @@
 #include <QDoubleSpinBox>
 #include <QDialogButtonBox>
 #include <QFrame>
+#include <cmath>
+#include <QPoint>
 
 #include "add_robot_dialog.h"
 #include "database_manager.h"
+
+static constexpr double MAP_RESOLUTION = 0.05; // meters per pixel
+static constexpr double MAP_ORIGIN_X   = -0.4; // meters
+static constexpr double MAP_ORIGIN_Y   = -1.0;// meters
 
 wheelchair_admin::wheelchair_admin(QWidget *parent) :
     QWidget(parent),
@@ -27,6 +33,40 @@ wheelchair_admin::wheelchair_admin(QWidget *parent) :
     initRobotTable();
     initCallLogTable(); // 호출 이력 테이블 초기화
 
+    //맵 이미지 로드
+    QPixmap mapImg(":/icons/Hospital.pgm");
+
+    if (!mapImg.isNull()) {
+        ui->lbMapPlaceholder->setPixmap(mapImg);
+
+        // 라벨 크기에 맞춰 이미지 꽉 채우기 (비율 깨질 수 있음)
+        //ui->lbMapPlaceholder->setScaledContents(true);
+        // 또는 비율 유지하며 꽉 채우기
+        //ui->lbMapPlaceholder->setPixmap(mapImg.scaled(ui->lbMapPlaceholder->size(), Qt::KeepAspectRatio, Qt::FastTransformation));
+
+        m_mapOriginal = QPixmap(":/icons/Hospital.pgm");
+
+        if (!m_mapOriginal.isNull()) {
+            ui->lbMapPlaceholder->setAlignment(Qt::AlignCenter);
+            ui->lbMapPlaceholder->setScaledContents(false); // 직접 scaled해서 넣을거라 false
+
+            updateMapPixmapToLabel(); // ★ 추가: 라벨 크기에 맞게 맵 스케일 + offset 계산
+
+            //qDebug() << "Map Loaded Successfully!";
+        } else {
+            //qDebug() << "Failed to load map image! Check 'icons/Hospital.pgm' path.";
+            ui->lbMapPlaceholder->setStyleSheet("border: 2px solid red;");
+            ui->lbMapPlaceholder->setText("Map Not Found");
+        }
+
+        //qDebug() << "Map Loaded Successfully!";
+     } else {
+        qDebug() << "Failed to load map image! Check 'icons/Hospital.pgm' path.";
+        // 이미지가 없으면 빨간 테두리로 표시 (디버깅용)
+        ui->lbMapPlaceholder->setStyleSheet("border: 2px solid red;");
+        ui->lbMapPlaceholder->setText("Map Not Found");
+     }
+
     // 로봇 선택 콤보박스 이벤트
     connect(ui->cbSelectedRobot, QOverload<int>::of(&QComboBox::activated), this, [this](int index){
         QString text = ui->cbSelectedRobot->itemText(index);
@@ -36,9 +76,19 @@ wheelchair_admin::wheelchair_admin(QWidget *parent) :
     });
 
     // 타이머 설정 (로봇 상태 + 호출 이력 동시 갱신)
-    updateTimer = new QTimer(this);
-    connect(updateTimer, &QTimer::timeout, this, &wheelchair_admin::refreshAll);
-    updateTimer->start(800);
+//    updateTimer = new QTimer(this);
+//    connect(updateTimer, &QTimer::timeout, this, &wheelchair_admin::refreshAll);
+//    updateTimer->start(800);
+
+    QTimer *fastTimer = new QTimer(this);
+    connect(fastTimer, &QTimer::timeout, this, &wheelchair_admin::refreshRobotTable);
+    fastTimer->start(1000);
+
+    // 2. 느린 타이머 (호출 이력용): 2000ms (2초)
+    // 호출 이력은 텍스트가 많아서 자주 갱신하면 렉 유발의 주범이 됩니다.
+    QTimer *slowTimer = new QTimer(this);
+    connect(slowTimer, &QTimer::timeout, this, &wheelchair_admin::refreshCallLog);
+    slowTimer->start(2000);
 }
 
 wheelchair_admin::~wheelchair_admin()
@@ -61,24 +111,38 @@ void wheelchair_admin::initRobotTable()
     t->setEditTriggers(QAbstractItemView::NoEditTriggers);
     t->verticalHeader()->setVisible(false);
 
-    // [수정] 컬럼 수 6개로 증가 (ID, 배터리, 상태, 현재위치, 출발위치, 도착위치)
-    t->setColumnCount(6);
+    t->setColumnCount(8);
 
-    // [수정] 헤더 이름 명시적 설정
     QStringList headers;
-    headers << "ID" << "배터리" << "상태" << "현재 위치" << "출발 위치" << "도착 위치";
+    headers << "ID" << "배터리" << "상태" << "현재 위치" << "출발 위치" << "도착 위치" << "초음파" << "탑승";
     t->setHorizontalHeaderLabels(headers);
 
-    t->horizontalHeader()->setStretchLastSection(true);
+    // =========================================================
+    // [수정] 컬럼 너비 디자인 개선 (3, 4, 5번 균등 분배)
+    // =========================================================
+    QHeaderView *header = t->horizontalHeader();
 
-    // 컬럼 너비 설정
-    t->setColumnWidth(0, 80);   // ID
-    t->setColumnWidth(1, 90);   // 배터리
-    t->setColumnWidth(2, 100);  // 상태
-    t->setColumnWidth(3, 150);  // 현재 위치
-    // [추가] 새로운 컬럼 너비
-    t->setColumnWidth(4, 150);  // 출발 위치
-    t->setColumnWidth(5, 150);  // 도착 위치
+    header->setSectionResizeMode(0, QHeaderView::Interactive); // ID
+        t->setColumnWidth(0, 80);
+
+        header->setSectionResizeMode(1, QHeaderView::Interactive); // 배터리
+        t->setColumnWidth(1, 80);
+
+        header->setSectionResizeMode(2, QHeaderView::Interactive); // 상태
+        t->setColumnWidth(2, 100);
+
+        header->setSectionResizeMode(6, QHeaderView::Interactive); // 초음파
+        t->setColumnWidth(6, 80);
+
+        header->setSectionResizeMode(7, QHeaderView::Interactive); // 탑승
+        t->setColumnWidth(7, 60);
+
+        // 2. 긴 정보들(좌표): 남은 공간을 1:1:1로 나눠 갖기 (Stretch)
+        header->setSectionResizeMode(3, QHeaderView::Stretch); // 현재 위치
+        header->setSectionResizeMode(4, QHeaderView::Stretch); // 출발 위치
+        header->setSectionResizeMode(5, QHeaderView::Stretch); // 도착 위치
+
+        t->horizontalHeader()->setStretchLastSection(false);
 
     t->setContextMenuPolicy(Qt::CustomContextMenu);
     disconnect(t, &QTableWidget::customContextMenuRequested, this, &wheelchair_admin::onCustomContextMenuRequested);
@@ -390,50 +454,105 @@ void wheelchair_admin::on_pbAddWheel_clicked() {
     }
 }
 
-void wheelchair_admin::updateMapMarkers(const QList<RobotInfo> &robotList) {
-    // (기존 코드와 동일하게 유지)
-    // 맵 라벨에서 사이즈 가져와서 비율 계산 후 버튼 이동
-     QLabel *mapLabel = ui->lbMapPlaceholder;
-     if (mapLabel->pixmap(Qt::ReturnByValue).isNull()) return;
+void wheelchair_admin::updateMapMarkers(const QList<RobotInfo> &robotList)
+{
+    QLabel *mapLabel = ui->lbMapPlaceholder;
+    if (m_mapOriginal.isNull()) return;
+    if (mapLabel->pixmap(Qt::ReturnByValue).isNull()) return;
 
-     QSize labelSize = mapLabel->size();
-     QSize pixmapSize = mapLabel->pixmap(Qt::ReturnByValue).size();
-     double scaleW = (double)labelSize.width() / pixmapSize.width();
-     double scaleH = (double)labelSize.height() / pixmapSize.height();
-     double scale = qMin(scaleW, scaleH);
-     int drawnW = pixmapSize.width() * scale;
-     int drawnH = pixmapSize.height() * scale;
-     int offsetX = (labelSize.width() - drawnW) / 2;
-     int offsetY = (labelSize.height() - drawnH) / 2;
+    // 원본 맵(좌표계 기준) 크기
+    const int mapW = m_mapOriginal.width();
+    const int mapH = m_mapOriginal.height();
 
-     QSet<int> currentIds;
-     for (const RobotInfo &info : robotList) {
-         currentIds.insert(info.id);
-         QPushButton *btn;
-         if (m_robotButtons.contains(info.id)) btn = m_robotButtons[info.id];
-         else {
-             btn = new QPushButton(mapLabel);
-             btn->setText(info.name);
-             btn->resize(30, 30);
-             btn->setStyleSheet("QPushButton { border-radius: 15px; border: 2px solid white; font-weight: bold; }");
-             btn->show();
-             connect(btn, &QPushButton::clicked, this, [this, info]() { selectRobot(info.id); });
-             m_robotButtons.insert(info.id, btn);
-         }
+    // 라벨 크기, 실제 맵이 그려진 크기(KeepAspectRatio), 그리고 여백(레터박스) 오프셋
+    const QSize labelSize = mapLabel->size();
+    const QSize drawSize  = m_mapDrawSize;
+    const QPoint offset   = m_mapOffset;
 
-         if (info.id == m_selectedRobotId) btn->setStyleSheet("background-color: red; color: white; border-radius: 15px; border: 2px solid white;");
-         else btn->setStyleSheet("background-color: pink; color: black; border-radius: 15px; border: 1px solid gray;");
+    // 원본 픽셀 -> 화면(그려진 맵 영역) 픽셀로 스케일
+    const double scaleX = (double)drawSize.width()  / (double)mapW;
+    const double scaleY = (double)drawSize.height() / (double)mapH;
 
-         double ratioX = (info.current_x - MAP_ORIGIN_X) / MAP_REAL_WIDTH;
-         double ratioY = (info.current_y - MAP_ORIGIN_Y) / MAP_REAL_HEIGHT;
-         int pixelX = offsetX + (int)(ratioX * drawnW);
-         int pixelY = offsetY + (int)(ratioY * drawnH);
-         btn->move(pixelX - btn->width()/2, pixelY - btn->height()/2);
-     }
+    QSet<int> currentIds;
+
+    for (const RobotInfo &info : robotList) {
+        currentIds.insert(info.id);
+
+        QPushButton *btn = nullptr;
+        if (m_robotButtons.contains(info.id)) {
+            btn = m_robotButtons[info.id];
+        } else {
+            btn = new QPushButton(mapLabel);
+            btn->setText(info.name);
+            btn->resize(24, 24);
+            btn->show();
+            connect(btn, &QPushButton::clicked, this, [this, info]() { selectRobot(info.id); });
+            m_robotButtons.insert(info.id, btn);
+        }
+
+        // 선택된 로봇 강조
+        if (info.id == m_selectedRobotId)
+            btn->setStyleSheet("background-color: red; color: white; border-radius: 12px; border: 2px solid yellow;");
+        else
+            btn->setStyleSheet("background-color: #FF69B4; color: black; border-radius: 12px; border: 1px solid gray;");
+
+        // =========================
+        // (1) map 좌표(m) -> 원본 맵 픽셀(px)
+        // x_px = (x - origin_x) / resolution
+        // y_px = (H-1) - ((y - origin_y) / resolution)  (y축 반전)
+        // =========================
+
+        double px_raw = (info.current_x - MAP_ORIGIN_X) / MAP_RESOLUTION;
+        const double px = px_raw + 5.0;
+
+        double py_raw = (mapH - 1) - ((info.current_y - MAP_ORIGIN_Y) / MAP_RESOLUTION);
+        const double py = py_raw - 15.0; // <-- 여기 숫자(15.0)를 조절하세요!
+
+        // =========================
+        // (2) 원본 픽셀 -> 라벨 좌표(그려진 맵 영역) : scale + offset
+        // =========================
+        const int xOnLabel = offset.x() + (int)std::round(px * scaleX);
+        const int yOnLabel = offset.y() + (int)std::round(py * scaleY);
+
+        // 버튼 중심 정렬
+        int bx = xOnLabel - btn->width()  / 2;
+        int by = yOnLabel - btn->height() / 2;
+
+        // =========================
+        // (3) 버튼이 "맵이 그려진 영역" 밖으로 나가지 않도록 clamp
+        // =========================
+        const int minX = offset.x();
+        const int minY = offset.y();
+        const int maxX = offset.x() + drawSize.width()  - btn->width();
+        const int maxY = offset.y() + drawSize.height() - btn->height();
+
+        bx = qBound(minX, bx, maxX);
+        by = qBound(minY, by, maxY);
+
+        btn->move(bx, by);
+    }
+
+    // 사라진 로봇 버튼 제거
+    QList<int> existingIds = m_robotButtons.keys();
+    for (int id : existingIds) {
+        if (!currentIds.contains(id)) {
+            if (m_robotButtons[id]) {
+                m_robotButtons[id]->hide();
+                m_robotButtons[id]->deleteLater();
+            }
+            m_robotButtons.remove(id);
+        }
+    }
 }
 
 void wheelchair_admin::refreshRobotTable() {
     QSqlQuery query = DatabaseManager::instance().getRobotStatusQuery();
+
+    // 쿼리 에러 체크 (필수)
+    if (query.lastError().isValid()) {
+        return;
+    }
+
     QList<RobotInfo> robotList;
 
     // [1] DB 데이터 읽기
@@ -448,29 +567,35 @@ void wheelchair_admin::refreshRobotTable() {
         // 좌표 읽기 (소수점)
         info.current_x = query.value("current_x").toDouble();
         info.current_y = query.value("current_y").toDouble();
-
-        // [추가] 출발지, 목적지 좌표 읽기
-        // (DB 컬럼명이 start_x, start_y, goal_x, goal_y 라고 가정)
         info.start_x = query.value("start_x").toDouble();
         info.start_y = query.value("start_y").toDouble();
         info.goal_x = query.value("goal_x").toDouble();
         info.goal_y = query.value("goal_y").toDouble();
 
+        // [추가] 센서 데이터 읽기
+        info.ultra_distance = query.value("ultra_distance_cm").toInt();
+        info.seat_detected = query.value("seat_detected").toInt();
+
         robotList.append(info);
         m_robotCache.insert(info.id, info);
     }
 
-    // 콤보박스 갱신 로직 (기존 코드 유지)
-    QString currentCombo = ui->cbSelectedRobot->currentText();
-    ui->cbSelectedRobot->blockSignals(true);
-    ui->cbSelectedRobot->clear();
-    for(const auto &info : robotList) ui->cbSelectedRobot->addItem(QString::number(info.id));
-    int idx = ui->cbSelectedRobot->findText(currentCombo);
-    if(idx != -1) ui->cbSelectedRobot->setCurrentIndex(idx);
-    ui->cbSelectedRobot->blockSignals(false);
+    // 콤보박스 갱신 로직 (목록이 변경되었을 때만 갱신하여 깜빡임 방지)
+    if (ui->cbSelectedRobot->count() != robotList.size()) {
+        QString currentText = ui->cbSelectedRobot->currentText();
+        ui->cbSelectedRobot->blockSignals(true);
+        ui->cbSelectedRobot->clear();
+        for(const auto &info : robotList) {
+            ui->cbSelectedRobot->addItem(QString::number(info.id));
+        }
+        int idx = ui->cbSelectedRobot->findText(currentText);
+        if(idx != -1) ui->cbSelectedRobot->setCurrentIndex(idx);
+        ui->cbSelectedRobot->blockSignals(false);
+    }
 
     // [2] 테이블 갱신
     auto *t = ui->twRobotStatus;
+    t->blockSignals(true); // 갱신 중 시그널 차단
     t->setRowCount(robotList.size());
 
     for(int i=0; i<robotList.size(); ++i) {
@@ -483,39 +608,78 @@ void wheelchair_admin::refreshRobotTable() {
         // Col 2: 상태
         t->setItem(i, 2, new QTableWidgetItem(robotList[i].status));
 
-        // Col 3: 현재 위치 (0.0, 0.0) 형식
+        // Col 3: 현재 위치 (소수점 3자리)
         t->setItem(i, 3, new QTableWidgetItem(
             QString("(%1, %2)")
-            .arg(robotList[i].current_x, 0, 'f', 1)
-            .arg(robotList[i].current_y, 0, 'f', 1)));
+            .arg(robotList[i].current_x, 0, 'f', 3)
+            .arg(robotList[i].current_y, 0, 'f', 3)));
 
-        // [추가] Col 4: 출발 위치
+        // Col 4: 출발 위치
         t->setItem(i, 4, new QTableWidgetItem(
             QString("(%1, %2)")
-            .arg(robotList[i].start_x, 0, 'f', 1)
-            .arg(robotList[i].start_y, 0, 'f', 1)));
+            .arg(robotList[i].start_x, 0, 'f', 3)
+            .arg(robotList[i].start_y, 0, 'f', 3)));
 
-        // [추가] Col 5: 도착 위치
+        // Col 5: 도착 위치
         t->setItem(i, 5, new QTableWidgetItem(
             QString("(%1, %2)")
-            .arg(robotList[i].goal_x, 0, 'f', 1)
-            .arg(robotList[i].goal_y, 0, 'f', 1)));
+            .arg(robotList[i].goal_x, 0, 'f', 3)
+            .arg(robotList[i].goal_y, 0, 'f', 3)));
 
-        // 가운데 정렬 (옵션)
-        for(int col=0; col<6; col++) {
-            if(t->item(i, col)) t->item(i, col)->setTextAlignment(Qt::AlignCenter);
+        // =========================================================
+        // [추가] Col 6: 초음파 (거리 표시)
+        // =========================================================
+        QString distStr = QString::number(robotList[i].ultra_distance) + " cm"; // <--- cm 추가
+        QTableWidgetItem *ultraItem = new QTableWidgetItem(distStr);
+        ultraItem->setTextAlignment(Qt::AlignCenter);
+        t->setItem(i, 6, ultraItem);
+
+        // =========================================================
+        // [추가] Col 7: 탑승 (0 -> X, 1 -> O + 빨간색)
+        // =========================================================
+        QTableWidgetItem *seatItem = new QTableWidgetItem();
+        if (robotList[i].seat_detected == 1) {
+            seatItem->setText("O");
+            seatItem->setForeground(QBrush(Qt::red)); // 빨간색 설정
+
+            // (옵션) 더 잘 보이게 굵게 처리
+            QFont font = seatItem->font();
+            font.setBold(true);
+            seatItem->setFont(font);
+        } else {
+            seatItem->setText("X");
+            seatItem->setForeground(QBrush(Qt::black)); // 기본 검정
+        }
+        t->setItem(i, 7, seatItem);
+
+        // 전체 컬럼 가운데 정렬 (0 ~ 7번 컬럼)
+        for(int col=0; col<8; col++) {
+            if(t->item(i, col)) {
+                t->item(i, col)->setTextAlignment(Qt::AlignCenter);
+            }
         }
     }
+    t->blockSignals(false);
 
+    // 맵 마커 업데이트
     updateMapMarkers(robotList);
-    if(m_selectedRobotId != -1) selectRobot(m_selectedRobotId);
+
+    // 테이블이 갱신되었으므로 선택 상태 복구
+    if(m_selectedRobotId != -1){
+        updateSelectionUI();
+    }
 }
 
 void wheelchair_admin::selectRobot(int robotId) {
     m_selectedRobotId = robotId;
-    // ... 테이블 하이라이트 ...
-    // ... 버튼 색상 변경 ...
-    // (기존 코드 동일)
+    if (m_selectedRobotId == robotId) return;
+
+    m_selectedRobotId = robotId;
+
+    // [핵심] 변수 변경 후 UI 강제 동기화 호출
+    updateSelectionUI();
+
+    qDebug() << "Robot Selected:" << robotId;
 }
 
 void wheelchair_admin::on_twRobotStatus_cellClicked(int row, int column) {
@@ -525,7 +689,8 @@ void wheelchair_admin::on_twRobotStatus_cellClicked(int row, int column) {
 
 void wheelchair_admin::resizeEvent(QResizeEvent *event) {
     QWidget::resizeEvent(event);
-    refreshRobotTable();
+    updateMapPixmapToLabel(); //창 크기 변화시 맵 재스케일+offset 재계산
+    //refreshRobotTable();
 }
 
 void wheelchair_admin::onCustomContextMenuRequested(const QPoint &pos) {
@@ -637,6 +802,64 @@ void wheelchair_admin::launchSshTerminal(const QString &sshTarget)
 
         if (!success) {
             QMessageBox::critical(this, "실패", "터미널을 실행할 수 없습니다.\n(gnome-terminal 또는 xterm 필요)");
+        }
+    }
+}
+
+void wheelchair_admin::updateMapPixmapToLabel()
+{
+    if (m_mapOriginal.isNull()) return;
+
+    const QSize labelSize = ui->lbMapPlaceholder->size();
+
+    // KeepAspectRatio로 스케일된 픽스맵을 라벨에 표시
+    QPixmap scaled = m_mapOriginal.scaled(labelSize, Qt::KeepAspectRatio, Qt::FastTransformation);
+    ui->lbMapPlaceholder->setPixmap(scaled);
+
+    // 실제 표시된 맵 크기, 레터박스 오프셋 계산 (중앙정렬 기준)
+    m_mapDrawSize = scaled.size();
+    m_mapOffset = QPoint((labelSize.width()  - scaled.width())  / 2,
+                         (labelSize.height() - scaled.height()) / 2);
+}
+
+// ID에 맞춰 테이블, 콤보박스, 버튼의 상태를 즉시 동기화
+void wheelchair_admin::updateSelectionUI() {
+    if (m_selectedRobotId == -1) return;
+
+    QString idStr = QString::number(m_selectedRobotId);
+
+    // 1. 테이블 선택 동기화
+    auto *t = ui->twRobotStatus;
+    bool rowFound = false;
+    t->blockSignals(true); // 무한 루프 방지
+    for (int i = 0; i < t->rowCount(); ++i) {
+        if (t->item(i, 0) && t->item(i, 0)->text() == idStr) {
+            t->selectRow(i);
+            rowFound = true;
+            break;
+        }
+    }
+    if (!rowFound) t->clearSelection();
+    t->blockSignals(false);
+
+    // 2. 콤보박스 선택 동기화
+    auto *cb = ui->cbSelectedRobot;
+    cb->blockSignals(true);
+    int cbIdx = cb->findText(idStr);
+    if (cbIdx != -1) cb->setCurrentIndex(cbIdx);
+    cb->blockSignals(false);
+
+    // 3. 맵 버튼 스타일 동기화 (즉시 반영)
+    QList<int> keys = m_robotButtons.keys();
+    for (int id : keys) {
+        QPushButton *btn = m_robotButtons.value(id);
+        if (!btn) continue;
+
+        if (id == m_selectedRobotId) {
+            btn->setStyleSheet("background-color: red; color: white; border-radius: 12px; border: 2px solid yellow;");
+            btn->raise(); // 맨 위로 올리기
+        } else {
+            btn->setStyleSheet("background-color: #FF69B4; color: black; border-radius: 12px; border: 1px solid gray;");
         }
     }
 }
