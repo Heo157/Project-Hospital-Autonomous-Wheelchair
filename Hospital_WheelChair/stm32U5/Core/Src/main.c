@@ -86,7 +86,10 @@ PCD_HandleTypeDef hpcd_USB_OTG_HS;
 
 /* USER CODE BEGIN PV */
 fsr_t g_fsr;
-
+static uint8_t uart1_rx_ch;                 // 1바이트 수신 버퍼
+static char uart1_line_buf[256];            // 한 줄 버퍼(적당히 크게)
+static volatile uint16_t uart1_line_idx = 0;
+static volatile uint8_t uart1_line_ready = 0;
 
 /* USER CODE END PV */
 
@@ -106,7 +109,8 @@ static void MX_TIM2_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_ADC4_Init(void);
 /* USER CODE BEGIN PFP */
-
+static void UART1_StartRxIT(void);
+static void UART1_ProcessLine(const char *line);
 
 /* USER CODE END PFP */
 
@@ -177,7 +181,7 @@ SystemCoreClockUpdate(); //
   /* USER CODE BEGIN 2 */
   FSR_Init(&g_fsr, &hadc4, 1600, 1200, 0.3f);
   Ultrasonic_Init(&htim2, &htim4, TIM_CHANNEL_2, TRIG_GPIO_Port, TRIG_Pin);
-
+  UART1_StartRxIT();
 
 
 
@@ -191,38 +195,44 @@ SystemCoreClockUpdate(); //
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  if (uart1_line_ready)
+	  {
+	      uart1_line_ready = 0;
+	      UART1_ProcessLine(uart1_line_buf);
+	  }
+
 	  char buf[120];
 
-	      float dist_cm = -1.0f;
+	  float dist_cm = -1.0f;
 
 
 
-	     // 1) 초음파 트리거 + 측정 시작
-	      Ultrasonic_TriggerAndStart();
+	 // 1) 초음파 트리거 + 측정 시작
+	  Ultrasonic_TriggerAndStart();
 
-	     // 2) 최대 60ms 대기
-	     uint32_t t0 = HAL_GetTick();
-	     while(!Ultrasonic_Done && (HAL_GetTick() - t0 < 60)) { }
+	 // 2) 최대 60ms 대기
+	 uint32_t t0 = HAL_GetTick();
+	 while(!Ultrasonic_Done && (HAL_GetTick() - t0 < 60)) { }
 
-	     // 4) 거리값
-	     if (Ultrasonic_Done)
-	    	 dist_cm = Ultrasonic_Distance_cm;
+	 // 4) 거리값
+	 if (Ultrasonic_Done)
+		 dist_cm = Ultrasonic_Distance_cm;
 
 
 
-	      // 5) FSR는 항상 돌림
-	      FSR_Update(&g_fsr);
-	      uint16_t fsr_raw = FSR_GetRaw(&g_fsr);
-	      uint8_t seat = (uint8_t)FSR_GetSeat(&g_fsr);
+	  // 5) FSR는 항상 돌림
+	  FSR_Update(&g_fsr);
+	  uint16_t fsr_raw = FSR_GetRaw(&g_fsr);
+	  uint8_t seat = (uint8_t)FSR_GetSeat(&g_fsr);
 
-	      // 6) 송신
-	      int len = snprintf(buf, sizeof(buf),
-	                         "U=%.2f,FSR=%u,SEAT=%u\r\n",
-	                         dist_cm, fsr_raw, seat);
+	  // 6) 송신
+	  int len = snprintf(buf, sizeof(buf),
+						 "U=%.2f,FSR=%u,SEAT=%u\r\n",
+						 dist_cm, fsr_raw, seat);
 
-	      HAL_UART_Transmit(&huart1, (uint8_t*)buf, len, 100);
+	  HAL_UART_Transmit(&huart1, (uint8_t*)buf, len, 100);
 
-	      HAL_Delay(60);
+	  HAL_Delay(60);
 
   }
   /* USER CODE END 3 */
@@ -988,8 +998,46 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+static void UART1_StartRxIT(void)
+{
+    uart1_line_idx = 0;
+    uart1_line_ready = 0;
+    HAL_UART_Receive_IT(&huart1, &uart1_rx_ch, 1);   // 1바이트씩 인터럽트 수신 시작
+}
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    if (huart->Instance == USART1)
+    {
+        char c = (char)uart1_rx_ch;
 
+        // 라인 버퍼 오버플로우 방지
+        if (uart1_line_idx < (sizeof(uart1_line_buf) - 1))
+        {
+            uart1_line_buf[uart1_line_idx++] = c;
+        }
+        else
+        {
+            // 너무 길면 리셋
+            uart1_line_idx = 0;
+        }
 
+        // '\n' 기준으로 한 줄 완성 (Pi가 \r\n 보내므로 \n에서 끊기면 됨)
+        if (c == '\n')
+        {
+            uart1_line_buf[uart1_line_idx] = '\0';   // 문자열 종료
+            uart1_line_ready = 1;
+            uart1_line_idx = 0;
+        }
+
+        // 다음 바이트 수신 계속
+        HAL_UART_Receive_IT(&huart1, &uart1_rx_ch, 1);
+    }
+}
+static void UART1_ProcessLine(const char *line)
+{
+    // 라인 하나 올 때마다 LED 토글 (수신 확인용)
+    HAL_GPIO_TogglePin(GREEN_LED_GPIO_Port, GREEN_LED_Pin);
+}
 
 /* USER CODE END 4 */
 
