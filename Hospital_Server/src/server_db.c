@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 /* ============================================================================
  * [데이터베이스 접속 정보]
@@ -468,4 +469,80 @@ int db_check_robot_exists(DBContext *ctx, const char *name) {
 
     mysql_stmt_close(stmt);
     return exists;
+}
+
+int db_export_map_json(DBContext *ctx, const char *filepath) {
+    if (!ctx || !ctx->connected) return -1;
+
+    FILE *fp = fopen(filepath, "w");
+    if (!fp) {
+        fprintf(stderr, "[DB] File open error: %s\n", filepath);
+        return -1;
+    }
+
+    // ---------------------------------------------------------
+    // 1. 노드(Nodes) 저장: "id": [x, y]
+    // ---------------------------------------------------------
+    fprintf(fp, "{ \"nodes\": {");
+    
+    if (mysql_query(ctx->conn, "SELECT node_id, x, y FROM tb_waypoints")) {
+        fclose(fp);
+        return -1;
+    }
+    
+    MYSQL_RES *res = mysql_store_result(ctx->conn);
+    MYSQL_ROW row;
+    int first = 1;
+    
+    while ((row = mysql_fetch_row(res))) {
+        if (!first) fprintf(fp, ",");
+        fprintf(fp, "\"%s\": [%s, %s]", row[0], row[1], row[2]);
+        first = 0;
+    }
+    mysql_free_result(res);
+
+    // ---------------------------------------------------------
+    // 2. 엣지(Edges) 저장 및 거리 계산: [node1, node2, distance]
+    // ---------------------------------------------------------
+    fprintf(fp, "}, \"edges\": [");
+
+    // [핵심 쿼리] 엣지 테이블을 기준으로 웨이포인트 테이블을 두 번 조인(Alias w1, w2)
+    const char *join_query = 
+        "SELECT e.node1_id, e.node2_id, w1.x, w1.y, w2.x, w2.y "
+        "FROM tb_edges e "
+        "JOIN tb_waypoints w1 ON e.node1_id = w1.node_id "
+        "JOIN tb_waypoints w2 ON e.node2_id = w2.node_id";
+
+    if (mysql_query(ctx->conn, join_query)) {
+        fprintf(stderr, "[DB] Query failed: %s\n", mysql_error(ctx->conn));
+        fclose(fp);
+        return -1;
+    }
+
+    res = mysql_store_result(ctx->conn);
+    first = 1;
+    while ((row = mysql_fetch_row(res))) {
+        // row[0]: node1_id, row[1]: node2_id
+        // row[2]: x1, row[3]: y1
+        // row[4]: x2, row[5]: y2
+        
+        double x1 = atof(row[2]);
+        double y1 = atof(row[3]);
+        double x2 = atof(row[4]);
+        double y2 = atof(row[5]);
+
+        // C에서 유클리드 거리 계산
+        double dist = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
+
+        if (!first) fprintf(fp, ",");
+        // 파이썬에게 줄 데이터: [시작점, 끝점, 계산된_거리]
+        fprintf(fp, "[%s, %s, %.4f]", row[0], row[1], dist);
+        first = 0;
+    }
+    mysql_free_result(res);
+    
+    fprintf(fp, "] }");
+    fclose(fp);
+    printf("[DB] Map & Distances exported to '%s'\n", filepath);
+    return 0;
 }

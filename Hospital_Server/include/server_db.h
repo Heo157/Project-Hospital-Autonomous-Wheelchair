@@ -124,4 +124,11 @@ int db_check_new_order(DBContext *ctx, const char *robot_name,
  */
 int db_reset_order(DBContext *ctx, const char *name);
 
+/**
+ * @brief DB 정보를 읽어 거리(Distance)까지 계산한 뒤 JSON 파일로 생성
+ * @param filepath 생성할 파일 경로 (예: "map.json")
+ * @return 0: 성공, -1: 실패
+ */
+int db_export_map_json(DBContext *ctx, const char *filepath);
+
 #endif // SERVER_DB_H
