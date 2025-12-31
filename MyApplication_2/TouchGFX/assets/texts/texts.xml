@@ -6,34 +6,13 @@
   <Texts>
     <TextGroup Id="Group1" />
     <TextGroup Id="Unsorted">
-      <Text Id="__SingleUse_5HKV" Alignment="Left" TypographyId="Default">
-        <Translation Language="GB">RETURNING</Translation>
-      </Text>
-      <Text Id="__SingleUse_6J9D" Alignment="Center" TypographyId="Default">
-        <Translation Language="GB">EMERGENCY STOP</Translation>
-      </Text>
-      <Text Id="__SingleUse_E9QA" Alignment="Left" TypographyId="Default">
-        <Translation Language="GB">ARRIVED AT DESTINATION</Translation>
-      </Text>
-      <Text Id="__SingleUse_OLD1" Alignment="Left" TypographyId="Default">
-        <Translation Language="GB">Patient:</Translation>
-      </Text>
-      <Text Id="__SingleUse_3822" Alignment="Left" TypographyId="Default">
-        <Translation Language="GB">Destination:</Translation>
-      </Text>
-      <Text Id="__SingleUse_A12I" Alignment="Left" TypographyId="Default">
-        <Translation Language="GB">MOVING</Translation>
+      <Text Id="__SingleUse_VUZH" Alignment="Left" TypographyId="Large">
+        <Translation Language="GB">&lt;value&gt;</Translation>
       </Text>
       <Text Id="__SingleUse_ZZOS" Alignment="Center" TypographyId="Default">
-        <Translation Language="GB">BOARDING COMPLETE</Translation>
+        <Translation Language="GB">비상정지</Translation>
       </Text>
-      <Text Id="__SingleUse_SKRV" Alignment="Left" TypographyId="Default">
-        <Translation Language="GB">Destination:</Translation>
-      </Text>
-      <Text Id="__SingleUse_KFPH" Alignment="Left" TypographyId="Default">
-        <Translation Language="GB">Patient:</Translation>
-      </Text>
-      <Text Id="__SingleUse_NGPY" Alignment="Left" TypographyId="Default">
+      <Text Id="__SingleUse_NGPY" Alignment="Left" TypographyId="Typography1">
         <Translation Language="GB">MOVING TO PATIENT</Translation>
       </Text>
       <Text Id="__SingleUse_KBWS" Alignment="Left" TypographyId="Default">
@@ -42,20 +21,17 @@
       <Text Id="__SingleUse_691O" Alignment="Left" TypographyId="Default">
         <Translation Language="GB">Patient:</Translation>
       </Text>
-      <Text Id="__SingleUse_0ZAA" Alignment="Left" TypographyId="Default">
-        <Translation Language="GB">CHARGING</Translation>
-      </Text>
-      <Text Id="__SingleUse_A1WY" Alignment="Left" TypographyId="Default">
-        <Translation Language="GB">WAITING</Translation>
-      </Text>
       <Text Id="__SingleUse_XEVB" Alignment="Center" TypographyId="Default">
-        <Translation Language="GB">&lt;&gt; %</Translation>
+        <Translation Language="GB">&lt; &gt; %</Translation>
       </Text>
     </TextGroup>
   </Texts>
   <Typographies>
-    <Typography Id="Default" Font="verdana.ttf" Size="20" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WidgetWildcardCharacters="0123456789." />
-    <Typography Id="Large" Font="verdana.ttf" Size="40" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" />
+    <Typography Id="Default" Font="NotoSerifKR-VF.ttf" Size="20" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WidgetWildcardCharacters="0123456789." />
+    <Typography Id="Large" Font="verdana.ttf" Size="60" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" />
     <Typography Id="Small" Font="verdana.ttf" Size="10" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" />
+    <Typography Id="PaDe" Font="verdana.ttf" Size="30" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" />
+    <Typography Id="Typography1" Font="verdana.ttf" Size="30" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" />
+    <Typography Id="Typography2" Font="verdana.ttf" Size="50" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" />
   </Typographies>
 </TextDatabase>
