@@ -119,57 +119,87 @@ STM32U5 TFT-OLED(또는 관리자 UI)에 표시할 토픽들:
 
 ## 🧱 Database (MariaDB/MySQL)
 
-> 본 프로젝트는 `hospital_schema.sql` / `hospital_backup.sql` 기준으로 DB를 구성합니다.  
-> 서버(C 코드)는 DB를 주기적으로 조회/갱신하여 배차를 수행합니다.
+> 본 프로젝트는 `hospital_backup.sql` 기준으로 DB를 구성합니다.  
+> 서버(C 코드)는 DB를 주기적으로 조회/갱신하여 배차(Dispatch)를 수행합니다.
 
-### 1) 주요 테이블 요약
+### ✅ 주요 테이블 요약
 
-#### ✅ `call_queue` (호출 대기열)
-외래 키오스크/시스템에서 생성하는 호출 요청이 쌓이는 테이블
+#### 1) `call_queue` — 호출 대기열 (키오스크/시스템 호출 저장)
 
-- `call_id` (PK, AUTO_INCREMENT)
-- `call_time` (DEFAULT current_timestamp)
-- `caller_name` (환자/호출자 이름)
-- `start_loc` (출발지: 문자열)
-- `dest_loc` (목적지: 문자열)
-- `is_dispatched` (0/1)
-- `eta` (문자열: 예 "이동중")
+| 컬럼명 | 설명 | 예시 |
+|---|---|---|
+| `call_id`  | 호출 ID | 101 |
+| `call_time`  | 호출 생성 시간 | 2025-12-31 12:34:56 |
+| `caller_name`   | 환자/호출자 이름 | "홍길동" |
+| `start_loc`   | 출발지(장소명 문자열) | "키오스크" |
+| `dest_loc`   | 목적지(장소명 문자열) | "정형외과" |
+| `is_dispatched`  | 배차 여부 | 배차 여부(0/1)|
+| `eta`  | 상태/예상 정보 | "이동중" |
 
-#### ✅ `map_location` (장소명 → 좌표)
-서버 배차 시 `start_loc`, `dest_loc`을 (x,y)로 변환할 때 사용
+---
 
-- `location_id` (PK)
-- `location_name` (UNIQUE)
-- `x`, `y`
+#### 2) `map_location` — 장소명 → 좌표 매핑 테이블
 
-#### ✅ `robot_status` (로봇 상태 + 명령 채널)
-로봇 상태를 저장하고, 서버가 로봇에게 줄 “명령(order)” 및 좌표를 저장하는 핵심 테이블
+| 컬럼명  | 설명 | 예시 |
+|---|---|---|
+| `location_id`  | 장소 ID | 12 |
+| `location_name` | 장소명(문자열) | "진료실 2" |
+| `x`   | 맵 좌표 X | 1.25 |
+| `y`   | 맵 좌표 Y | -3.40 |
 
-- `robot_id` (PK, AUTO_INCREMENT)
-- `name` (UNIQUE)  ← 서버 UPSERT의 Key
-- `ip_address`
-- `op_status` enum('WAITING','HEADING','BOARDING','RUNNING','STOP','ARRIVED','EXITING','CHARGING','ERROR')
-- `battery_percent`
-- `is_charging`
-- `current_x`, `current_y`, `current_theta`
-- `start_x`, `start_y`
-- `goal_x`, `goal_y`
-- `sensor`
-- `order`  ← **명령 존재 여부 판단(서버는 order>0이면 로봇에 전달)**
-- `who_called` ← 호출자 이름 저장
+> 서버 배차 시 `call_queue.start_loc`, `call_queue.dest_loc`을 `map_location`에서 찾아 (x, y)로 변환합니다.
 
-#### ✅ `patient_info`, `disease_types` (우선순위 배차)
-서버 배차 우선순위가 “응급/질병 우선순위/호출 시간”을 반영하도록 설계됨
+---
 
-- `patient_info`
-  - `name`, `disease_code`, `is_emergency`, `type(OUT/IN)` 등
-- `disease_types`
-  - `base_priority` (큰 값일수록 우선)
+#### 3) `robot_status` — 로봇 상태 + 명령 채널(핵심 테이블)
 
-서버 배차 우선순위 정렬:
-1) `is_emergency` DESC  
-2) `base_priority` DESC  
-3) `call_time` ASC
+| 구분  | 설명 |
+|---|---|---|
+| 식별 | `robot_id` | 로봇 고유 ID |
+| 식별 | `name`  | 로봇 이름(서버가 로봇 구분에 사용) |
+| 네트워크 | `ip_address`   | 로봇 IP |
+| 상태 | `op_status` | `WAITING/HEADING/BOARDING/RUNNING/STOP/ARRIVED/EXITING/CHARGING/ERROR` |
+| 전원 | `battery_percent`   | 배터리 % |
+| 전원 | `is_charging`   | 충전 중 여부(0/1) |
+| 현재 위치 | `current_x`   | 현재 X |
+| 현재 위치 | `current_y`   | 현재 Y |
+| 현재 방향 | `current_theta`   | 현재 θ(yaw) |
+| 시작 좌표 | `start_x`  | 배차된 출발지 X |
+| 시작 좌표 | `start_y`   | 배차된 출발지 Y |
+| 목표 좌표 | `goal_x`   | 배차된 목적지 X |
+| 목표 좌표 | `goal_y`   | 배차된 목적지 Y |
+| 센서/기타 | `sensor`   | 센서 상태/메모 |
+| **명령** | **`order`**   | **명령 존재 여부(서버: `order>0`이면 로봇에게 전송)** |
+| 호출자 | `who_called`   | 호출자 이름 저장 |
+
+> `order`는 서버 → 로봇 명령 전달을 위한 “DB 기반 명령 채널” 역할입니다.
+
+---
+
+#### 4) `patient_info`, `disease_types` — 우선순위 배차(응급/질병/호출시간)
+
+##### `patient_info` (환자 정보)
+
+| 컬럼(예시) | 설명 |
+|---|---|
+| `name` | 환자 이름 |
+| `disease_code` | 질병 코드 |
+| `is_emergency` | 응급 여부(1이면 최우선) |
+| `type` | 환자 타입(OUT/IN) |
+
+##### `disease_types` (질병 우선순위 기준)
+
+| 컬럼(예시) | 설명 |
+|---|---|
+| `base_priority` | 우선순위 점수(클수록 우선) |
+
+✅ **배차 우선순위 정렬(코드 기준)**
+
+| 우선순위 | 기준 | 정렬 방향 |
+|---:|---|---|
+| 1 | `is_emergency` | DESC (응급 먼저) |
+| 2 | `base_priority` | DESC (점수 높은 질병 먼저) |
+| 3 | `call_time` | ASC (먼저 온 호출 먼저) |
 
 ---
 
