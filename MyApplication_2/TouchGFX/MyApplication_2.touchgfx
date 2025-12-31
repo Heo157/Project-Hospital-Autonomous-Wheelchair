@@ -330,7 +330,30 @@
             ]
           }
         ],
-        "Interactions": []
+        "Interactions": [
+          {
+            "InteractionName": "push_BoardingDone",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "btnBoardingDone"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "pbBoardingDone"
+            }
+          },
+          {
+            "InteractionName": "push_EmergencyStop",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "btnEmergencyStop"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "pbEmergencyStop"
+            }
+          }
+        ]
       }
     ],
     "CustomContainerDefinitions": [],
