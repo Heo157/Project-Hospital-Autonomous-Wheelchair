@@ -151,7 +151,7 @@ STM32U5 TFT-OLED(또는 관리자 UI)에 표시할 토픽들:
 
 - **Robot**: ROS2, Nav2, SLAM, AMCL
 - **Edge**: Raspberry Pi 4
-- **Sensor Module**: STM32U5 + UART/Serial + TFT UI
+- **Sensor Board**: STM32U5G9J-DK2 + TFT UI
 - **Server**: C Socket Server(Multi-process), MariaDB/MySQL
 - **UI**: Qt (Admin Dashboard / Touch Kiosk)
 
