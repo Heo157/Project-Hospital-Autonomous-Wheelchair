@@ -68,6 +68,10 @@ void Error_Handler(void);
 #define USER_BUTTON_GPIO_Port GPIOC
 #define VSYNC_FREQ_Pin GPIO_PIN_0
 #define VSYNC_FREQ_GPIO_Port GPIOC
+#define FSR_INPUT_Pin GPIO_PIN_1
+#define FSR_INPUT_GPIO_Port GPIOC
+#define TRIG_Pin GPIO_PIN_1
+#define TRIG_GPIO_Port GPIOB
 #define RENDER_TIME_Pin GPIO_PIN_10
 #define RENDER_TIME_GPIO_Port GPIOC
 #define FRAME_RATE_Pin GPIO_PIN_11
@@ -78,6 +82,8 @@ void Error_Handler(void);
 #define USER_LD2_RED_GPIO_Port GPIOD
 #define USER_LD3_GREEN_Pin GPIO_PIN_4
 #define USER_LD3_GREEN_GPIO_Port GPIOD
+#define ECHO_Pin GPIO_PIN_7
+#define ECHO_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 
