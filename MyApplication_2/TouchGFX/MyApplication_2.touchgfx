@@ -54,7 +54,7 @@
                 "Name": "txt_patient",
                 "X": 199,
                 "Y": 54,
-                "Width": 75,
+                "Width": 150,
                 "Height": 23,
                 "TextId": "__SingleUse_691O",
                 "TextRotation": "0",
@@ -63,14 +63,15 @@
                   "Green": 90,
                   "Blue": 100
                 },
-                "AutoSize": true
+                "AutoSize": true,
+                "Wildcard1": {}
               },
               {
                 "Type": "TextArea",
                 "Name": "txt_destination",
                 "X": 199,
                 "Y": 94,
-                "Width": 118,
+                "Width": 193,
                 "Height": 23,
                 "TextId": "__SingleUse_KBWS",
                 "TextRotation": "0",
@@ -79,14 +80,15 @@
                   "Green": 90,
                   "Blue": 100
                 },
-                "AutoSize": true
+                "AutoSize": true,
+                "Wildcard1": {}
               },
               {
                 "Type": "TextArea",
                 "Name": "txt_Status",
                 "X": 242,
                 "Y": 152,
-                "Width": 317,
+                "Width": 447,
                 "Height": 30,
                 "TextId": "__SingleUse_NGPY",
                 "TextRotation": "0",
@@ -95,7 +97,8 @@
                   "Green": 90,
                   "Blue": 100
                 },
-                "AutoSize": true
+                "AutoSize": true,
+                "Wildcard1": {}
               },
               {
                 "Type": "ButtonWithLabel",
@@ -218,7 +221,19 @@
             ]
           }
         ],
-        "Interactions": []
+        "Interactions": [
+          {
+            "InteractionName": "push_button",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "btn"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "push_btn"
+            }
+          }
+        ]
       }
     ],
     "CustomContainerDefinitions": [],

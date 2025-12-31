@@ -13,13 +13,13 @@
         <Translation Language="GB">비상정지</Translation>
       </Text>
       <Text Id="__SingleUse_NGPY" Alignment="Left" TypographyId="Typography1">
-        <Translation Language="GB">MOVING TO PATIENT</Translation>
+        <Translation Language="GB">&lt;value&gt;</Translation>
       </Text>
       <Text Id="__SingleUse_KBWS" Alignment="Left" TypographyId="Default">
-        <Translation Language="GB">Destination:</Translation>
+        <Translation Language="GB">&lt;value&gt;</Translation>
       </Text>
       <Text Id="__SingleUse_691O" Alignment="Left" TypographyId="Default">
-        <Translation Language="GB">Patient:</Translation>
+        <Translation Language="GB">&lt;value&gt;</Translation>
       </Text>
       <Text Id="__SingleUse_XEVB" Alignment="Center" TypographyId="Default">
         <Translation Language="GB">&lt; &gt; %</Translation>
