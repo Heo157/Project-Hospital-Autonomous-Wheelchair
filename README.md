@@ -1,8 +1,8 @@
 # 🏥 Hospital Autonomous Wheelchair Robot  
-### TurtleBot3 + ROS2(Nav2/SLAM) + Raspberry Pi 4 + STM32U5 Sensor Module + C Server + MariaDB + Qt Kiosk/Admin
+
 
 > **요약**  
-> TurtleBot3 플랫폼에 3D 프린팅 휠체어 구조물을 장착하고,  
+> TurtleBot3 Burger 플랫폼에 3D 프린팅 휠체어 구조물을 장착하고,  
 > **LiDAR SLAM 기반 자율주행(ROS2/Nav2)** + **중앙 서버/DB 배차 시스템** + **Qt 터치 키오스크(외래 호출)** + **STM32U5(초음파/압력 + TFT-OLED UI)** 를 결합해  
 > 병원 환경에서 **환자 호출 → 탑승 확인 → 목적지 이동 → 도착 알림 → 하차/대기/충전** 흐름을 구현하는 프로젝트입니다.
 
@@ -14,7 +14,7 @@
 - **외래 환자**는 QR 대신 **터치 키오스크(Qt)** 로 호출
 - **입원 환자**는 DB에 등록된 병동/병실 좌표 기반으로 배차 가능
 - 자율주행은 **LiDAR SLAM + Nav2** 로 수행
-- **STM32U5 센서모듈**로:
+- **STM32U5G9J-DK2 보드**로:
   - LiDAR가 감지하기 어려운 **낮은 높이 장애물**을 초음파로 감지
   - **압력 센서(FSR)**로 환자 탑승/하차를 감지하여 서버/DB에 반영
   - 보드 내장 **TFT-OLED**에서 로봇 상태/토픽값을 실시간 UI로 표시
@@ -40,7 +40,7 @@
   - 로봇에 start/goal 좌표 전달
   - 로봇 상태를 DB에 지속 기록
 
-### ✅ STM32U5 센서모듈(초음파 + 압력) + TFT UI
+### ✅ STM32U5 보드(초음파 + 압력) + TFT UI
 - 초음파(HC-SR04): **하단 장착** → 낮은 장애물 감지용
 - 압력(FSR): **seat_detected** → 탑승 감지용
 - TFT-OLED UI에 ROS 토픽 기반 상태 표시
@@ -51,11 +51,11 @@
 
 ### 구성 요소
 
-#### 1) Robot (TurtleBot3 + Raspberry Pi 4)
+#### 1) Robot (TurtleBot3 Burger+ Raspberry Pi 4)
 - ROS2 (Nav2/SLAM/AMCL)
 - LiDAR(`/scan`), odom(`/odom`), 배터리(`/battery_state`) publish
 - 서버와 네트워크 통신(프로젝트 방식에 맞는 브리지/프로토콜)
-- STM32U5 센서모듈과 UART/Serial 등으로 연동
+- STM32U5 보드와 UART/Serial 등으로 연동
 
 #### 2) STM32U5 Sensor Module
 - **초음파 거리 토픽**: `/ultra_distance_cm`
@@ -135,15 +135,15 @@ STM32U5 TFT-OLED(또는 관리자 UI)에 표시할 토픽들:
 ## 🔧 7. 하드웨어 구성 (Hardware)
 
 ### ✅ Robot Side
-- TurtleBot3 base + LiDAR
+- TurtleBot3 Burger base + LiDAR
 - Raspberry Pi 4
-- USB Camera(선택)
-- (권장) E-STOP 버튼, 부저/LED
+- OpenCR
 
 ### ✅ STM32U5 Sensor Module
 - STM32U5 보드(내장 TFT-OLED)
 - IUM-100 초음파 센서 (하단 장애물 감지)
-- FSR 압력 센서(탑승 감지)
+- FSR 압력 센서 (탑승 감지)
+- E-STOP (응급정지 버튼)
 
 ---
 
