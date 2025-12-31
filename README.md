@@ -117,18 +117,59 @@ STM32U5 TFT-OLED(또는 관리자 UI)에 표시할 토픽들:
 
 ---
 
-## 🧱 6. DB (MariaDB/MySQL) 개요
+## 🧱 Database (MariaDB/MySQL)
 
-- 로봇 상태(robot_status)
-- 호출 큐(call_queue)
-- 위치 테이블(map_location)
-- (선택) 환자/진료정보(patient_info 등)
+> 본 프로젝트는 `hospital_schema.sql` / `hospital_backup.sql` 기준으로 DB를 구성합니다.  
+> 서버(C 코드)는 DB를 주기적으로 조회/갱신하여 배차를 수행합니다.
 
-> ⚠️ DB/서버 코드 분석을 반영한 “정확한 테이블/컬럼명”을 README에 맞추려면  
-> 업로드된 SQL/C 파일을 다시 확인해야 합니다.  
-> 현재 시스템에서 업로드된 일부 파일은 만료되어 열람이 불가능합니다.  
-> **hospital_schema.sql / hospital_backup.sql / server_db.c / main.c / robot_manager.c** 를 다시 업로드해주면  
-> README의 DB 스키마/컬럼/실행 방법을 **코드 100% 기준으로** 딱 맞춰 정리해드릴게요.
+### 1) 주요 테이블 요약
+
+#### ✅ `call_queue` (호출 대기열)
+외래 키오스크/시스템에서 생성하는 호출 요청이 쌓이는 테이블
+
+- `call_id` (PK, AUTO_INCREMENT)
+- `call_time` (DEFAULT current_timestamp)
+- `caller_name` (환자/호출자 이름)
+- `start_loc` (출발지: 문자열)
+- `dest_loc` (목적지: 문자열)
+- `is_dispatched` (0/1)
+- `eta` (문자열: 예 "이동중")
+
+#### ✅ `map_location` (장소명 → 좌표)
+서버 배차 시 `start_loc`, `dest_loc`을 (x,y)로 변환할 때 사용
+
+- `location_id` (PK)
+- `location_name` (UNIQUE)
+- `x`, `y`
+
+#### ✅ `robot_status` (로봇 상태 + 명령 채널)
+로봇 상태를 저장하고, 서버가 로봇에게 줄 “명령(order)” 및 좌표를 저장하는 핵심 테이블
+
+- `robot_id` (PK, AUTO_INCREMENT)
+- `name` (UNIQUE)  ← 서버 UPSERT의 Key
+- `ip_address`
+- `op_status` enum('WAITING','HEADING','BOARDING','RUNNING','STOP','ARRIVED','EXITING','CHARGING','ERROR')
+- `battery_percent`
+- `is_charging`
+- `current_x`, `current_y`, `current_theta`
+- `start_x`, `start_y`
+- `goal_x`, `goal_y`
+- `sensor`
+- `order`  ← **명령 존재 여부 판단(서버는 order>0이면 로봇에 전달)**
+- `who_called` ← 호출자 이름 저장
+
+#### ✅ `patient_info`, `disease_types` (우선순위 배차)
+서버 배차 우선순위가 “응급/질병 우선순위/호출 시간”을 반영하도록 설계됨
+
+- `patient_info`
+  - `name`, `disease_code`, `is_emergency`, `type(OUT/IN)` 등
+- `disease_types`
+  - `base_priority` (큰 값일수록 우선)
+
+서버 배차 우선순위 정렬:
+1) `is_emergency` DESC  
+2) `base_priority` DESC  
+3) `call_time` ASC
 
 ---
 
