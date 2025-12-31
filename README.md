@@ -1,6 +1,5 @@
 # 🏥 Hospital Autonomous Wheelchair Robot  
 
-
 > **요약**  
 > TurtleBot3 Burger 플랫폼에 3D 프린팅 휠체어 구조물을 장착하고,  
 > **LiDAR SLAM 기반 자율주행(ROS2/Nav2)** + **중앙 서버/DB 배차 시스템** + **Qt 터치 키오스크(외래 호출)** + **STM32U5(초음파/압력 + TFT-OLED UI)** 를 결합해  
@@ -233,56 +232,13 @@ STM32U5 TFT-OLED(또는 관리자 UI)에 표시할 토픽들:
 
 ## 👥 팀원 소개 (Team)
 
-<table style="width: 100%; border-collapse: collapse;">
-  <thead>
-    <tr style="background-color: #f8f9fa;">
-      <th style="padding: 10px; border: 1px solid #ddd;">이름</th>
-      <th style="padding: 10px; border: 1px solid #ddd;">역할</th>
-      <th style="padding: 10px; border: 1px solid #ddd;">파트</th>
-      <th style="padding: 10px; border: 1px solid #ddd;">담당 기능(요약)</th>
-      <th style="padding: 10px; border: 1px solid #ddd;">사용 기술/도구</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td style="padding: 10px; border: 1px solid #ddd; white-space: nowrap; text-align: center;">허진경</td>
-      <td style="padding: 10px; border: 1px solid #ddd; white-space: nowrap; text-align: center;">팀장</td>
-      <td style="padding: 10px; border: 1px solid #ddd;">Robot / ROS</td>
-      <td style="padding: 10px; border: 1px solid #ddd;">TurtleBot3 자율주행(ROS2/Nav2/SLAM) 통합, STM32U5(초음파/압력) 센서 모듈 연동, ROS 토픽 → TFT-OLED UI 표시</td>
-      <td style="padding: 10px; border: 1px solid #ddd;">ROS2, Nav2, SLAM, STM32 HAL, UART, Raspberry Pi 4</td>
-    </tr>
-    <tr>
-      <td style="padding: 10px; border: 1px solid #ddd; white-space: nowrap; text-align: center;">강송구</td>
-      <td style="padding: 10px; border: 1px solid #ddd; white-space: nowrap; text-align: center;">부팀장</td>
-      <td style="padding: 10px; border: 1px solid #ddd;">Server / DB</td>
-      <td style="padding: 10px; border: 1px solid #ddd;">C 서버(소켓) 구현, MariaDB 스키마/쿼리 설계, 로봇 상태 저장/배차 로직(Dispatch)</td>
-      <td style="padding: 10px; border: 1px solid #ddd;">C(Socket), MariaDB/MySQL, SQL</td>
-    </tr>
-    <tr>
-      <td style="padding: 10px; border: 1px solid #ddd; white-space: nowrap; text-align: center;">김선곤</td>
-      <td style="padding: 10px; border: 1px solid #ddd; white-space: nowrap; text-align: center;">팀원</td>
-      <td style="padding: 10px; border: 1px solid #ddd;">Qt Kiosk / STM32U5 LCD UI</td>
-      <td style="padding: 10px; border: 1px solid #ddd;">외래 환자용 터치 키오스크(Qt) UI 구현, STM32U5 TFT-OLED UI(토픽 상태 표시) 연동(옵션)</td>
-      <td style="padding: 10px; border: 1px solid #ddd;">Qt, (STM32 HAL), (UART)</td>
-    </tr>
-    <tr>
-      <td style="padding: 10px; border: 1px solid #ddd; white-space: nowrap; text-align: center;">임정민</td>
-      <td style="padding: 10px; border: 1px solid #ddd; white-space: nowrap; text-align: center;">팀원</td>
-      <td style="padding: 10px; border: 1px solid #ddd;">DB</td>
-      <td style="padding: 10px; border: 1px solid #ddd;">DB 데이터 관리/정리, 호출·로봇 상태 테이블 운영 지원, 샘플 데이터(세트장 위치 좌표) 구축</td>
-      <td style="padding: 10px; border: 1px solid #ddd;">SQL, MariaDB/MySQL</td>
-    </tr>
-    <tr>
-      <td style="padding: 10px; border: 1px solid #ddd; white-space: nowrap; text-align: center;">유종민</td>
-      <td style="padding: 10px; border: 1px solid #ddd; white-space: nowrap; text-align: center;">팀원</td>
-      <td style="padding: 10px; border: 1px solid #ddd;">Firmware / ROS</td>
-      <td style="padding: 10px; border: 1px solid #ddd;">STM32U5(초음파/압력) 센서 구현 및 ROS2 연동, 3D 프린팅 구조물 제작/장착</td>
-      <td style="padding: 10px; border: 1px solid #ddd;">ROS2, STM32, UART, Autodesk(Fusion 360), 3D Printing</td>
-    </tr>
-  </tbody>
-</table>
-
-> ✅ 팁: “담당 기능(요약)”은 1줄로, “사용 기술/도구”는 키워드만 적으면 가독성이 좋습니다.
+| &nbsp;&nbsp;&nbsp;&nbsp;이름&nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp;역할&nbsp;&nbsp;&nbsp;&nbsp; | 파트 | 담당 기능(요약) | 사용 기술/도구 |
+| :---: | :---: | :--- | :--- | :--- |
+| **허진경** | 팀장 | Robot / ROS | TurtleBot3 자율주행(ROS2/Nav2/SLAM) 통합,<br>STM32U5(초음파/압력) 센서 모듈 연동,<br>ROS 토픽 → TFT-OLED UI 표시 | ROS2, Nav2, SLAM,<br>STM32 HAL, UART,<br>Raspberry Pi 4 |
+| **강송구** | 부팀장 | Server / DB | C 서버 구현, MariaDB 스키마/쿼리 설계,<br>로봇 상태 저장/배차 로직 | C(Socket), SQL,<br>MariaDB / MySQL |
+| **김선곤** | 팀원 | Qt Kiosk /<br>STM32U5 LCD | 외래 환자용 터치 키오스크(Qt) UI 구현,<br>STM32U5 TFT-OLED UI 연동(옵션) | Qt,  |
+| **임정민** | 팀원 | DB / ROS | DB 데이터 관리/정리, URDF | SQL,<br>MariaDB / MySQL /ROS2 |
+| **유종민** | 팀원 | Firmware /<br>ROS | STM32U5(초음파/압력) 센서 구현 및<br>ROS2 연동, 3D 프린팅 구조물 제작 | ROS2, STM32,<br>Fusion 360 |
 
 
 
