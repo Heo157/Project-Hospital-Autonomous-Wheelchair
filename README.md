@@ -153,12 +153,12 @@ STM32U5 TFT-OLED(또는 관리자 UI)에 표시할 토픽들:
 
 #### 3) `robot_status` — 로봇 상태 + 명령 채널(핵심 테이블)
 
-| 구분  | 설명 |
+| 구분 | 컬럼명  | 설명 |
 |---|---|---|
 | 식별 | `robot_id` | 로봇 고유 ID |
 | 식별 | `name`  | 로봇 이름(서버가 로봇 구분에 사용) |
 | 네트워크 | `ip_address`   | 로봇 IP |
-| 상태 | `op_status` | `WAITING/HEADING/BOARDING/RUNNING/STOP/ARRIVED/EXITING/CHARGING/ERROR` |
+| 상태 | `op_status`  | `WAITING/HEADING/BOARDING/RUNNING/STOP/ARRIVED/EXITING/CHARGING/ERROR` |
 | 전원 | `battery_percent`   | 배터리 % |
 | 전원 | `is_charging`   | 충전 중 여부(0/1) |
 | 현재 위치 | `current_x`   | 현재 X |
@@ -171,6 +171,9 @@ STM32U5 TFT-OLED(또는 관리자 UI)에 표시할 토픽들:
 | 센서/기타 | `sensor`   | 센서 상태/메모 |
 | **명령** | **`order`**   | **명령 존재 여부(서버: `order>0`이면 로봇에게 전송)** |
 | 호출자 | `who_called`   | 호출자 이름 저장 |
+
+> `order`는 서버 → 로봇 명령 전달을 위한 “DB 기반 명령 채널” 역할입니다.
+
 
 > `order`는 서버 → 로봇 명령 전달을 위한 “DB 기반 명령 채널” 역할입니다.
 
@@ -196,7 +199,7 @@ STM32U5 TFT-OLED(또는 관리자 UI)에 표시할 토픽들:
 ✅ **배차 우선순위 정렬(코드 기준)**
 
 | 우선순위 | 기준 | 정렬 방향 |
-|---:|---|---|
+|---|---|---|
 | 1 | `is_emergency` | DESC (응급 먼저) |
 | 2 | `base_priority` | DESC (점수 높은 질병 먼저) |
 | 3 | `call_time` | ASC (먼저 온 호출 먼저) |
