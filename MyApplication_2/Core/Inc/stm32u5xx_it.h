@@ -56,6 +56,7 @@ void EXTI5_IRQHandler(void);
 void GPDMA1_Channel0_IRQHandler(void);
 void GPDMA1_Channel1_IRQHandler(void);
 void TIM6_IRQHandler(void);
+void USART1_IRQHandler(void);
 void DMA2D_IRQHandler(void);
 void HSPI1_IRQHandler(void);
 void GPU2D_IRQHandler(void);
