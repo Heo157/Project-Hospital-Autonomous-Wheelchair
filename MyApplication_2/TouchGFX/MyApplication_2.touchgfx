@@ -1,0 +1,304 @@
+{
+  "Application": {
+    "Screens": [
+      {
+        "Name": "mainscreen",
+        "CanvasBufferSize": 12000,
+        "Components": [
+          {
+            "Type": "Box",
+            "Name": "box2",
+            "Width": 800,
+            "Height": 480,
+            "Color": {
+              "Red": 74,
+              "Green": 85,
+              "Blue": 96
+            }
+          },
+          {
+            "Type": "Box",
+            "Name": "BackGround",
+            "X": 19,
+            "Y": 18,
+            "Width": 762,
+            "Height": 443,
+            "Color": {
+              "Red": 230,
+              "Green": 242,
+              "Blue": 250
+            }
+          },
+          {
+            "Type": "Box",
+            "Name": "box1",
+            "X": 19,
+            "Y": 250,
+            "Width": 762,
+            "Height": 2,
+            "Color": {
+              "Red": 74,
+              "Green": 85,
+              "Blue": 96
+            }
+          },
+          {
+            "Type": "Container",
+            "Name": "BottomStatusBar",
+            "Y": 251,
+            "Width": 800,
+            "Height": 229,
+            "Components": [
+              {
+                "Type": "TextArea",
+                "Name": "txt_patient",
+                "X": 194,
+                "Y": 46,
+                "Width": 36,
+                "Height": 21,
+                "TextId": "__SingleUse_691O",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 69,
+                  "Green": 90,
+                  "Blue": 100
+                },
+                "AutoSize": true,
+                "Wildcard1": {}
+              },
+              {
+                "Type": "TextArea",
+                "Name": "txt_destination",
+                "X": 469,
+                "Y": 46,
+                "Width": 54,
+                "Height": 21,
+                "TextId": "__SingleUse_KBWS",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 69,
+                  "Green": 90,
+                  "Blue": 100
+                },
+                "AutoSize": true,
+                "Wildcard1": {}
+              },
+              {
+                "Type": "TextArea",
+                "Name": "txt_Status",
+                "X": 194,
+                "Y": 151,
+                "Width": 72,
+                "Height": 21,
+                "TextId": "__SingleUse_NGPY",
+                "TextRotation": "0",
+                "Color": {
+                  "Red": 69,
+                  "Green": 90,
+                  "Blue": 100
+                },
+                "AutoSize": true,
+                "Wildcard1": {}
+              },
+              {
+                "Type": "ButtonWithLabel",
+                "Name": "btn",
+                "X": 400,
+                "Y": 121,
+                "Width": 340,
+                "Height": 80,
+                "Pressed": "__generated\\clay_theme_images_widgets_button_regular_height_36_large_round_action.png",
+                "Released": "__generated\\clay_theme_images_widgets_button_regular_height_36_large_round_disabled.png",
+                "TextId": "__SingleUse_ZZOS",
+                "ReleasedColor": {
+                  "Red": 255,
+                  "Green": 255,
+                  "Blue": 255
+                },
+                "PressedColor": {
+                  "Red": 255,
+                  "Green": 255,
+                  "Blue": 255
+                },
+                "TextRotation": "0"
+              }
+            ]
+          },
+          {
+            "Type": "Container",
+            "Name": "TopStatusBar",
+            "Width": 800,
+            "Height": 251,
+            "Components": [
+              {
+                "Type": "Gauge",
+                "Name": "gauge_speed",
+                "X": 138,
+                "Y": 29,
+                "Width": 184,
+                "Height": 184,
+                "Preset": "clay_theme\\presets\\gauges\\small\\active_filled.json",
+                "FileNameBackground": "__generated\\clay_theme_images_widgets_gauge_small_backgrounds_active_filled.png",
+                "RotationCenterX": 92.0,
+                "RotationCenterY": 92.0,
+                "StartAngle": -119.0,
+                "EndAngle": 122.0,
+                "RangeMax": 100.0,
+                "InitialValue": 50.0,
+                "Easing": "Linear",
+                "EasingOption": "In",
+                "FileNameNeedle": "__generated\\clay_theme_images_widgets_gauge_small_needles_rough.png",
+                "NeedleRotationCenterX": 8.0,
+                "NeedleRotationCenterY": 53.0,
+                "NeedleMovingRenderingAlgorithm": "Bilinear Interpolation",
+                "NeedleSteadyRenderingAlgorithm": "Bilinear Interpolation",
+                "UseArc": true,
+                "FileNameArc": "__generated\\clay_theme_images_widgets_gauge_small_fillers_swoop.png",
+                "ArcColor": {
+                  "Red": 20,
+                  "Green": 151,
+                  "Blue": 197
+                },
+                "SetArcPosition": true,
+                "ArcX": 19.0,
+                "ArcY": 19.0,
+                "ArcWidth": 146.0,
+                "ArcHeight": 108.0,
+                "ArcRadius": 79.0,
+                "ArcLineWidth": 78.0,
+                "ArcCapStyle": "Butt"
+              },
+              {
+                "Type": "TextProgress",
+                "Name": "txt_battery",
+                "X": 469,
+                "Y": 96,
+                "Width": 175,
+                "Height": 50,
+                "TextId": "__SingleUse_XEVB",
+                "Color": {
+                  "Red": 69,
+                  "Green": 90,
+                  "Blue": 100
+                },
+                "FileNameBackground": "__generated\\light_theme_images_widgets_textprogress_backgrounds_rounded_light.png",
+                "IndicatorPositionX": 12,
+                "IndicatorPositionY": 10,
+                "IndicatorPositionWidth": 150,
+                "IndicatorPositionHeight": 30,
+                "ProgressRangeMax": 100,
+                "ProgressInitialValue": 60
+              },
+              {
+                "Type": "BoxProgress",
+                "Name": "progress_battery",
+                "X": 456,
+                "Y": 156,
+                "Width": 200,
+                "Height": 18,
+                "Color": {
+                  "Red": 129,
+                  "Green": 235,
+                  "Blue": 103
+                },
+                "Direction": "Right",
+                "FileNameBackground": "__generated\\light_theme_images_widgets_boxprogress_thick_small.png",
+                "IndicatorPositionWidth": 200,
+                "IndicatorPositionHeight": 18,
+                "ProgressRangeMax": 100,
+                "ProgressInitialValue": 50
+              },
+              {
+                "Type": "TextArea",
+                "Name": "txt_speed",
+                "X": 224,
+                "Y": 220,
+                "Width": 12,
+                "Height": 23,
+                "TextId": "__SingleUse_VUZH",
+                "TextRotation": "0",
+                "AutoSize": true,
+                "Wildcard1": {}
+              }
+            ]
+          }
+        ],
+        "Interactions": [
+          {
+            "InteractionName": "push_button",
+            "Trigger": {
+              "Type": "TriggerClicked",
+              "TriggerComponent": "btn"
+            },
+            "Action": {
+              "Type": "ActionCustom",
+              "FunctionName": "push_btn"
+            }
+          }
+        ]
+      }
+    ],
+    "CustomContainerDefinitions": [],
+    "Name": "MyApplication_2",
+    "Resolution": {
+      "Width": 800,
+      "Height": 480
+    },
+    "SelectedColorDepth": 16,
+    "StartupScreenName": "mainscreen",
+    "SelectedStartupLanguage": "GB",
+    "TouchGfxPath": "../Middlewares/ST/touchgfx",
+    "UIPath": ".",
+    "AvailableColorDepths": [
+      16
+    ],
+    "AvailableLCDs": {
+      "16": "LCDGPU2D"
+    },
+    "AvailableSections": [
+      "ExtFlashSection",
+      "IntFlashSection"
+    ],
+    "AvailableResolutions": [
+      {
+        "Width": 800,
+        "Height": 480
+      }
+    ],
+    "PhysicalButtons": [
+      {
+        "Key": 1,
+        "Name": "USER_BUTTON"
+      }
+    ],
+    "GenerateAssetsCommand": "make -f simulator/gcc/Makefile assets -j8",
+    "PostGenerateCommand": "touchgfx update_project --project-file=simulator/msvs/Application.vcxproj",
+    "PostGenerateTargetCommand": "touchgfx update_project",
+    "CompileSimulatorCommand": "make -f simulator/gcc/Makefile -j8",
+    "RunSimulatorCommand": "build\\bin\\simulator.exe",
+    "CompileTargetCommand": "make -f ../gcc/Makefile -j8",
+    "FlashTargetCommand": "make -f ../gcc/Makefile flash",
+    "FlashTargetIntCommandOverride": "make -f ../gcc/Makefile intflash",
+    "LandscapeSkinX": 0,
+    "LandscapeSkinY": 0,
+    "PortraitSkinX": 0,
+    "PortraitSkinY": 0,
+    "DisplayOrientation": "Landscape",
+    "Family": "STM32U5",
+    "SubFamily": "STM32U5F9/5G9",
+    "Toolchain": "STM32CubeIDE",
+    "Platform": "m33",
+    "ProjectFile": "../STM32U5G9J-DK2.ioc",
+    "OptionalComponentsRoot": "../Middlewares/ST/touchgfx_components",
+    "OptionalComponents": [
+      "GPU2D"
+    ],
+    "AdditionalFeatures": [
+      "GPU2DVector",
+      "VectorFonts",
+      "Video"
+    ]
+  },
+  "Version": "4.26.0",
+  "CreatedBy": "4.26.0"
+}
