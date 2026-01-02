@@ -2,7 +2,7 @@
 
 > **요약**  
 > TurtleBot3 Burger 플랫폼에 3D 프린팅 휠체어 구조물을 장착하고,  
-> **LiDAR SLAM 기반 자율주행(ROS2/Nav2)** + **중앙 서버/DB 배차 시스템** + **Qt 터치 키오스크(외래 호출)** + **STM32U5(초음파/압력 + TFT-OLED UI)** 를 결합해  
+> **LiDAR SLAM 기반 자율주행(ROS2/Nav2)** + **중앙 서버/DB 배차 시스템** + **Qt 터치 키오스크(외래 호출)** + **STM32U5(초음파/압력 + Touch-GFX UI)** 를 결합해  
 > 병원 환경에서 **환자 호출 → 탑승 확인 → 목적지 이동 → 도착 알림 → 하차/대기/충전** 흐름을 구현하는 프로젝트입니다.
 
 ---
@@ -16,7 +16,7 @@
 - **STM32U5G9J-DK2 보드**로:
   - LiDAR가 감지하기 어려운 **낮은 높이 장애물**을 초음파로 감지
   - **압력 센서(FSR)**로 환자 탑승/하차를 감지하여 서버/DB에 반영
-  - 보드 내장 **TFT-OLED**에서 로봇 상태/토픽값을 실시간 UI로 표시
+  - 보드 내장 **Touch-GFX**에서 로봇 상태/토픽값을 실시간 UI로 표시
 
 ---
 
@@ -39,10 +39,10 @@
   - 로봇에 start/goal 좌표 전달
   - 로봇 상태를 DB에 지속 기록
 
-### ✅ STM32U5 보드(초음파 + 압력) + TFT UI
+### ✅ STM32U5 보드(초음파 + 압력) + Touch-GFX UI
 - 초음파(HC-SR04): **하단 장착** → 낮은 장애물 감지용
 - 압력(FSR): **seat_detected** → 탑승 감지용
-- TFT-OLED UI에 ROS 토픽 기반 상태 표시
+- Touch-GFX UI에 ROS 토픽 기반 상태 표시
 
 ---
 
@@ -59,7 +59,7 @@
 #### 2) STM32U5 Sensor Module
 - **초음파 거리 토픽**: `/ultra_distance_cm`
 - **탑승 감지 토픽**: `/seat_detected`
-- TFT-OLED에 아래 토픽 UI 표시
+- Touch-GFX에 아래 토픽 UI 표시
 
 #### 3) Central Server (Linux/Ubuntu)
 - C 기반 TCP 서버(멀티프로세스)
@@ -100,7 +100,7 @@
 
 ## 📡 5. ROS2 토픽 인터페이스 (UI 표시용)
 
-STM32U5 TFT-OLED(또는 관리자 UI)에 표시할 토픽들:
+STM32U5 Touch-GFX(또는 관리자 UI)에 표시할 토픽들:
 
 | Topic | 의미 | UI 표시 예시 |
 |------|------|-------------|
@@ -210,7 +210,7 @@ STM32U5 TFT-OLED(또는 관리자 UI)에 표시할 토픽들:
 - OpenCR
 
 ### ✅ STM32U5 Sensor Module
-- STM32U5 보드(내장 TFT-OLED)
+- STM32U5 보드(내장 Touch-GFX)
 - IUM-100 초음파 센서 (하단 장애물 감지)
 - FSR 압력 센서 (탑승 감지)
 - E-STOP (응급정지 버튼)
@@ -221,7 +221,7 @@ STM32U5 TFT-OLED(또는 관리자 UI)에 표시할 토픽들:
 
 - **Robot**: ROS2, Nav2, SLAM, AMCL
 - **Edge**: Raspberry Pi 4
-- **Sensor Board**: STM32U5G9J-DK2 + TFT UI
+- **Sensor Board**: STM32U5G9J-DK2 + Touch-GFX UI
 - **Server**: C Socket Server(Multi-process), MariaDB/MySQL
 - **UI**: Qt (Admin Dashboard / Touch Kiosk)
 
@@ -231,9 +231,9 @@ STM32U5 TFT-OLED(또는 관리자 UI)에 표시할 토픽들:
 
 | &nbsp;&nbsp;&nbsp;&nbsp;이름&nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp;역할&nbsp;&nbsp;&nbsp;&nbsp; | 파트 | 담당 기능(요약) | 사용 기술/도구 |
 | :---: | :---: | :--- | :--- | :--- |
-| **허진경** | 팀장 | Robot / ROS | TurtleBot3 자율주행(ROS2/Nav2/SLAM) 통합,<br>STM32U5(초음파/압력) 센서 모듈 연동,<br>ROS 토픽 → TFT-OLED UI 표시 | ROS2, Nav2, SLAM,<br>STM32 HAL, UART,<br>Raspberry Pi 4 |
+| **허진경** | 팀장 | Robot / ROS | TurtleBot3 자율주행(ROS2/Nav2/SLAM) 통합,<br>STM32U5(초음파/압력) 센서 모듈 연동,<br>ROS 토픽 → Touch-GFX UI 표시 | ROS2, Nav2, SLAM,<br>STM32 HAL, UART,<br>Raspberry Pi 4 |
 | **강송구** | 부팀장 | Server / DB | C 서버 구현, MariaDB 스키마/쿼리 설계,<br>로봇 상태 저장/배차 로직 | C(Socket), SQL,<br>MariaDB / MySQL |
-| **김선곤** | 팀원 | Qt Kiosk /<br>STM32U5 LCD | 외래 환자용 터치 키오스크(Qt) UI 구현,<br>STM32U5 TFT-OLED UI 연동(옵션) | Qt,  |
+| **김선곤** | 팀원 | Qt Kiosk /<br>STM32U5 Touch-GFX | 외래 환자용 터치 키오스크(Qt) UI 구현,<br>STM32U5 Touch-GFX UI 연동(옵션) | Qt,  |
 | **임정민** | 팀원 | DB / ROS | DB 데이터 관리/정리, URDF | SQL,<br>MariaDB / MySQL /ROS2 |
 | **유종민** | 팀원 | Firmware /<br>ROS | STM32U5(초음파/압력) 센서 구현 및<br>ROS2 연동, 3D 프린팅 구조물 제작 | ROS2, STM32,<br>Fusion 360 |
 
