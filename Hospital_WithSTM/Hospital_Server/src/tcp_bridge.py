@@ -23,7 +23,7 @@ from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
 from geometry_msgs.msg import PoseStamped, Quaternion
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import BatteryState
-from std_msgs.msg import Int32, Bool, String
+from std_msgs.msg import Int32, Bool, String, Float32
 
 # =========================================================================
 # 1. 프로토콜 및 상수
