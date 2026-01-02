@@ -60,7 +60,7 @@ CREATE TABLE `call_queue` (
   `is_dispatched` int(11) DEFAULT 0,
   `eta` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`call_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=90 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=296 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -98,21 +98,19 @@ CREATE TABLE `inpatient_details` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `map_location`
+-- Temporary table structure for view `map_location`
 --
 
 DROP TABLE IF EXISTS `map_location`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8mb4 */;
-CREATE TABLE `map_location` (
-  `location_id` int(11) NOT NULL AUTO_INCREMENT,
-  `location_name` varchar(50) DEFAULT NULL,
-  `x` double DEFAULT NULL,
-  `y` double DEFAULT NULL,
-  PRIMARY KEY (`location_id`),
-  UNIQUE KEY `location_name` (`location_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
+/*!50001 DROP VIEW IF EXISTS `map_location`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8mb4;
+/*!50001 CREATE VIEW `map_location` AS SELECT
+ 1 AS `location_id`,
+  1 AS `location_name`,
+  1 AS `x`,
+  1 AS `y` */;
+SET character_set_client = @saved_cs_client;
 
 --
 -- Table structure for table `patient_info`
@@ -184,9 +182,47 @@ CREATE TABLE `robot_status` (
   `sensor` int(11) DEFAULT NULL,
   `order` tinyint(3) unsigned DEFAULT NULL,
   `who_called` char(20) DEFAULT NULL,
+  `ultra_distance_cm` int(11) DEFAULT 0,
+  `seat_detected` tinyint(1) DEFAULT 0,
   PRIMARY KEY (`robot_id`),
   UNIQUE KEY `uk_robot_name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=448491 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=951709 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `tb_edges`
+--
+
+DROP TABLE IF EXISTS `tb_edges`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `tb_edges` (
+  `edge_id` int(11) NOT NULL AUTO_INCREMENT,
+  `node1_id` int(11) NOT NULL,
+  `node2_id` int(11) NOT NULL,
+  PRIMARY KEY (`edge_id`),
+  KEY `node1_id` (`node1_id`),
+  KEY `node2_id` (`node2_id`),
+  CONSTRAINT `tb_edges_ibfk_1` FOREIGN KEY (`node1_id`) REFERENCES `tb_waypoints` (`node_id`) ON DELETE CASCADE,
+  CONSTRAINT `tb_edges_ibfk_2` FOREIGN KEY (`node2_id`) REFERENCES `tb_waypoints` (`node_id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `tb_waypoints`
+--
+
+DROP TABLE IF EXISTS `tb_waypoints`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `tb_waypoints` (
+  `node_id` int(11) NOT NULL,
+  `node_name` varchar(50) DEFAULT NULL,
+  `x` double NOT NULL,
+  `y` double NOT NULL,
+  `is_destination` tinyint(4) DEFAULT 0,
+  PRIMARY KEY (`node_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -204,6 +240,32 @@ CREATE TABLE `users` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping events for database 'hospital_db'
+--
+
+--
+-- Dumping routines for database 'hospital_db'
+--
+
+--
+-- Final view structure for view `map_location`
+--
+
+/*!50001 DROP VIEW IF EXISTS `map_location`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_uca1400_ai_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `map_location` AS select `tb_waypoints`.`node_id` AS `location_id`,`tb_waypoints`.`node_name` AS `location_name`,`tb_waypoints`.`x` AS `x`,`tb_waypoints`.`y` AS `y` from `tb_waypoints` where `tb_waypoints`.`is_destination` = 1 */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -214,4 +276,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;
 
--- Dump completed on 2025-12-28 17:12:55
+-- Dump completed on 2026-01-02 16:57:29
