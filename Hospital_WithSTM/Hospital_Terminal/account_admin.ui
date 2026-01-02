@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>account_admin</class>
+ <widget class="QWidget" name="account_admin">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>900</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>계정 관리</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QGroupBox" name="gbUserEdit">
+     <property name="title">
+      <string>계정 추가 / 수정</string>
+     </property>
+     <layout class="QFormLayout" name="formLayoutUser">
+      <item row="0" column="0">
+       <widget class="QLabel" name="lbUserId">
+        <property name="text">
+         <string>사용자 ID</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="leUserId">
+        <property name="placeholderText">
+         <string>로그인 ID 입력</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="lbUserName">
+        <property name="text">
+         <string>비밀번호</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLineEdit" name="leUserName">
+        <property name="placeholderText">
+         <string>비밀번호 입력</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="lbRole">
+        <property name="text">
+         <string>권한</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QComboBox" name="cbRole">
+        <item>
+         <property name="text">
+          <string>관리자</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>키오스크</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>의료진</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="lbNote">
+        <property name="text">
+         <string>비고</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLineEdit" name="leNote"/>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="lbButtons">
+        <property name="text">
+         <string>작업</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <layout class="QHBoxLayout" name="hlButtons">
+        <item>
+         <widget class="QPushButton" name="pbAddUser">
+          <property name="text">
+           <string>추가</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pbUpdateUser">
+          <property name="text">
+           <string>수정</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pbDeleteUser">
+          <property name="text">
+           <string>삭제</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pbClearForm">
+          <property name="text">
+           <string>입력 초기화</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="gbUserList">
+     <property name="title">
+      <string>계정 목록</string>
+     </property>
+     <layout class="QVBoxLayout" name="vlUserList">
+      <item>
+       <widget class="QTableWidget" name="twUserList">
+        <property name="rowCount">
+         <number>0</number>
+        </property>
+        <property name="columnCount">
+         <number>4</number>
+        </property>
+        <column>
+         <property name="text">
+          <string>사용자 ID</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>비밀번호</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>권한</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>비고</string>
+         </property>
+        </column>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

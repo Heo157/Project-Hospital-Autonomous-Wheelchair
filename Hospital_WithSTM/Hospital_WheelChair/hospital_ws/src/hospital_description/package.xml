@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>hospital_description</name>
+  <version>0.0.1</version>
+  <description>
+    Hospital Autonomous Wheelchair robot description (URDF and meshes)
+  </description>
+
+  <maintainer email="you@example.com">your_name</maintainer>
+  <license>Apache-2.0</license>
+
+  <!-- Build system -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- Runtime dependencies -->
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>joint_state_publisher</exec_depend>
+  <exec_depend>urdf</exec_depend>
+  <exec_depend>xacro</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

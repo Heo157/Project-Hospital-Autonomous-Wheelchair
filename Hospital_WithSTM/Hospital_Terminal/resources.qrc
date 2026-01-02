@@ -1,0 +1,12 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icons/wifi.png</file>
+        <file>icons/mascot.png</file>
+        <file>icons/mascotbye.png</file>
+        <file>icons/Lan.png</file>
+        <file>icons/caution.png</file>
+        <file>icons/HJK_1.png</file>
+        <file>icons/HJK_2.png</file>
+        <file>icons/Hospital.pgm</file>
+    </qresource>
+</RCC>

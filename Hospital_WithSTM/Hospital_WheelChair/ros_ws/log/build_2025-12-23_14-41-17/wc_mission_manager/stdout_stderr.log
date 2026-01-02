@@ -1,0 +1,28 @@
+running develop
+Removing /home/ubuntu/ros_ws/install/wc_mission_manager/lib/python3.10/site-packages/wc-mission-manager.egg-link (link to .)
+running egg_info
+writing ../../build/wc_mission_manager/wc_mission_manager.egg-info/PKG-INFO
+writing dependency_links to ../../build/wc_mission_manager/wc_mission_manager.egg-info/dependency_links.txt
+writing entry points to ../../build/wc_mission_manager/wc_mission_manager.egg-info/entry_points.txt
+writing requirements to ../../build/wc_mission_manager/wc_mission_manager.egg-info/requires.txt
+writing top-level names to ../../build/wc_mission_manager/wc_mission_manager.egg-info/top_level.txt
+reading manifest file '../../build/wc_mission_manager/wc_mission_manager.egg-info/SOURCES.txt'
+writing manifest file '../../build/wc_mission_manager/wc_mission_manager.egg-info/SOURCES.txt'
+running build
+running build_py
+copying wc_mission_manager/mission_manager.py -> /home/ubuntu/ros_ws/build/wc_mission_manager/build/lib/wc_mission_manager
+running install
+running install_lib
+creating /home/ubuntu/ros_ws/install/wc_mission_manager/lib/python3.10/site-packages/wc_mission_manager
+copying /home/ubuntu/ros_ws/build/wc_mission_manager/build/lib/wc_mission_manager/__init__.py -> /home/ubuntu/ros_ws/install/wc_mission_manager/lib/python3.10/site-packages/wc_mission_manager
+copying /home/ubuntu/ros_ws/build/wc_mission_manager/build/lib/wc_mission_manager/mission_manager.py -> /home/ubuntu/ros_ws/install/wc_mission_manager/lib/python3.10/site-packages/wc_mission_manager
+byte-compiling /home/ubuntu/ros_ws/install/wc_mission_manager/lib/python3.10/site-packages/wc_mission_manager/__init__.py to __init__.cpython-310.pyc
+byte-compiling /home/ubuntu/ros_ws/install/wc_mission_manager/lib/python3.10/site-packages/wc_mission_manager/mission_manager.py to mission_manager.cpython-310.pyc
+running install_data
+copying resource/wc_mission_manager -> /home/ubuntu/ros_ws/install/wc_mission_manager/share/ament_index/resource_index/packages
+copying package.xml -> /home/ubuntu/ros_ws/install/wc_mission_manager/share/wc_mission_manager
+running install_egg_info
+Copying ../../build/wc_mission_manager/wc_mission_manager.egg-info to /home/ubuntu/ros_ws/install/wc_mission_manager/lib/python3.10/site-packages/wc_mission_manager-0.0.0-py3.10.egg-info
+running install_scripts
+Installing mission_manager script to /home/ubuntu/ros_ws/install/wc_mission_manager/lib/wc_mission_manager
+writing list of installed files to '/home/ubuntu/ros_ws/build/wc_mission_manager/install.log'

@@ -1,0 +1,16 @@
+robots:
+  - namespace: wc1
+    robot_name: wc1
+    server_ip: 10.10.14.138
+    server_port: 8080
+    x: 0.0
+    y: 0.0
+    yaw: 0.0
+
+  - namespace: wc2
+    robot_name: wc2
+    server_ip: 10.10.14.138
+    server_port: 8080
+    x: 2.0
+    y: 0.0
+    yaw: 0.0
