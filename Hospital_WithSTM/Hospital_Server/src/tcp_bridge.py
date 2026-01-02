@@ -283,15 +283,21 @@ class TcpBridge(Node):
     # --- Nav2 Helper ---
     def publish_nav2_goal(self, x, y):
         if self.current_state == STATE_STOP: return
-        self.current_goal_x = float(x)
-        self.current_goal_y = float(y)
+        self.current_goal_x = x; self.current_goal_y = y
         
         goal = PoseStamped()
         goal.header.frame_id = "map"
         goal.header.stamp = self.get_clock().now().to_msg()
-        goal.pose.position.x = x
-        goal.pose.position.y = y
-        goal.pose.orientation.w = 1.0 # No rotation preference
+        
+        # [수정 전]
+        # goal.pose.position.x = x
+        # goal.pose.position.y = y
+        
+        # [수정 후] 반드시 float()로 감싸주세요!
+        goal.pose.position.x = float(x)
+        goal.pose.position.y = float(y)
+        
+        goal.pose.orientation.w = 1.0
         self.goal_pub.publish(goal)
 
     def stop_nav2(self):
