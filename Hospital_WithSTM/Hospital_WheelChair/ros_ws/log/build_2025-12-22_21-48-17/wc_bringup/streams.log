@@ -1,0 +1,16 @@
+[1.006s] Invoking command in '/home/ubuntu/ros_ws/build/wc_bringup': PYTHONPATH=/home/ubuntu/ros_ws/build/wc_bringup/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ubuntu/ros_ws/install/wc_bringup/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/ubuntu/ros_ws/build/wc_bringup/build --no-deps symlink_data
+[1.269s] running develop
+[1.469s] running egg_info
+[1.469s] writing wc_bringup.egg-info/PKG-INFO
+[1.469s] writing dependency_links to wc_bringup.egg-info/dependency_links.txt
+[1.469s] writing entry points to wc_bringup.egg-info/entry_points.txt
+[1.469s] writing requirements to wc_bringup.egg-info/requires.txt
+[1.469s] writing top-level names to wc_bringup.egg-info/top_level.txt
+[1.470s] reading manifest file 'wc_bringup.egg-info/SOURCES.txt'
+[1.470s] writing manifest file 'wc_bringup.egg-info/SOURCES.txt'
+[1.471s] running build_ext
+[1.471s] Creating /home/ubuntu/ros_ws/install/wc_bringup/lib/python3.10/site-packages/wc-bringup.egg-link (link to .)
+[1.472s] 
+[1.474s] Installed /home/ubuntu/ros_ws/build/wc_bringup
+[1.475s] running symlink_data
+[1.496s] Invoked command in '/home/ubuntu/ros_ws/build/wc_bringup' returned '0': PYTHONPATH=/home/ubuntu/ros_ws/build/wc_bringup/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ubuntu/ros_ws/install/wc_bringup/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/ubuntu/ros_ws/build/wc_bringup/build --no-deps symlink_data

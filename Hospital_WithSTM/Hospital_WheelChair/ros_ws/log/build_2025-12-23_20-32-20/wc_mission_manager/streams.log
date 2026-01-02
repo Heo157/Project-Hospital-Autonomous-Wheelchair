@@ -1,0 +1,19 @@
+[2.763s] Invoking command in '/home/ubuntu/ros_ws/build/wc_mission_manager': PYTHONPATH=/home/ubuntu/ros_ws/build/wc_mission_manager/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ubuntu/ros_ws/install/wc_mission_manager/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/ubuntu/ros_ws/build/wc_mission_manager/build --no-deps symlink_data --force
+[3.385s] running develop
+[3.762s] running egg_info
+[3.762s] writing wc_mission_manager.egg-info/PKG-INFO
+[3.762s] writing dependency_links to wc_mission_manager.egg-info/dependency_links.txt
+[3.762s] writing entry points to wc_mission_manager.egg-info/entry_points.txt
+[3.762s] writing requirements to wc_mission_manager.egg-info/requires.txt
+[3.762s] writing top-level names to wc_mission_manager.egg-info/top_level.txt
+[3.763s] reading manifest file 'wc_mission_manager.egg-info/SOURCES.txt'
+[3.763s] writing manifest file 'wc_mission_manager.egg-info/SOURCES.txt'
+[3.765s] running build_ext
+[3.765s] Creating /home/ubuntu/ros_ws/install/wc_mission_manager/lib/python3.10/site-packages/wc-mission-manager.egg-link (link to .)
+[3.768s] Installing mission_manager script to /home/ubuntu/ros_ws/install/wc_mission_manager/lib/wc_mission_manager
+[3.768s] 
+[3.775s] Installed /home/ubuntu/ros_ws/build/wc_mission_manager
+[3.775s] running symlink_data
+[3.775s] symbolically linking /home/ubuntu/ros_ws/build/wc_mission_manager/resource/wc_mission_manager -> /home/ubuntu/ros_ws/install/wc_mission_manager/share/ament_index/resource_index/packages
+[3.775s] symbolically linking /home/ubuntu/ros_ws/build/wc_mission_manager/package.xml -> /home/ubuntu/ros_ws/install/wc_mission_manager/share/wc_mission_manager
+[3.860s] Invoked command in '/home/ubuntu/ros_ws/build/wc_mission_manager' returned '0': PYTHONPATH=/home/ubuntu/ros_ws/build/wc_mission_manager/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ubuntu/ros_ws/install/wc_mission_manager/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/ubuntu/ros_ws/build/wc_mission_manager/build --no-deps symlink_data --force

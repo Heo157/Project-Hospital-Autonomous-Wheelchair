@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>wheelchair_medical</class>
+ <widget class="QWidget" name="wheelchair_medical">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>900</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>휠체어 관리</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QGroupBox" name="gbCallWheelchair">
+     <property name="title">
+      <string>휠체어 호출 설정</string>
+     </property>
+     <layout class="QFormLayout" name="formCall">
+      <item row="0" column="0">
+       <widget class="QLabel" name="lbPatientName">
+        <property name="text">
+         <string>환자 이름</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="lbRoomClinic">
+        <property name="text">
+         <string>출발지 / 도착지</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <layout class="QHBoxLayout" name="hlRoomClinic">
+        <item>
+         <widget class="QComboBox" name="cbSelectStart"/>
+        </item>
+        <item>
+         <widget class="QComboBox" name="cbSelectEnd"/>
+        </item>
+       </layout>
+      </item>
+      <item row="2" column="1">
+       <layout class="QHBoxLayout" name="hlReserveTime">
+        <item>
+         <widget class="QPushButton" name="pbSendWheelchair">
+          <property name="text">
+           <string>휠체어 호출</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="0" column="1">
+       <widget class="QComboBox" name="cbSelectPatient"/>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="lbReserveTime">
+        <property name="text">
+         <string>휠체어 호출</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="gbReservation">
+     <property name="title">
+      <string>휠체어 / 예약 현황</string>
+     </property>
+     <layout class="QVBoxLayout" name="vlReservation">
+      <item>
+       <widget class="QTableWidget" name="twReservation">
+        <property name="rowCount">
+         <number>0</number>
+        </property>
+        <property name="columnCount">
+         <number>6</number>
+        </property>
+        <column>
+         <property name="text">
+          <string>호출 시간</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>환자 이름</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>호출 위치</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>목적지</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>배차 여부</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>ETA</string>
+         </property>
+        </column>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="hlBottom">
+     <item>
+      <widget class="QGroupBox" name="gbBoarding">
+       <property name="title">
+        <string/>
+       </property>
+       <layout class="QHBoxLayout" name="hlBoarding">
+        <item>
+         <widget class="QPushButton" name="pbCancel">
+          <property name="text">
+           <string>호출 취소</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

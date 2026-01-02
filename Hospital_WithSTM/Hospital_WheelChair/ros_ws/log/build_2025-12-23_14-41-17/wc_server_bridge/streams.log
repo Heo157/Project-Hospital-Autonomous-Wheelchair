@@ -1,0 +1,31 @@
+[1.029s] Invoking command in '/home/ubuntu/ros_ws/build/wc_server_bridge': PYTHONPATH=/home/ubuntu/ros_ws/build/wc_server_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ubuntu/ros_ws/install/wc_server_bridge/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --uninstall --editable --build-directory /home/ubuntu/ros_ws/build/wc_server_bridge/build
+[1.388s] running develop
+[1.571s] Removing /home/ubuntu/ros_ws/install/wc_server_bridge/lib/python3.10/site-packages/wc-server-bridge.egg-link (link to .)
+[1.591s] Invoked command in '/home/ubuntu/ros_ws/build/wc_server_bridge' returned '0': PYTHONPATH=/home/ubuntu/ros_ws/build/wc_server_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ubuntu/ros_ws/install/wc_server_bridge/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --uninstall --editable --build-directory /home/ubuntu/ros_ws/build/wc_server_bridge/build
+[1.592s] Invoking command in '/home/ubuntu/ros_ws/src/wc_server_bridge': PYTHONPATH=/home/ubuntu/ros_ws/build/wc_server_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ubuntu/ros_ws/install/wc_server_bridge/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/wc_server_bridge build --build-base /home/ubuntu/ros_ws/build/wc_server_bridge/build install --record /home/ubuntu/ros_ws/build/wc_server_bridge/install.log --single-version-externally-managed install_data --force
+[1.857s] running egg_info
+[1.858s] writing ../../build/wc_server_bridge/wc_server_bridge.egg-info/PKG-INFO
+[1.858s] writing dependency_links to ../../build/wc_server_bridge/wc_server_bridge.egg-info/dependency_links.txt
+[1.858s] writing entry points to ../../build/wc_server_bridge/wc_server_bridge.egg-info/entry_points.txt
+[1.858s] writing requirements to ../../build/wc_server_bridge/wc_server_bridge.egg-info/requires.txt
+[1.858s] writing top-level names to ../../build/wc_server_bridge/wc_server_bridge.egg-info/top_level.txt
+[1.858s] reading manifest file '../../build/wc_server_bridge/wc_server_bridge.egg-info/SOURCES.txt'
+[1.859s] writing manifest file '../../build/wc_server_bridge/wc_server_bridge.egg-info/SOURCES.txt'
+[1.859s] running build
+[1.859s] running build_py
+[1.859s] running install
+[1.860s] running install_lib
+[1.861s] creating /home/ubuntu/ros_ws/install/wc_server_bridge/lib/python3.10/site-packages/wc_server_bridge
+[1.861s] copying /home/ubuntu/ros_ws/build/wc_server_bridge/build/lib/wc_server_bridge/__init__.py -> /home/ubuntu/ros_ws/install/wc_server_bridge/lib/python3.10/site-packages/wc_server_bridge
+[1.861s] copying /home/ubuntu/ros_ws/build/wc_server_bridge/build/lib/wc_server_bridge/tcp_bridge.py -> /home/ubuntu/ros_ws/install/wc_server_bridge/lib/python3.10/site-packages/wc_server_bridge
+[1.863s] byte-compiling /home/ubuntu/ros_ws/install/wc_server_bridge/lib/python3.10/site-packages/wc_server_bridge/__init__.py to __init__.cpython-310.pyc
+[1.864s] byte-compiling /home/ubuntu/ros_ws/install/wc_server_bridge/lib/python3.10/site-packages/wc_server_bridge/tcp_bridge.py to tcp_bridge.cpython-310.pyc
+[1.864s] running install_data
+[1.865s] copying resource/wc_server_bridge -> /home/ubuntu/ros_ws/install/wc_server_bridge/share/ament_index/resource_index/packages
+[1.865s] copying package.xml -> /home/ubuntu/ros_ws/install/wc_server_bridge/share/wc_server_bridge
+[1.865s] running install_egg_info
+[1.866s] Copying ../../build/wc_server_bridge/wc_server_bridge.egg-info to /home/ubuntu/ros_ws/install/wc_server_bridge/lib/python3.10/site-packages/wc_server_bridge-0.0.0-py3.10.egg-info
+[1.867s] running install_scripts
+[1.889s] Installing tcp_bridge script to /home/ubuntu/ros_ws/install/wc_server_bridge/lib/wc_server_bridge
+[1.889s] writing list of installed files to '/home/ubuntu/ros_ws/build/wc_server_bridge/install.log'
+[1.923s] Invoked command in '/home/ubuntu/ros_ws/src/wc_server_bridge' returned '0': PYTHONPATH=/home/ubuntu/ros_ws/build/wc_server_bridge/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ubuntu/ros_ws/install/wc_server_bridge/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/wc_server_bridge build --build-base /home/ubuntu/ros_ws/build/wc_server_bridge/build install --record /home/ubuntu/ros_ws/build/wc_server_bridge/install.log --single-version-externally-managed install_data --force

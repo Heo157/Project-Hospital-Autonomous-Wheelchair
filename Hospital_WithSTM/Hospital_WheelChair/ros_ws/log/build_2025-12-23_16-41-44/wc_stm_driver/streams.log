@@ -1,0 +1,36 @@
+[1.422s] Invoking command in '/home/ubuntu/ros_ws/src/wc_stm_driver': PYTHONPATH=/home/ubuntu/ros_ws/build/wc_stm_driver/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ubuntu/ros_ws/install/wc_stm_driver/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/wc_stm_driver build --build-base /home/ubuntu/ros_ws/build/wc_stm_driver/build install --record /home/ubuntu/ros_ws/build/wc_stm_driver/install.log --single-version-externally-managed install_data
+[1.738s] running egg_info
+[1.738s] creating ../../build/wc_stm_driver/wc_stm_driver.egg-info
+[1.738s] writing ../../build/wc_stm_driver/wc_stm_driver.egg-info/PKG-INFO
+[1.738s] writing dependency_links to ../../build/wc_stm_driver/wc_stm_driver.egg-info/dependency_links.txt
+[1.738s] writing entry points to ../../build/wc_stm_driver/wc_stm_driver.egg-info/entry_points.txt
+[1.738s] writing requirements to ../../build/wc_stm_driver/wc_stm_driver.egg-info/requires.txt
+[1.738s] writing top-level names to ../../build/wc_stm_driver/wc_stm_driver.egg-info/top_level.txt
+[1.738s] writing manifest file '../../build/wc_stm_driver/wc_stm_driver.egg-info/SOURCES.txt'
+[1.738s] reading manifest file '../../build/wc_stm_driver/wc_stm_driver.egg-info/SOURCES.txt'
+[1.738s] writing manifest file '../../build/wc_stm_driver/wc_stm_driver.egg-info/SOURCES.txt'
+[1.738s] running build
+[1.738s] running build_py
+[1.738s] creating /home/ubuntu/ros_ws/build/wc_stm_driver/build
+[1.738s] creating /home/ubuntu/ros_ws/build/wc_stm_driver/build/lib
+[1.738s] creating /home/ubuntu/ros_ws/build/wc_stm_driver/build/lib/wc_stm_driver
+[1.738s] copying wc_stm_driver/__init__.py -> /home/ubuntu/ros_ws/build/wc_stm_driver/build/lib/wc_stm_driver
+[1.739s] copying wc_stm_driver/stm_driver.py -> /home/ubuntu/ros_ws/build/wc_stm_driver/build/lib/wc_stm_driver
+[1.739s] running install
+[1.739s] running install_lib
+[1.739s] creating /home/ubuntu/ros_ws/install/wc_stm_driver/lib/python3.10/site-packages/wc_stm_driver
+[1.739s] copying /home/ubuntu/ros_ws/build/wc_stm_driver/build/lib/wc_stm_driver/__init__.py -> /home/ubuntu/ros_ws/install/wc_stm_driver/lib/python3.10/site-packages/wc_stm_driver
+[1.739s] copying /home/ubuntu/ros_ws/build/wc_stm_driver/build/lib/wc_stm_driver/stm_driver.py -> /home/ubuntu/ros_ws/install/wc_stm_driver/lib/python3.10/site-packages/wc_stm_driver
+[1.739s] byte-compiling /home/ubuntu/ros_ws/install/wc_stm_driver/lib/python3.10/site-packages/wc_stm_driver/__init__.py to __init__.cpython-310.pyc
+[1.739s] byte-compiling /home/ubuntu/ros_ws/install/wc_stm_driver/lib/python3.10/site-packages/wc_stm_driver/stm_driver.py to stm_driver.cpython-310.pyc
+[1.742s] running install_data
+[1.742s] creating /home/ubuntu/ros_ws/install/wc_stm_driver/share/ament_index
+[1.742s] creating /home/ubuntu/ros_ws/install/wc_stm_driver/share/ament_index/resource_index
+[1.742s] creating /home/ubuntu/ros_ws/install/wc_stm_driver/share/ament_index/resource_index/packages
+[1.742s] copying resource/wc_stm_driver -> /home/ubuntu/ros_ws/install/wc_stm_driver/share/ament_index/resource_index/packages
+[1.742s] copying package.xml -> /home/ubuntu/ros_ws/install/wc_stm_driver/share/wc_stm_driver
+[1.742s] running install_egg_info
+[1.742s] Copying ../../build/wc_stm_driver/wc_stm_driver.egg-info to /home/ubuntu/ros_ws/install/wc_stm_driver/lib/python3.10/site-packages/wc_stm_driver-0.0.0-py3.10.egg-info
+[1.742s] running install_scripts
+[1.764s] writing list of installed files to '/home/ubuntu/ros_ws/build/wc_stm_driver/install.log'
+[1.795s] Invoked command in '/home/ubuntu/ros_ws/src/wc_stm_driver' returned '0': PYTHONPATH=/home/ubuntu/ros_ws/build/wc_stm_driver/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/ubuntu/ros_ws/install/wc_stm_driver/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/wc_stm_driver build --build-base /home/ubuntu/ros_ws/build/wc_stm_driver/build install --record /home/ubuntu/ros_ws/build/wc_stm_driver/install.log --single-version-externally-managed install_data
