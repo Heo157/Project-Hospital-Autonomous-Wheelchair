@@ -486,8 +486,7 @@ int db_export_map_json(DBContext *ctx, const char *filepath) {
     fprintf(fp, "{ \"nodes\": {");
     
     if (mysql_query(ctx->conn, "SELECT node_id, x, y FROM tb_waypoints")) {
-        fclose(fp);
-        return -1;
+        fclose(fp); return -1;
     }
     
     MYSQL_RES *res = mysql_store_result(ctx->conn);
@@ -502,11 +501,10 @@ int db_export_map_json(DBContext *ctx, const char *filepath) {
     mysql_free_result(res);
 
     // ---------------------------------------------------------
-    // 2. 엣지(Edges) 저장 및 거리 계산: [node1, node2, distance]
+    // 2. 엣지(Edges) 저장: [node1, node2, distance]
     // ---------------------------------------------------------
     fprintf(fp, "}, \"edges\": [");
 
-    // [핵심 쿼리] 엣지 테이블을 기준으로 웨이포인트 테이블을 두 번 조인(Alias w1, w2)
     const char *join_query = 
         "SELECT e.node1_id, e.node2_id, w1.x, w1.y, w2.x, w2.y "
         "FROM tb_edges e "
@@ -514,35 +512,43 @@ int db_export_map_json(DBContext *ctx, const char *filepath) {
         "JOIN tb_waypoints w2 ON e.node2_id = w2.node_id";
 
     if (mysql_query(ctx->conn, join_query)) {
-        fprintf(stderr, "[DB] Query failed: %s\n", mysql_error(ctx->conn));
-        fclose(fp);
-        return -1;
+        fclose(fp); return -1;
     }
 
     res = mysql_store_result(ctx->conn);
     first = 1;
     while ((row = mysql_fetch_row(res))) {
-        // row[0]: node1_id, row[1]: node2_id
-        // row[2]: x1, row[3]: y1
-        // row[4]: x2, row[5]: y2
-        
-        double x1 = atof(row[2]);
-        double y1 = atof(row[3]);
-        double x2 = atof(row[4]);
-        double y2 = atof(row[5]);
-
-        // C에서 유클리드 거리 계산
+        double x1 = atof(row[2]); double y1 = atof(row[3]);
+        double x2 = atof(row[4]); double y2 = atof(row[5]);
         double dist = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
 
         if (!first) fprintf(fp, ",");
-        // 파이썬에게 줄 데이터: [시작점, 끝점, 계산된_거리]
         fprintf(fp, "[%s, %s, %.4f]", row[0], row[1], dist);
         first = 0;
     }
     mysql_free_result(res);
     
-    fprintf(fp, "] }");
+    // ---------------------------------------------------------
+    // [NEW] 3. 장소(Locations) 저장: "장소명": [x, y]
+    // ---------------------------------------------------------
+    fprintf(fp, "], \"locations\": {");
+
+    if (mysql_query(ctx->conn, "SELECT location_name, x, y FROM map_location")) {
+        fclose(fp); return -1;
+    }
+
+    res = mysql_store_result(ctx->conn);
+    first = 1;
+    while ((row = mysql_fetch_row(res))) {
+        if (!first) fprintf(fp, ",");
+        // JSON 문자열 처리를 위해 장소명에 따옴표 추가
+        fprintf(fp, "\"%s\": [%s, %s]", row[0], row[1], row[2]);
+        first = 0;
+    }
+    mysql_free_result(res);
+
+    fprintf(fp, "} }");
     fclose(fp);
-    printf("[DB] Map & Distances exported to '%s'\n", filepath);
+    printf("[DB] Map (Nodes+Edges+Locations) exported to '%s'\n", filepath);
     return 0;
 }
