@@ -25,6 +25,10 @@ class MainWindow : public QMainWindow
 
 public:
     MainWindow(QWidget *parent = nullptr);
+
+    // 키오스크모드 로그아웃버튼 숨김
+    void setLogoutKioskMode(bool on);
+
     ~MainWindow();
 
 protected:
