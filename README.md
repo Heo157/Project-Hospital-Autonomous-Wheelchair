@@ -10,7 +10,7 @@
 ## 📌 1. 프로젝트 목표
 
 - 병원에서 거동이 불편한 환자가 휠체어를 쉽게 호출하고 이동할 수 있도록 지원
-- **외래 환자**는 QR 대신 **터치 키오스크(Qt)** 로 호출
+- **외래 환자**는 **터치 키오스크(Qt)** 로 호출
 - **입원 환자**는 DB에 등록된 병동/병실 좌표 기반으로 배차 가능
 - 자율주행은 **LiDAR SLAM + Nav2** 로 수행
 - **STM32U5G9J-DK2 보드**로:
@@ -28,10 +28,14 @@
 - Nav2로 경로 계획 및 목표 지점 이동
 
 ### ✅ 외래 호출: Qt 터치 키오스크
-- 외래 환자가 터치 키오스크에서 “휠체어 호출”
+- 외래 환자가 직접 터치 키오스크에서 “휠체어 호출”
 - 출발/목적지 선택(또는 스테이션 기준 호출)
 - 호출 정보는 서버/DB에 저장되고, 배차 로직이 로봇을 할당
 
+### ✅ 입원 환자 호출/이동
+  - 간호사가 필요에 따라 터치 키오스크에서 환자에게 휠체어 배정 
+  - 병동/병실 등 미리 등록된 위치로 휠체어 로봇 배차 및 이동
+    
 ### ✅ 서버/DB 기반 배차(Dispatch)
 - DB의 호출 큐(call queue)를 기반으로
   - 가용 로봇 탐색
@@ -40,7 +44,7 @@
   - 로봇 상태를 DB에 지속 기록
 
 ### ✅ STM32U5 보드(초음파 + 압력) + Touch-GFX UI
-- 초음파(HC-SR04): **하단 장착** → 낮은 장애물 감지용
+- 초음파(IUM-100): **하단 장착** → 낮은 장애물 감지용
 - 압력(FSR): **seat_detected** → 탑승 감지용
 - Touch-GFX UI에 ROS 토픽 기반 상태 표시
 
@@ -48,27 +52,71 @@
 
 ## 🧠 3. 시스템 아키텍처 (System Architecture)
 
-### 구성 요소
+### 1) 전체 시스템 아키텍처 
 
-#### 1) Robot (TurtleBot3 Burger+ Raspberry Pi 4)
-- ROS2 (Nav2/SLAM/AMCL)
-- LiDAR(`/scan`), odom(`/odom`), 배터리(`/battery_state`) publish
-- 서버와 네트워크 통신(프로젝트 방식에 맞는 브리지/프로토콜)
-- STM32U5 보드와 UART/Serial 등으로 연동
+<img width="850" height="596" alt="image" src="https://github.com/user-attachments/assets/4c0d09a5-9963-4567-ac51-ab5ef822cb45" />
 
-#### 2) STM32U5 Sensor Module
-- **초음파 거리 토픽**: `/ultra_distance_cm`
-- **탑승 감지 토픽**: `/seat_detected`
-- Touch-GFX에 아래 토픽 UI 표시
+- **Application (Qt)**  
+  - Qt Admin Dashboard / Qt User TouchBoard / Qt Nurse Dashboard
+- **Database (MariaDB/MySQL)**  
+  - `robot_status`, `call_queue`, `map_location` 등을 통해 상태 저장 및 배차 데이터 관리
+- **Central Server (TCP, C)**  
+  - 로봇 접속 관리, 상태 수집, 명령 전달, 배차 로직 수행
+- **Platform (ROS2)**  
+  - 로봇의 자율주행(AMCL/SLAM/Nav2), 센서 토픽 처리, 서버-로봇 브리지 연동
+- **Hardware**  
+  - TurtleBot3 Burger + STM32U5 모듈(센서/디스플레이)
 
-#### 3) Central Server (Linux/Ubuntu)
-- C 기반 TCP 서버(멀티프로세스)
-- MariaDB/MySQL 연동(로봇 상태 UPSERT, 호출 큐 관리)
-- 배차/로봇 매니저/클라이언트 핸들러 프로세스
 
-#### 4) Qt Apps
-- **Qt Admin Dashboard**: 관리자 모니터링/알림
-- **Qt Touch Kiosk**: 외래 호출 UI(터치스크린)
+
+
+---
+
+### 2) 다중 로봇 확장형 배차 구조 (robot_status 기반 최대 N대 운영)
+
+<img width="745" height="620" alt="image" src="https://github.com/user-attachments/assets/d50571a4-5844-4957-a214-0a69dcbf3490" />
+
+본 시스템은 **DB의 `robot_status` 테이블**을 중심으로 로봇을 관리합니다.
+
+- 로봇 하드웨어(TurtleBot3 + RPi4)가 추가되면
+  - 서버는 `robot_status`의 `robot_id`(또는 name)를 기준으로 **로봇 호스트를 식별/등록**
+  - 로봇 상태를 주기적으로 갱신하고,
+  - 호출 큐(`call_queue`)와 매칭해 **배차/명령 할당**을 수행합니다.
+- 즉, **로봇이 늘어나도 서버/DB 구조는 동일**하며,
+  - `robot_status` 레코드 수만 증가하는 형태로 **최대 100대 단위까지 확장 가능한 구조**를 목표로 설계했습니다.
+
+
+---
+
+
+### 3) STM32U5 + TouchGFX HMI 연동 구조 (ROS 토픽 표시 + 센서 토픽 생성)
+
+<img width="937" height="628" alt="image" src="https://github.com/user-attachments/assets/64a58873-ee28-4301-adb6-eec05be33936" />
+
+STM32U5는 단순 센서 보드가 아니라, **로봇 상태 표시(TouchGFX) + 안전 센서 모듈** 역할을 수행합니다.
+
+#### ✅ A. ROS → STM32U5(TouchGFX) 상태 표시
+Raspberry Pi 4(ROS2)에서 수신/발행 중인 주요 토픽을 STM32U5로 전달하여 TouchGFX에 표시합니다.
+
+- 표시 대상 토픽:
+  - `/amcl_pose` : 현재 위치
+  - `/odom` : 자기 위치/속도
+  - `/battery_state` : 배터리
+  - `/goal_pose` : 목표 좌표
+  - `/scan` : 라이다 근접 거리
+
+#### ✅ B. STM32U5 센서 → ROS2 토픽 생성(호스트명 포함)
+STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 생성**하고, 로봇 호스트명을 붙여 재발행 합니다
+
+- STM32U5 센서 입력:
+  - **초음파(IUM-100)**: 라이다가 감지 못하는 **낮은 높이 장애물** 감지  
+    → `/ultra_distance_cm`
+  - **압력(FSR)**: 환자 **탑승 여부 감지**  
+    → `/seat_detected`
+
+- 운영 관점:
+  - 다중 로봇 환경에서 토픽 충돌을 막기 위해  
+    `/<hostname>/ultra_distance_cm`, `/<hostname>/seat_detected` 처럼 **호스트명 구조로 재발행** 가능
 
 ---
 
