@@ -1,20 +1,13 @@
 #!/usr/bin/env python3
 """
 파일명: stm32_sensor_bridge.py
-수정내용: STM32에서 오는 BTN(버튼) 값을 파싱하여 ROS 토픽으로 발행 기능 추가
+수정내용: STM32 데이터 포맷(값@값@값)에 맞춰 파싱 로직 전면 수정
 """
 
-import re
 import serial
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Float32, Bool, Int32  # [수정] Int32 추가
-
-# 예: U=12.34,FSR=59,SEAT=0,BTN=2
-# BTN 부분은 있을 수도 있고 없을 수도 있도록 (?: ... )? 로 처리
-LINE_RE = re.compile(
-    r'U\s*=\s*([-+]?\d+(?:\.\d+)?)\s*,\s*FSR\s*=\s*(\d+)\s*,\s*SEAT\s*=\s*(\d+)(?:,\s*BTN\s*=\s*(\d+))?'
-)
+from std_msgs.msg import Float32, Bool, Int32
 
 class Stm32SensorBridge(Node):
     def __init__(self):
@@ -25,7 +18,7 @@ class Stm32SensorBridge(Node):
         self.declare_parameter('baud', 115200)
         self.declare_parameter('distance_topic', '/ultra_distance_cm')
         self.declare_parameter('seat_topic', '/seat_detected')
-        self.declare_parameter('btn_topic', '/stm32/button') # [수정] 버튼 토픽 추가
+        self.declare_parameter('btn_topic', '/stm32/button')
 
         self.port = self.get_parameter('port').value
         self.baud = int(self.get_parameter('baud').value)
@@ -36,7 +29,7 @@ class Stm32SensorBridge(Node):
         # 퍼블리셔
         self.pub_dist = self.create_publisher(Float32, self.distance_topic, 10)
         self.pub_seat = self.create_publisher(Bool, self.seat_topic, 10)
-        self.pub_btn  = self.create_publisher(Int32, self.btn_topic, 10) # [수정] 버튼 퍼블리셔
+        self.pub_btn  = self.create_publisher(Int32, self.btn_topic, 10)
 
         # 시리얼
         self.ser = None
@@ -48,7 +41,6 @@ class Stm32SensorBridge(Node):
 
     def _open_serial(self):
         try:
-            # timeout=0 : 논블로킹
             self.ser = serial.Serial(self.port, baudrate=self.baud, timeout=0)
             self.rx_buf.clear()
             self.get_logger().info(f"Serial opened: {self.port} @ {self.baud}")
@@ -58,26 +50,37 @@ class Stm32SensorBridge(Node):
 
     def _process_line(self, line: str):
         line = line.strip()
-        if not line:
-            return
+        if not line: return
 
-        m = LINE_RE.search(line)
-        if not m:
-            return
+        # [핵심 수정] 기존 정규식 제거 -> @ 기준으로 분리
+        # 예상 포맷: "6.7@0@0" (거리@착석@버튼)
+        parts = line.split('@')
+        
+        if len(parts) < 3:
+            return  # 데이터 개수가 부족하면 무시
 
-        dist = float(m.group(1))
-        seat = int(m.group(3))
-        seat_bool = (seat != 0)
+        try:
+            # 1. 거리 (Float)
+            dist = float(parts[0])
+            
+            # 2. 착석 (Int -> Bool)
+            seat_val = int(parts[1])
+            seat_bool = (seat_val != 0)
+            
+            # 3. 버튼 (Int)
+            btn_val = int(parts[2])
 
-        # [수정] 버튼 값 처리
-        if m.group(4):
-            btn_val = int(m.group(4))
-            if btn_val != 0: # 버튼이 눌렸을 때만 발행 (혹은 항상 발행해도 무방)
-                self.get_logger().info(f"🔘 Button Click Detected: {btn_val}")
-                self.pub_btn.publish(Int32(data=btn_val))
+            # 토픽 발행
+            self.pub_dist.publish(Float32(data=dist))
+            self.pub_seat.publish(Bool(data=seat_bool))
+            
+            # 버튼은 눌렸을 때만 로그 출력 (디버깅용)
+            if btn_val != 0:
+                self.get_logger().info(f"🔘 Button Click: {btn_val}")
+            self.pub_btn.publish(Int32(data=btn_val))
 
-        self.pub_dist.publish(Float32(data=dist))
-        self.pub_seat.publish(Bool(data=seat_bool))
+        except ValueError:
+            pass # 숫자가 아닌 값이 들어오면 무시
 
     def _tick(self):
         if self.ser is None:
@@ -86,42 +89,35 @@ class Stm32SensorBridge(Node):
 
         try:
             n = self.ser.in_waiting
-            if n <= 0:
-                return
+            if n <= 0: return
 
             data = self.ser.read(n)
-            if not data:
-                return
+            if not data: return
 
             self.rx_buf.extend(data)
 
-            # '\n' 단위로 프레임 분리
             while b'\n' in self.rx_buf:
                 line_bytes, _, rest = self.rx_buf.partition(b'\n')
                 self.rx_buf = bytearray(rest)
-
-                line = line_bytes.decode(errors='ignore')
-                self._process_line(line)
+                
+                # 디코딩 및 처리
+                try:
+                    line = line_bytes.decode('utf-8', errors='ignore')
+                    self._process_line(line)
+                except:
+                    pass
 
         except (OSError, serial.SerialException) as e:
-            self.get_logger().warn(f"Serial error: {e} (reopen)")
-            try:
-                self.ser.close()
-            except Exception:
-                pass
+            self.get_logger().warn(f"Serial error: {e}")
             self.ser = None
 
 def main():
     rclpy.init()
     node = Stm32SensorBridge()
-    try:
-        rclpy.spin(node)
+    try: rclpy.spin(node)
+    except: pass
     finally:
-        try:
-            if node.ser:
-                node.ser.close()
-        except Exception:
-            pass
+        if node.ser: node.ser.close()
         node.destroy_node()
         rclpy.shutdown()
 
