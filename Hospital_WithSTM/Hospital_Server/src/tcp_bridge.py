@@ -172,10 +172,17 @@ class TcpBridge(Node):
 
         # ROS 통신
         prefix = f"/{self.robot_name}"
+        
         self.create_subscription(Odometry, f"{prefix}/odom", self.odom_pose_cb, 10)
         self.create_subscription(BatteryState, f"{prefix}/battery_state", self.batt_cb, 10)
-        self.create_subscription(Int32, f"{prefix}/stm32/ultrasonic", self.ultra_cb, 10)
-        self.create_subscription(Bool, f"{prefix}/stm32/seat", self.seat_cb, 10)
+        
+        # 초음파: Int32 -> Float32로 변경 / 토픽명도 sensor_bridge와 통일
+        self.create_subscription(Float32, f"{prefix}/ultra_distance_cm", self.ultra_cb, 10)
+        
+        # 착석: seat_detected로 통일
+        self.create_subscription(Bool, f"{prefix}/seat_detected", self.seat_cb, 10)
+        
+        # 버튼: stm32/button 유지 (sensor_bridge 코드에도 반영 필요)
         self.create_subscription(Int32, f"{prefix}/stm32/button", self.button_cb, 10)
 
         self.ui_pub = self.create_publisher(String, f"{prefix}/ui/info", 10)
@@ -196,7 +203,7 @@ class TcpBridge(Node):
         # Theta 변환 생략
 
     def batt_cb(self, msg): self.battery = int(msg.percentage)
-    def ultra_cb(self, msg): self.ultra_distance = msg.data
+    def ultra_cb(self, msg): self.ultra_distance = int(msg.data)
     def seat_cb(self, msg): self.seat_detected = msg.data
 
     def button_cb(self, msg):
