@@ -24,6 +24,8 @@ public:
 
     // 로봇 데이터 업데이트 함수
     virtual void updateRobotData(RobotData_t data);
+    void userClickedStart();
+
 
 private:
     mainscreenPresenter();

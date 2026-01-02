@@ -4,6 +4,7 @@
 
 extern "C" {
 #include "common_data.h"
+extern volatile ButtonCommand_t g_btn_cmd_queue;
 }
 
 Model::Model() : modelListener(0)
@@ -27,4 +28,10 @@ void Model::tick()
             modelListener->updateRobotData(currentData);
         }
     }
+}
+
+void Model::sendButtonCommand(int cmd)
+{
+    // 드디어 C 변수에 값을 넣습니다!
+    g_btn_cmd_queue = (ButtonCommand_t)cmd;
 }

@@ -19,6 +19,7 @@ public:
 
     // 화면 갱신 함수
     virtual void updateScreen(RobotData_t data);
+    virtual void sendStartCommand();
 protected:
 };
 

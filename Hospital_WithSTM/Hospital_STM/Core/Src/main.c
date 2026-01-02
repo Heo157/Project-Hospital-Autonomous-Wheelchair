@@ -123,8 +123,7 @@ void Parse_Robot_Packet(char* packet)
     token = strtok_r(rest, "@", &rest);
     if(token == NULL) return;
     float speed_ms = strtof(token, NULL);
-    g_robot_data.speed_kmh = (int)(speed_ms * 3.6f); // m/s to km/h
-
+    g_robot_data.speed_kmh = (int)(speed_ms * 3.6f + 0.5f);
     // 3. 배터리 (%)
     token = strtok_r(rest, "@", &rest);
     if(token == NULL) return;
