@@ -34,6 +34,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
+from rclpy.action import ActionClient
 
 # -------------------------------------------------------------------------
 # [ROS 2 메시지 타입 임포트]
@@ -43,10 +44,12 @@ from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
 # Odometry: 휠 인코더 기반 위치 정보
 # BatteryState: 배터리 잔량
 # Int32, Bool, String: 초음파 거리, 착석 여부, 호출자 이름 등 단순 데이터
-from geometry_msgs.msg import PoseWithCovarianceStamped, Quaternion, PoseStamped
+from geometry_msgs.msg import PoseWithCovarianceStamped, Quaternion, PoseStamped, Twist
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import BatteryState
 from std_msgs.msg import Int32, Bool, String
+from action_msgs.msg import GoalStatus
+from nav2_msgs.action import NavigateToPose
 
 # =========================================================================
 # 1. 통신 프로토콜 및 상수 정의
@@ -204,6 +207,7 @@ class TcpBridge(Node):
         self.robot_name = self.declare_parameter("robot_name", "wc1").value
         self.use_amcl_pose = bool(self.declare_parameter("use_amcl_pose", True).value)
         self.tx_hz = float(self.declare_parameter("tx_hz", 2.0).value)
+        self.nav2_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
 
         prefix = f"/{self.robot_name}"
         
@@ -213,10 +217,12 @@ class TcpBridge(Node):
         self.topic_battery = self.declare_parameter("topic_battery", f"{prefix}/battery_state").value
         self.topic_ultra = self.declare_parameter("topic_ultra", f"{prefix}/ultra_distance_cm").value
         self.topic_seat = self.declare_parameter("topic_seat", f"{prefix}/seat_detected").value
-        
+        self.topic_cmd_vel = self.declare_parameter("topic_cmd_vel", f"{prefix}/cmd_vel").value
         self.topic_goal = self.declare_parameter("topic_goal", "/goal_pose").value
         self.topic_caller = self.declare_parameter("topic_caller", f"{prefix}/caller_name").value
 
+
+        self.cmd_vel_pub = self.create_publisher(Twist, self.topic_cmd_vel, 10)
         # 내부 변수
         self.x = 0.0; self.y = 0.0; self.theta = 0.0
         self.battery_percent = 90
@@ -227,11 +233,19 @@ class TcpBridge(Node):
         self.prev_state = STATE_WAITING
         self.mission_mode = "NONE" 
         
-        # [수정] 웨이포인트 주행을 위한 변수들
+        # 웨이포인트 주행을 위한 변수들
         self.current_goal_x = 0.0
         self.current_goal_y = 0.0
         self.waypoint_queue = [] # [(x1,y1), (x2,y2)...]
+        self.last_goal = None     # (x, y) 마지막 이동 목표
+        self.paused_goal = None   # (x, y) STOP 시 재개할 목표
         
+        self.goal_active = False
+        self.paused_queue = []
+        self.final_goal_x = 0.0
+        self.final_goal_y = 0.0
+
+
         # TCP 소켓
         self.sock = None
         self.lock = threading.Lock()
@@ -333,12 +347,58 @@ class TcpBridge(Node):
         self.goal_pub.publish(goal)
         self.current_goal_x = float(x)
         self.current_goal_y = float(y)
+        self.goal_active = True
         # 로그는 너무 자주 찍히면 정신없으니 주석 처리 혹은 필요시 해제
         # self.get_logger().info(f"Nav2 Goal -> ({x:.2f}, {y:.2f})")
 
+    def _cancel_nav2_goals_best_effort(self):
+        """Nav2 액션 goal 전체 취소(가능하면)."""
+        try:
+            if self.nav2_client is None:
+                return
+            if not self.nav2_client.server_is_ready():
+                # 액션 서버가 준비 안 되었으면 취소 시도 자체가 의미 없음
+                return
+
+            cancel_future = self.nav2_client.cancel_all_goals_async()
+
+            # rx_thread에서 돌기 때문에 오래 기다리면 위험 -> 짧게만 대기
+            start = time.time()
+            while not cancel_future.done() and (time.time() - start) < 0.5:
+                time.sleep(0.01)
+        except Exception as e:
+            self.get_logger().warn(f"[STOP] cancel_all_goals best-effort failed: {e}")
+
+
+
     def stop_nav2(self):
-        self.waypoint_queue = [] # 정지 시 남은 경로 삭제
-        self.publish_nav2_goal(self.x, self.y)
+        """로봇 긴급 정지"""
+        self.get_logger().warn("[STOP] stop_nav2()")
+
+        # 1) Nav2 goal 취소 (Action 기반일 때 의미)
+        self._cancel_nav2_goals_best_effort()
+
+        # 2) cmd_vel=0 반복 전송 (토픽이 맞아야 실제로 멈춤)
+        tw = Twist()
+        for _ in range(30):
+            self.cmd_vel_pub.publish(tw)
+            time.sleep(0.01)
+
+        # 3) 현재 위치를 goal로 한번 더(관성/플래너 영향 완화 목적)
+        if self.x is not None and self.y is not None:
+            g = PoseStamped()
+            g.header.stamp = self.get_clock().now().to_msg()
+            g.header.frame_id = "map"
+            g.pose.position.x = float(self.x)
+            g.pose.position.y = float(self.y)
+            g.pose.orientation = self.yaw_to_quaternion(self.theta)
+
+            for _ in range(3):
+                self.goal_pub.publish(g)
+                time.sleep(0.03)
+
+        self.get_logger().warn("[STOP] done")
+
 
     def pop_and_drive(self):
         """ 큐에서 다음 웨이포인트를 꺼내서 이동 """
@@ -418,23 +478,51 @@ class TcpBridge(Node):
                 self.start_path_navigation(gx, gy)
 
             elif order == 2: # [비상 정지]
+                self.get_logger().warn("🛑 Order 2 Received: EMERGENCY STOP")
+                
+                # 재개용 데이터 저장
                 if self.current_state != STATE_STOP:
                     self.prev_state = self.current_state
-                    self.change_state(STATE_STOP)
-                    self.stop_nav2()
+                    
+                    # 현재 목표 저장
+                    # 현재 목표 저장 (좌표가 0일 수도 있으니 truthy 체크 금지)
+                    if self.goal_active:
+                        self.paused_goal = (float(self.current_goal_x), float(self.current_goal_y))
+                    else:
+                        self.paused_goal = None
+
+                    
+                    # 남은 웨이포인트 저장
+                    self.paused_queue = self.waypoint_queue.copy()
+                
+                # 즉시 정지 실행
+                self.stop_nav2()
+                self.waypoint_queue.clear()
+                self.change_state(STATE_STOP)
 
             elif order == 3: # [동작 재개]
-                if self.current_state == STATE_STOP:
-                    self.get_logger().info("동작 재개: 남은 경로를 다시 계산합니다.")
-                    self.change_state(self.prev_state)
-                    # 현재 목표가 남아있다면 다시 경로 계산해서 이동
-                    if self.current_state == STATE_HEADING:
-                         # 픽업 가는 중이었으면 다시 Start 지점으로
-                         # (sx, sy는 저장 안해뒀으니 현재 큐의 마지막 목표나 final_goal 로직 보강 필요하지만
-                         #  간단히 멈춘 지점에서 현재 목표(current_goal)로 다시 가라고 명령)
-                         self.publish_nav2_goal(self.current_goal_x, self.current_goal_y)
+                self.get_logger().info("▶️ Order 3 Received: RESUME")
+                
+                if self.paused_goal:
+                    # 이전 상태 복원
+                    prev = self.prev_state if self.prev_state != STATE_STOP else STATE_RUNNING
+                    self.change_state(prev)
+                    
+                    # 경로 복원
+                    if hasattr(self, 'paused_queue') and self.paused_queue:
+                        self.get_logger().info(f"📍 경로 복원: {len(self.paused_queue)}개 웨이포인트")
+                        self.waypoint_queue = self.paused_queue
+                        self.pop_and_drive()
                     else:
-                         self.publish_nav2_goal(self.current_goal_x, self.current_goal_y)
+                        # 큐 없으면 마지막 목표로
+                        gx, gy = self.paused_goal
+                        self.publish_nav2_goal(gx, gy)
+                    
+                    # 초기화
+                    self.paused_goal = None
+                    self.paused_queue = []
+                else:
+                    self.get_logger().warn("⚠️ Order 3 무시: 저장된 목표 없음")
 
     # =========================================================================
     # [섹션 E] 데이터 전송 및 도착 판정 (수정됨: 웨이포인트 로직)
@@ -448,9 +536,9 @@ class TcpBridge(Node):
             # 도착 판정 거리 (0.3m)
             dist = math.sqrt((self.x - self.current_goal_x)**2 + (self.y - self.current_goal_y)**2)
             
-            # [수정] 웨이포인트 통과 로직
+            # 웨이포인트 통과 로직
             # 이동 중(HEADING/RUNNING)이고 목표에 가까워졌다면?
-            if self.current_state in [STATE_HEADING, STATE_RUNNING] and dist < 0.3:
+            if self.current_state in [STATE_HEADING, STATE_RUNNING] and dist < 0.5:
                 
                 if self.waypoint_queue:
                     # 1. 아직 갈 길이 남음 -> 다음 웨이포인트 꺼냄
