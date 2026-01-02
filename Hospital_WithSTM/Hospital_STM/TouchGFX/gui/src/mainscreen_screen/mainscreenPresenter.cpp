@@ -20,3 +20,9 @@ void mainscreenPresenter::updateRobotData(RobotData_t data)
 {
     view.updateScreen(data);
 }
+
+void mainscreenPresenter::userClickedStart()
+{
+    // Model에게 전달
+    model->sendButtonCommand(1); // 1: 출발 명령이라 가정
+}

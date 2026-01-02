@@ -101,3 +101,9 @@ void mainscreenView::updateScreen(RobotData_t data)
     btn.setVisible(show_btn);
     btn.invalidate();
 }
+
+void mainscreenView::sendStartCommand()
+{
+    // Presenter에게 "버튼 눌렸어!"라고 알림
+    presenter->userClickedStart();
+}

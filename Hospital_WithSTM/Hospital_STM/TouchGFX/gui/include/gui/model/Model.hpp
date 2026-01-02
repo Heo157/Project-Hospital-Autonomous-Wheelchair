@@ -12,6 +12,7 @@ public:
     {
         modelListener = listener;
     }
+    void sendButtonCommand(int cmd);
 
     void tick();
 protected:
