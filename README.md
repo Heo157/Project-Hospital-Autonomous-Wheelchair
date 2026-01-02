@@ -11,11 +11,11 @@
 
 - 병원에서 거동이 불편한 환자가 휠체어를 쉽게 호출하고 이동할 수 있도록 지원
 - **외래 환자**는 **터치 키오스크(Qt)** 로 호출
-- **입원 환자**는 DB에 등록된 병동/병실 좌표 기반으로 배차 가능
+- **입원 환자**는 간호사가 **간호사용(QT)** 로 호출
 - 자율주행은 **LiDAR SLAM + Nav2** 로 수행
 - **STM32U5G9J-DK2 보드**로:
   - LiDAR가 감지하기 어려운 **낮은 높이 장애물**을 초음파로 감지
-  - **압력 센서(FSR)**로 환자 탑승/하차를 감지하여 서버/DB에 반영
+  - **압력 센서**로 환자 탑승/하차를 감지하여 서버/DB에 반영
   - 보드 내장 **Touch-GFX**에서 로봇 상태/토픽값을 실시간 UI로 표시
 
 ---
@@ -33,7 +33,7 @@
 - 호출 정보는 서버/DB에 저장되고, 배차 로직이 로봇을 할당
 
 ### ✅ 입원 환자 호출/이동
-  - 간호사가 필요에 따라 터치 키오스크에서 환자에게 휠체어 배정 
+  - 간호사가 필요에 따라 QT에서 환자에게 휠체어 배정 
   - 병동/병실 등 미리 등록된 위치로 휠체어 로봇 배차 및 이동
     
 ### ✅ 서버/DB 기반 배차(Dispatch)
@@ -57,20 +57,19 @@
 <img width="850" height="596" alt="image" src="https://github.com/user-attachments/assets/4c0d09a5-9963-4567-ac51-ab5ef822cb45" />
 
 - **Application (Qt)**  
-  - Qt Admin Dashboard / Qt User TouchBoard / Qt Nurse Dashboard
+  - 관리자용 Qt / 외래환자용 Qt  / 간호사용 Qt 
 - **Database (MariaDB/MySQL)**  
   - `robot_status`, `call_queue`, `map_location` 등을 통해 상태 저장 및 배차 데이터 관리
 - **Central Server (TCP, C)**  
   - 로봇 접속 관리, 상태 수집, 명령 전달, 배차 로직 수행
 - **Platform (ROS2)**  
-  - 로봇의 자율주행(AMCL/SLAM/Nav2), 센서 토픽 처리, 서버-로봇 브리지 연동
+  - 로봇의 자율주행, 센서 토픽 처리, 서버-로봇 브리지 연동
 - **Hardware**  
   - TurtleBot3 Burger + STM32U5 모듈(센서/디스플레이)
 
 
-
-
 ---
+
 
 ### 2) 다중 로봇 확장형 배차 구조 (robot_status 기반 최대 N대 운영)
 
@@ -78,12 +77,12 @@
 
 본 시스템은 **DB의 `robot_status` 테이블**을 중심으로 로봇을 관리합니다.
 
-- 로봇 하드웨어(TurtleBot3 + RPi4)가 추가되면
+- 로봇 하드웨어가 추가 되다면
   - 서버는 `robot_status`의 `robot_id`(또는 name)를 기준으로 **로봇 호스트를 식별/등록**
   - 로봇 상태를 주기적으로 갱신하고,
   - 호출 큐(`call_queue`)와 매칭해 **배차/명령 할당**을 수행합니다.
 - 즉, **로봇이 늘어나도 서버/DB 구조는 동일**하며,
-  - `robot_status` 레코드 수만 증가하는 형태로 **최대 100대 단위까지 확장 가능한 구조**를 목표로 설계했습니다.
+  - `robot_status` 레코드 수만 증가하는 형태로 **최대 100대 까지 확장 가능한 구조**를 목표로 설계했습니다.
 
 
 ---
@@ -93,30 +92,31 @@
 
 <img width="937" height="628" alt="image" src="https://github.com/user-attachments/assets/64a58873-ee28-4301-adb6-eec05be33936" />
 
-STM32U5는 단순 센서 보드가 아니라, **로봇 상태 표시(TouchGFX) + 안전 센서 모듈** 역할을 수행합니다.
+STM32U5는 단순 센서 보드가 아니라, **로봇 상태 표시(TouchGFX) + 센서 모듈** 역할을 수행합니다.
 
 #### ✅ A. ROS → STM32U5(TouchGFX) 상태 표시
 Raspberry Pi 4(ROS2)에서 수신/발행 중인 주요 토픽을 STM32U5로 전달하여 TouchGFX에 표시합니다.
 
-- 표시 대상 토픽:
-  - `/amcl_pose` : 현재 위치
-  - `/odom` : 자기 위치/속도
-  - `/battery_state` : 배터리
-  - `/goal_pose` : 목표 좌표
-  - `/scan` : 라이다 근접 거리
+| Topic | 의미 | UI 표시 예시 |
+|------|------|-------------|
+| `/hostname/amcl_pose` | 맵 기준 현재 위치 | x, y, yaw |
+| `/hostname/odom` | odom/속도 | v, w, 누적 |
+| `/hostname/battery_state` | 배터리 상태 | %, charging |
+| `/hostname/goal_pose` | 목표 좌표 | goal x, y |
+| `/hostname/scan` | LiDAR 스캔 | min range |
 
 #### ✅ B. STM32U5 센서 → ROS2 토픽 생성(호스트명 포함)
 STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 생성**하고, 로봇 호스트명을 붙여 재발행 합니다
 
 - STM32U5 센서 입력:
-  - **초음파(IUM-100)**: 라이다가 감지 못하는 **낮은 높이 장애물** 감지  
-    → `/ultra_distance_cm`
-  - **압력(FSR)**: 환자 **탑승 여부 감지**  
-    → `/seat_detected`
+- | Topic | 의미 | UI 표시 예시 |
+  |------|------|-------------|
+  | `/hostname/ultra_distance_cm` | 초음파 거리(cm) | min 거리 |
+  | `/hostname/seat_detected` | 탑승 감지(0/1) | Seated/Empty |
 
 - 운영 관점:
   - 다중 로봇 환경에서 토픽 충돌을 막기 위해  
-    `/<hostname>/ultra_distance_cm`, `/<hostname>/seat_detected` 처럼 **호스트명 구조로 재발행** 가능
+    `/<hostname>/ultra_distance_cm`, `/<hostname>/seat_detected` 처럼 **호스트명 구조로 재발행** 
 
 ---
 
@@ -130,7 +130,7 @@ STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 �
 5. 도착 시 서버/관리자 UI에 알림
 
 ### 4.2 입원 환자 호출(병동/병실 기반)
-1. 입원 환자/관리자가 호출(병실/병동 선택)
+1. 간호사/관리자가 호출(병실/병동 선택)
 2. 서버가 DB의 위치(map_location) 좌표를 참조
 3. 로봇 배차 후 해당 위치로 이동
 
@@ -144,27 +144,10 @@ STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 �
 - 임계 거리 이하면:
     -Nav2 goal cancel/재계획(설계에 따라)
 
----
-
-## 📡 5. ROS2 토픽 인터페이스 (UI 표시용)
-
-STM32U5 Touch-GFX(또는 관리자 UI)에 표시할 토픽들:
-
-| Topic | 의미 | UI 표시 예시 |
-|------|------|-------------|
-| `/amcl_pose` | 맵 기준 현재 위치 | x, y, yaw |
-| `/odom` | odom/속도 | v, w, 누적 |
-| `/battery_state` | 배터리 상태 | %, charging |
-| `/goal_pose` | 목표 좌표 | goal x, y |
-| `/scan` | LiDAR 스캔 | min range |
-| `/ultra_distance_cm` | 초음파 거리(cm) | min 거리 |
-| `/seat_detected` | 탑승 감지(0/1) | Seated/Empty |
-
-> `/scan`은 데이터가 크므로 UI에서는 일반적으로 **최소 거리(min range)** 같은 요약값만 표시합니다.
 
 ---
 
-## 🧱 Database (MariaDB/MySQL)
+## 5. 🧱 Database (MariaDB/MySQL)
 
 > 본 프로젝트는 `hospital_backup.sql` 기준으로 DB를 구성합니다.  
 > 서버(C 코드)는 DB를 주기적으로 조회/갱신하여 배차(Dispatch)를 수행합니다.
@@ -250,7 +233,7 @@ STM32U5 Touch-GFX(또는 관리자 UI)에 표시할 토픽들:
 
 ---
 
-## 🔧 7. 하드웨어 구성 (Hardware)
+## 🔧 6. 하드웨어 구성 (Hardware)
 
 ### ✅ Robot Side
 - TurtleBot3 Burger base + LiDAR
@@ -265,7 +248,7 @@ STM32U5 Touch-GFX(또는 관리자 UI)에 표시할 토픽들:
 
 ---
 
-## 🧰 8. 기술 스택 (Tech Stack)
+## 🧰 7. 기술 스택 (Tech Stack)
 
 - **Robot**: ROS2, Nav2, SLAM, AMCL
 - **Edge**: Raspberry Pi 4
@@ -275,14 +258,14 @@ STM32U5 Touch-GFX(또는 관리자 UI)에 표시할 토픽들:
 
 ---
 
-## 👥 팀원 소개 (Team)
+## 👥8. 팀원 소개 (Team)
 
 | &nbsp;&nbsp;&nbsp;&nbsp;이름&nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp;역할&nbsp;&nbsp;&nbsp;&nbsp; | 파트 | 담당 기능(요약) | 사용 기술/도구 |
 | :---: | :---: | :--- | :--- | :--- |
-| **허진경** | 팀장 | Robot / ROS | TurtleBot3 자율주행(ROS2/Nav2/SLAM) 통합,<br>STM32U5(초음파/압력) 센서 모듈 연동,<br>ROS 토픽 → Touch-GFX UI 표시 | ROS2, Nav2, SLAM,<br>STM32 HAL, UART,<br>Raspberry Pi 4 |
-| **강송구** | 부팀장 | Server / DB | C 서버 구현, MariaDB 스키마/쿼리 설계,<br>로봇 상태 저장/배차 로직 | C(Socket), SQL,<br>MariaDB / MySQL |
-| **김선곤** | 팀원 | Qt Kiosk /<br>STM32U5 Touch-GFX | 외래 환자용 터치 키오스크(Qt) UI 구현,<br>STM32U5 Touch-GFX UI 연동(옵션) | Qt,  |
-| **임정민** | 팀원 | DB / ROS | DB 데이터 관리/정리, URDF | SQL,<br>MariaDB / MySQL /ROS2 |
+| **허진경** | 팀장 | Robot / ROS | TurtleBot3 자율주행(ROS2/Nav2/SLAM) 통합,<br>ROS 토픽 → Touch-GFX UI 표시 | ROS2, Nav2, SLAM |
+| **강송구** | 부팀장 | Server / DB | C 서버 구현, MariaDB 스키마/쿼리 설계,<br>로봇 상태 저장/배차 로직, <br>ROS 토픽 → Touch-GFX UI 표시 | C(Socket),<br>MariaDB / MySQL, Touch-GFX |
+| **김선곤** | 팀원 | Qt Kiosk /<br>STM32U5 Touch-GFX | 외래 환자용 터치 키오스크(Qt) UI 구현,<br>STM32U5 Touch-GFX UI 연동 | Qt, Touch-GFX |
+| **임정민** | 팀원 | DB / ROS | DB 데이터 관리/정리, URDF | <br>MariaDB / MySQL /ROS2 |
 | **유종민** | 팀원 | Firmware /<br>ROS | STM32U5(초음파/압력) 센서 구현 및<br>ROS2 연동, 3D 프린팅 구조물 제작 | ROS2, STM32,<br>Fusion 360 |
 
 
