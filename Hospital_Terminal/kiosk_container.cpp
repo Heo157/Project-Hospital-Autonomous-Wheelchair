@@ -7,6 +7,7 @@
 #include "kiosk_wheel.h"
 #include "kiosk_back.h"
 #include "keyboard.h"
+#include "mainwindow.h"
 
 kiosk_container::kiosk_container(QMainWindow *mw, QWidget *parent)
     : QWidget(parent)
@@ -14,6 +15,11 @@ kiosk_container::kiosk_container(QMainWindow *mw, QWidget *parent)
     , mainWindow(mw)
 {
     ui->setupUi(this);
+
+    //키오스크모드 로그아웃버튼 숨김
+    if (auto *mw = qobject_cast<MainWindow*>(mainWindow)) {
+        mw->setLogoutKioskMode(true);
+    }
 
     // ---------------------------------
     // 1. 페이지 생성
@@ -131,5 +137,10 @@ kiosk_container::kiosk_container(QMainWindow *mw, QWidget *parent)
 
 kiosk_container::~kiosk_container()
 {
+    //키오스크모드 로그아웃버튼 숨김
+    if (auto *mw = qobject_cast<MainWindow*>(mainWindow)) {
+        mw->setLogoutKioskMode(false);
+    }
+
     delete ui;
 }

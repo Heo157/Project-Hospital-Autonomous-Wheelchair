@@ -11,6 +11,7 @@
 #include <QPixmap>
 #include <QProcess>
 #include <QStringList>
+#include <QGraphicsOpacityEffect>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -326,5 +327,20 @@ void MainWindow::onLogoutClicked()
         ui->label_status->setText("Hospital");
     if (virtualKeyboard != nullptr) {
         virtualKeyboard->hide();
+    }
+}
+
+// ---------------------------------------------------------
+// 기능 5: 키오스크모드 로그아웃버튼 숨김
+// ---------------------------------------------------------
+void MainWindow::setLogoutKioskMode(bool on)
+{
+    if (on) {
+        auto *e = new QGraphicsOpacityEffect(ui->btn_logout);
+        e->setOpacity(0.0);                 // 안 보이게
+        ui->btn_logout->setGraphicsEffect(e);
+        ui->btn_logout->setEnabled(true);   // 클릭은 유지
+    } else {
+        ui->btn_logout->setGraphicsEffect(nullptr); // 원복
     }
 }
