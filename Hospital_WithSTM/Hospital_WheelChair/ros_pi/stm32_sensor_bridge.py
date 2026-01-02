@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
+"""
+파일명: stm32_sensor_bridge.py
+수정내용: STM32에서 오는 BTN(버튼) 값을 파싱하여 ROS 토픽으로 발행 기능 추가
+"""
+
 import re
 import serial
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Float32, Bool
+from std_msgs.msg import Float32, Bool, Int32  # [수정] Int32 추가
 
-# 예: U=12.34,FSR=59,SEAT=0
+# 예: U=12.34,FSR=59,SEAT=0,BTN=2
+# BTN 부분은 있을 수도 있고 없을 수도 있도록 (?: ... )? 로 처리
 LINE_RE = re.compile(
-    r'U\s*=\s*([-+]?\d+(?:\.\d+)?)\s*,\s*FSR\s*=\s*(\d+)\s*,\s*SEAT\s*=\s*(\d+)'
+    r'U\s*=\s*([-+]?\d+(?:\.\d+)?)\s*,\s*FSR\s*=\s*(\d+)\s*,\s*SEAT\s*=\s*(\d+)(?:,\s*BTN\s*=\s*(\d+))?'
 )
 
 class Stm32SensorBridge(Node):
@@ -19,22 +25,25 @@ class Stm32SensorBridge(Node):
         self.declare_parameter('baud', 115200)
         self.declare_parameter('distance_topic', '/ultra_distance_cm')
         self.declare_parameter('seat_topic', '/seat_detected')
+        self.declare_parameter('btn_topic', '/stm32/button') # [수정] 버튼 토픽 추가
 
         self.port = self.get_parameter('port').value
         self.baud = int(self.get_parameter('baud').value)
         self.distance_topic = self.get_parameter('distance_topic').value
         self.seat_topic = self.get_parameter('seat_topic').value
+        self.btn_topic = self.get_parameter('btn_topic').value
 
         # 퍼블리셔
         self.pub_dist = self.create_publisher(Float32, self.distance_topic, 10)
         self.pub_seat = self.create_publisher(Bool, self.seat_topic, 10)
+        self.pub_btn  = self.create_publisher(Int32, self.btn_topic, 10) # [수정] 버튼 퍼블리셔
 
         # 시리얼
         self.ser = None
         self.rx_buf = bytearray()
         self._open_serial()
 
-        # 50Hz 폴링(STM32가 60ms마다 쏘므로 충분)
+        # 50Hz 폴링
         self.timer = self.create_timer(0.02, self._tick)
 
     def _open_serial(self):
@@ -60,7 +69,13 @@ class Stm32SensorBridge(Node):
         seat = int(m.group(3))
         seat_bool = (seat != 0)
 
-        # ✅ 값이 같아도 "무조건 publish" (echo/hz 테스트 및 안정성)
+        # [수정] 버튼 값 처리
+        if m.group(4):
+            btn_val = int(m.group(4))
+            if btn_val != 0: # 버튼이 눌렸을 때만 발행 (혹은 항상 발행해도 무방)
+                self.get_logger().info(f"🔘 Button Click Detected: {btn_val}")
+                self.pub_btn.publish(Int32(data=btn_val))
+
         self.pub_dist.publish(Float32(data=dist))
         self.pub_seat.publish(Bool(data=seat_bool))
 
@@ -80,7 +95,7 @@ class Stm32SensorBridge(Node):
 
             self.rx_buf.extend(data)
 
-            # '\n' 단위로 프레임 분리 (STM32에서 \r\n 보내므로 OK)
+            # '\n' 단위로 프레임 분리
             while b'\n' in self.rx_buf:
                 line_bytes, _, rest = self.rx_buf.partition(b'\n')
                 self.rx_buf = bytearray(rest)
@@ -112,4 +127,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
