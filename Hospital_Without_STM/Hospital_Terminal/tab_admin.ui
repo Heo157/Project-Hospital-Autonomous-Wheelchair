@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>tab_admin</class>
+ <widget class="QWidget" name="tab_admin">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>관리자 탭</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="tabPosition">
+      <enum>QTabWidget::North</enum>
+     </property>
+     <property name="tabShape">
+      <enum>QTabWidget::Rounded</enum>
+     </property>
+     <property name="currentIndex">
+      <number>3</number>
+     </property>
+     <widget class="QWidget" name="tab">
+      <attribute name="title">
+       <string>계정 관리</string>
+      </attribute>
+     </widget>
+     <widget class="QWidget" name="tab_2">
+      <attribute name="title">
+       <string>휠체어 모니터링</string>
+      </attribute>
+     </widget>
+     <widget class="QWidget" name="tab_3">
+      <attribute name="title">
+       <string>환자 정보</string>
+      </attribute>
+     </widget>
+     <widget class="QWidget" name="tab_4">
+      <attribute name="title">
+       <string>휠체어 정보</string>
+      </attribute>
+     </widget>
+     <widget class="QWidget" name="tab_5">
+      <attribute name="title">
+       <string>터미널</string>
+      </attribute>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

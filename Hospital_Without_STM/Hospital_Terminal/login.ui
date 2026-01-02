@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Login</class>
+ <widget class="QWidget" name="Login">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>300</width>
+    <height>277</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_2">
+   <item>
+    <layout class="QVBoxLayout" name="verticalLayout" stretch="2,0,10,1,4,1">
+     <item>
+      <widget class="QLabel" name="label">
+       <property name="font">
+        <font>
+         <pointsize>22</pointsize>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="autoFillBackground">
+        <bool>false</bool>
+       </property>
+       <property name="styleSheet">
+        <string notr="true"/>
+       </property>
+       <property name="text">
+        <string>병원 관리 시스템</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="verticalSpacer_4">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>40</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="verticalLayout_3" stretch="1,1,1,1">
+       <property name="spacing">
+        <number>1</number>
+       </property>
+       <property name="sizeConstraint">
+        <enum>QLayout::SetDefaultConstraint</enum>
+       </property>
+       <item>
+        <widget class="QLabel" name="label_2">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>12</pointsize>
+          </font>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">color: rgb(85, 85, 85);</string>
+         </property>
+         <property name="text">
+          <string>ID</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="lineEdit">
+         <property name="styleSheet">
+          <string notr="true">border: 1px solid rgb(204, 204, 204);
+border-radius: 6px;
+padding: 8px;
+font-size: 14px;
+background-color: rgb(255, 255, 255);</string>
+         </property>
+         <property name="echoMode">
+          <enum>QLineEdit::Normal</enum>
+         </property>
+         <property name="placeholderText">
+          <string>아이디를 입력하세요.</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_3">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>12</pointsize>
+          </font>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">color:rgb(85, 85, 85);</string>
+         </property>
+         <property name="text">
+          <string>Password</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="lineEdit_2">
+         <property name="styleSheet">
+          <string notr="true">border: 1px solid rgb(204, 204, 204);
+border-radius: 6px;
+padding: 8px;
+font-size: 14px;
+background-color: rgb(255, 255, 255);</string>
+         </property>
+         <property name="echoMode">
+          <enum>QLineEdit::Password</enum>
+         </property>
+         <property name="placeholderText">
+          <string>비밀번호를 입력하세요.</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <spacer name="verticalSpacer">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>40</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="1,5,1">
+       <item>
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Minimum</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>-1</pointsize>
+           <kerning>true</kerning>
+          </font>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">background-color: rgb(255, 122, 122);
+color: rgb(255, 255, 255);
+border: none;
+border-radius: 8px;
+font-size: 15px;
+padding: 8px 24px;</string>
+         </property>
+         <property name="text">
+          <string>Login</string>
+         </property>
+         <property name="checkable">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Minimum</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <spacer name="verticalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>40</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>lineEdit_2</sender>
+   <signal>returnPressed()</signal>
+   <receiver>pushButton</receiver>
+   <slot>click()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>131</x>
+     <y>155</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>138</x>
+     <y>228</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lineEdit</sender>
+   <signal>returnPressed()</signal>
+   <receiver>pushButton</receiver>
+   <slot>click()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>198</x>
+     <y>78</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>186</x>
+     <y>220</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
