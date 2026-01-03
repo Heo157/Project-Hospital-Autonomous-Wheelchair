@@ -295,9 +295,9 @@ class TcpBridge(Node):
                 else:
                     print("[Logic] ⚠️ 탑승 버튼 눌림. 그러나 FSR(압력) 미감지. (안전을 위해 출발 안함)")
                     # 테스트용으로 강제 출발하려면 아래 주석 해제
-                    # self.change_state(STATE_RUNNING)
-                    # self.mission_mode = "DELIVER"
-                    # self.start_path_navigation(self.final_goal_x, self.final_goal_y)
+                    self.change_state(STATE_RUNNING)
+                    self.mission_mode = "DELIVER"
+                    self.start_path_navigation(self.final_goal_x, self.final_goal_y)
 
         # 2. 주행 중(이동, 픽업) -> [비상 정지] 버튼 누름
         elif self.current_state in [STATE_RUNNING, STATE_HEADING]:
@@ -324,6 +324,7 @@ class TcpBridge(Node):
                     self.reset_to_waiting()
                 else:
                     print("[Logic] ⚠️ 하차 버튼 눌림. 그러나 아직 좌석에 사람이 감지됩니다.")
+                    self.reset_to_waiting()
 
     def reset_to_waiting(self):
         """ 모든 미션 종료 후 초기화 """
