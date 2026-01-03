@@ -4,7 +4,17 @@
     <Language Id="GB" />
   </Languages>
   <Texts>
-    <TextGroup Id="Group1" />
+    <TextGroup Id="Group1">
+      <Text Id="T_BTN_EMERGENCY" Alignment="Center" TypographyId="Default">
+        <Translation Language="GB">비상 정지</Translation>
+      </Text>
+      <Text Id="T_BTN_RESUME" Alignment="Center" TypographyId="Default">
+        <Translation Language="GB">주행 재개</Translation>
+      </Text>
+      <Text Id="T_BTN_BOARDING" Alignment="Center" TypographyId="Default">
+        <Translation Language="GB">탑승 완료</Translation>
+      </Text>
+    </TextGroup>
     <TextGroup Id="Unsorted">
       <Text Id="__SingleUse_MB3B" Alignment="Left" TypographyId="Default">
         <Translation Language="GB">&lt;value&gt;%</Translation>
@@ -27,7 +37,7 @@
     </TextGroup>
   </Texts>
   <Typographies>
-    <Typography Id="Default" Font="NotoSansKR-VF.ttf" Size="20" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="% " WildcardCharacterRanges="0-9,A-Z,a-z,0xAC00-0xD7A" />
+    <Typography Id="Default" Font="NanumGothic.ttf" Size="20" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" WildcardCharacters="%,." WildcardCharacterRanges="0-9,A-Z,a-z,0xAC00-0xD7A3" />
     <Typography Id="Large" Font="verdana.ttf" Size="60" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" />
     <Typography Id="Small" Font="verdana.ttf" Size="10" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" />
     <Typography Id="PaDe" Font="verdana.ttf" Size="30" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" />

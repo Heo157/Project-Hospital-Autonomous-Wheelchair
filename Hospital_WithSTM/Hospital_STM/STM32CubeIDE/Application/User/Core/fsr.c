@@ -36,7 +36,7 @@ void FSR_SetThresholds(fsr_t *fsr, uint16_t th_on, uint16_t th_off)
 
 void FSR_Update(fsr_t *fsr)
 {
-    // 1) read raw
+    // 1) read raw 한번 adc 값read
     fsr->raw = fsr_adc_read(fsr->hadc);
 
     // 2) EMA filter
