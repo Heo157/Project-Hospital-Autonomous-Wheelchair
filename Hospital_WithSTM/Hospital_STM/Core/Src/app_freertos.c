@@ -158,7 +158,7 @@ void StartDefaultTask(void *argument)
 	  Ultrasonic_Init(NULL, &htim4, TIM_CHANNEL_2, TRIG_GPIO_Port, TRIG_Pin);
 
 	  // FSR: ADC4, 임계값(On:2000, Off:1000), Alpha 0.1f
-	  FSR_Init(&g_fsr, &hadc4, 2000, 1000, 0.1f);
+	  FSR_Init(&g_fsr, &hadc4, 2000, 1000, 0.2f);
 
 	  // 초기화 후 잠시 대기
 	  HAL_Delay(100);
