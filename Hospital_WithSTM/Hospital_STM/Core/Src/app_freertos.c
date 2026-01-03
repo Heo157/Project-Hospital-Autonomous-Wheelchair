@@ -157,8 +157,8 @@ void StartDefaultTask(void *argument)
 	  // 주의: TRIG 핀 포트/핀 번호는 main.h의 정의를 따름 (TRIG_GPIO_Port, TRIG_Pin)
 	  Ultrasonic_Init(NULL, &htim4, TIM_CHANNEL_2, TRIG_GPIO_Port, TRIG_Pin);
 
-	  // FSR: ADC4, 임계값(On:200, Off:40), Alpha 0.2
-	  FSR_Init(&g_fsr, &hadc4, 200, 40, 0.2f);
+	  // FSR: ADC4, 임계값(On:2000, Off:1000), Alpha 0.1f
+	  FSR_Init(&g_fsr, &hadc4, 2000, 1000, 0.1f);
 
 	  // 초기화 후 잠시 대기
 	  HAL_Delay(100);
