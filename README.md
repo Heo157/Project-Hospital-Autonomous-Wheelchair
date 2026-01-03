@@ -254,7 +254,7 @@ STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 �
 - **Edge**: Raspberry Pi 4
 - **Sensor Board**: STM32U5G9J-DK2 + Touch-GFX UI
 - **Server**: C Socket Server(Multi-process), MariaDB/MySQL
-- **UI**: Qt (Admin Dashboard / Touch Kiosk)
+- **UI**: Qt (Admin Dashboard / User Touch Kiosk / Nurse Dashboard)
 
 ---
 
