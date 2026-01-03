@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 파일명: stm32_bridge_all.py
-설명: STM32 양방향 통신 통합 노드 (들여쓰기 및 오타 수정판)
+설명: STM32 양방향 통신 통합 노드 (프로토콜 매칭 수정판)
 """
 
 import serial
@@ -75,15 +75,14 @@ class Stm32BridgeAll(Node):
         self.create_subscription(Odometry, self.odom_topic, self.cb_odom, qos_default)
         self.create_subscription(PoseWithCovarianceStamped, self.amcl_topic, self.cb_amcl, qos_default)
         self.create_subscription(PoseStamped, self.goal_topic, self.cb_goal, qos_default)
-        
-        # scan 구독에 qos_sensor 적용
         self.create_subscription(LaserScan, self.scan_topic, self.cb_scan, qos_sensor)
 
         # -----------------------------
         # 5. 상태 변수들
         # -----------------------------
-        self.ui_data = "0@Wait@None@None"
-        self.batt_p = -1.0; self.batt_v = -1.0
+        # 초기값 포맷도 6개 필드로 맞춰줍니다 (안전장치)
+        self.ui_data = "0@0.0@100@Waiting@-@-" 
+        self.batt_p = 100.0; self.batt_v = 0.0
         self.x = 0.0; self.y = 0.0; self.yaw = 0.0
         self.v = 0.0; self.w = 0.0
         self.gx = 0.0; self.gy = 0.0; self.gyaw = 0.0
@@ -111,15 +110,15 @@ class Stm32BridgeAll(Node):
     # =========================
     # ROS 콜백
     # =========================
-    def cb_ui(self, msg): self.ui_data = msg.data
+    def cb_ui(self, msg): 
+        # tcp_bridge에서 오는 데이터: "모드@0.0@배터리@호출자@출발지@도착지"
+        self.ui_data = msg.data
     
     def cb_battery(self, msg):
-        # [수정] 오타 flaot -> float 수정 및 배터리 로직 적용
         if msg.percentage > 1.0:
             self.batt_p = float(msg.percentage)
         else:
             self.batt_p = float(msg.percentage) * 100.0
-        
         self.batt_v = float(msg.voltage) if msg.voltage else 0.0
 
     def cb_odom(self, msg):
@@ -155,7 +154,7 @@ class Stm32BridgeAll(Node):
         try:
             if self.ser.in_waiting > 0:
                 data = self.ser.read(self.ser.in_waiting)
-                print(f"RAW: {data}")
+                # print(f"RAW: {data}")
                 self.rx_buf.extend(data)
                 
                 while b'\n' in self.rx_buf:
@@ -163,8 +162,6 @@ class Stm32BridgeAll(Node):
                     self.rx_buf = bytearray(rest)
                     try:
                         line = line_bytes.decode('utf-8', errors='ignore').strip()
-                        # 속도 로그 확인 (필요시 주석 해제)
-                        # self.get_logger().info(f"Current Speed(m/s): {self.v}")
                         self.parse_stm32_data(line)
                     except: pass
         except Exception as e:
@@ -179,63 +176,57 @@ class Stm32BridgeAll(Node):
 
     def parse_stm32_data(self, line):
         parts = line.split('@')
-        # 데이터가 3개 미만이면 무시 (줄바꿈만 오거나 깨진 경우)
         if len(parts) < 3: 
             return
 
         try:
             dist = float(parts[0])
-            # 두 번째가 좌석(0/1)
             seat = (int(parts[1]) != 0)
-        
-            # 세 번째가 버튼 값. (혹시 뒤에 \n이나 공백 있어도 int()가 처리함)
             btn = int(parts[2])
 
             self.pub_dist.publish(Float32(data=dist))
             self.pub_seat.publish(Bool(data=seat))
 
-            # [수정] 들여쓰기 수정 완료
-            # 버튼이 0이 아닐 때만 로그 출력 (눌렸는지 확인용)
             if btn != 0: 
                 self.get_logger().info(f"🔘 Button Clicked! Value: {btn}")
             
             self.pub_btn.publish(Int32(data=btn))
 
         except Exception as e:
-            # [중요] 에러가 나면 왜 났는지 출력하게 수정
             self.get_logger().error(f"Parsing Error: {e} | Line: {line}")
 
     def send_to_stm32(self):
         # ---------------------------------------------------------
-        # [중요] STM32의 Parse_Robot_Packet 함수 순서에 맞춰야 함!
-        # 순서: Mode(int) @ Speed(float) @ Battery(int) @ Caller @ Start @ Dest \n
+        # [수정됨] tcp_bridge.py와의 프로토콜 매칭
+        # tcp_bridge 보냄: Mode(0) @ Speed(1) @ Batt(2) @ Caller(3) @ Start(4) @ Dest(5)
         # ---------------------------------------------------------
-
-        # 1. UI 데이터(ui_data)에서 모드와 텍스트 정보 분리하기
         try:
             parts = self.ui_data.split('@')
-            mode = parts[0]  # 첫 번째는 모드
             
-            # 나머지는 문자열 (없으면 빈칸 처리)
-            caller = parts[1] if len(parts) > 1 else "None"
-            start_loc = parts[2] if len(parts) > 2 else ""
-            dest_loc = parts[3] if len(parts) > 3 else ""
-        except:
-            # 파싱 에러 시 기본값
-            mode = "0"
-            caller = "None"
-            start_loc = ""
-            dest_loc = ""
+            # 데이터가 6개(신규 프로토콜)로 오는지 확인
+            if len(parts) >= 6:
+                mode = parts[0]
+                # parts[1]은 속도, parts[2]는 배터리인데 이건 tcp_bridge가 모름(더미값)
+                # 그래서 여기서 실제 센서값(self.v, self.batt_p)으로 교체함
+                caller = parts[3]
+                start_loc = parts[4]
+                dest_loc = parts[5]
+            else:
+                # 혹시 예전 데이터가 오면 안전하게 처리
+                mode = parts[0]
+                caller = "Init"
+                start_loc = "-"
+                dest_loc = "-"
 
-        # 2. STM32가 원하는 포맷으로 조립 (@ 구분자)
-        # 속도: self.v (m/s)
-        # 배터리: self.batt_p (%)
+        except:
+            mode = "0"; caller = "Error"; start_loc = "-"; dest_loc = "-"
+
+        # 최종 조립: 실제 속도와 배터리 값 주입
+        # 순서: Mode @ Speed @ Battery @ Caller @ Start @ Dest
         msg = f"{mode}@{self.v:.2f}@{int(self.batt_p)}@{caller}@{start_loc}@{dest_loc}\n"
 
         try:
             self.ser.write(msg.encode('utf-8'))
-            # 디버깅용: 실제 보내는 데이터 확인
-            # self.get_logger().info(f"Sent to STM32: {msg.strip()}")
         except Exception as e:
             self.get_logger().warn(f"Serial Write Error: {e}")
             self.ser = None
