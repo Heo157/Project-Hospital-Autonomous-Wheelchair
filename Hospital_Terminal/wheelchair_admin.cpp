@@ -506,7 +506,7 @@ void wheelchair_admin::updateMapMarkers(const QList<RobotInfo> &robotList)
         const double px = px_raw + 5.0;
 
         double py_raw = (mapH - 1) - ((info.current_y - MAP_ORIGIN_Y) / MAP_RESOLUTION);
-        const double py = py_raw - 15.0; // <-- 여기 숫자(15.0)를 조절하세요!
+        const double py = py_raw - 21.0; // <-- 여기 숫자(15.0)를 조절하세요!
 
         // =========================
         // (2) 원본 픽셀 -> 라벨 좌표(그려진 맵 영역) : scale + offset
