@@ -249,9 +249,21 @@ STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 �
 
 ---
 
-## 🧰 Tech Stack
+## 🧰 기술 스택
 
 <div align="center">
+
+<!-- UI -->
+<img src="https://img.shields.io/badge/Qt-41CD52?style=for-the-badge&logo=qt&logoColor=white" />
+
+<br/>
+
+<!-- Backend -->
+<img src="https://img.shields.io/badge/Socket-374151?style=for-the-badge&logoColor=white" />
+<img src="https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white" />
+<img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white" />
+
+<br/>
 
 <!-- Core -->
 <img src="https://img.shields.io/badge/ROS2-0A0FF9?style=for-the-badge&logo=ros&logoColor=white" />
@@ -267,15 +279,6 @@ STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 �
 
 <br/>
 
-<!-- Backend -->
-<img src="https://img.shields.io/badge/Socket-374151?style=for-the-badge&logoColor=white" />
-<img src="https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white" />
-<img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white" />
-
-<br/>
-
-<!-- UI -->
-<img src="https://img.shields.io/badge/Qt-41CD52?style=for-the-badge&logo=qt&logoColor=white" />
 
 </div>
 
