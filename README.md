@@ -1,4 +1,4 @@
- 
+
 
 # 🏥 Hospital Autonomous Wheelchair Robot  
 
@@ -238,14 +238,12 @@ STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 �
 ## 🔧 6. 하드웨어 구성 
 
 ### ✅ Robot Side
-- TurtleBot3 Burger base + LiDAR
-- Raspberry Pi 4
-- OpenCR
+<img width="787" height="224" alt="image" src="https://github.com/user-attachments/assets/54c18447-0883-4ffe-8b27-023a83595357" />
+
 
 ### ✅ STM32U5 Sensor Module
-- STM32U5 보드(내장 Touch-GFX)
-- IUM-100 초음파 센서 (하단 장애물 감지)
-- FSR 압력 센서 (탑승 감지)
+<img width="830" height="256" alt="image" src="https://github.com/user-attachments/assets/362fc907-63a3-439c-bfd1-e7f9e9f80f83" />
+
 
 ---
 
