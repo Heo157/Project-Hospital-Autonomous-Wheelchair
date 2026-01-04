@@ -115,7 +115,9 @@
 
 ### 2) 다중 로봇 확장형 배차 구조 (robot_status 기반 최대 N대 운영)
 
-<img width="745" height="620" alt="image" src="https://github.com/user-attachments/assets/d50571a4-5844-4957-a214-0a69dcbf3490" />
+<img width="925" height="564" alt="image" src="https://github.com/user-attachments/assets/eee87182-efa9-4ca2-8d63-f168c2322ef1" />
+
+
 
 본 시스템은 **DB의 `robot_status` 테이블**을 중심으로 로봇을 관리합니다.
 
