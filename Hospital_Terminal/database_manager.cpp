@@ -36,7 +36,7 @@ bool DatabaseManager::connectToDb()
 
     db = QSqlDatabase::addDatabase("QMYSQL");
     // 라즈베리파이 IP (환경에 맞게 수정)
-    db.setHostName("10.10.14.138");
+    db.setHostName("10.10.14.31");
     db.setPort(3306);
     db.setDatabaseName("hospital_db");
     
