@@ -241,8 +241,9 @@ STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 �
 <img width="787" height="224" alt="image" src="https://github.com/user-attachments/assets/54c18447-0883-4ffe-8b27-023a83595357" />
 
 
-### ✅ STM32U5 Sensor Module
-<img width="830" height="256" alt="image" src="https://github.com/user-attachments/assets/362fc907-63a3-439c-bfd1-e7f9e9f80f83" />
+### ✅ STM32 Side
+<img width="808" height="270" alt="image" src="https://github.com/user-attachments/assets/e0f09e85-82c0-49e6-930a-bf4ff67fae4e" />
+
 
 
 ---
