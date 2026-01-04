@@ -3,18 +3,19 @@
 
 """
 ============================================================================
- 파일명: tcp_bridge.py (Final Release Version)
- 설명:   ROS 2(Nav2) <-> TCP(C Server) 통신 브리지 및 통합 제어기
+ 파일명: tcp_bridge.py (Final Perfect Version - No Spin / Detailed Comments)
+ 설명:   ROS 2(Nav2) <-> TCP(C Server) 통신 브리지 및 로봇 통합 제어기
  
- [기능 요약]
- 1. TCP 클라이언트로서 서버와 연결 및 데이터 교환 (명령 수신, 상태 송신)
- 2. A* 알고리즘을 이용한 경로 생성 및 Nav2 웨이포인트 주행
- 3. STM32 UI와의 데이터 프로토콜 동기화 (화면 표시용)
- 4. 물리 버튼 입력을 통한 로봇 상태(FSM) 제어 (탑승, 하차, 비상정지)
+ [핵심 기능 요약]
+ 1. TCP 통신: C언어 관제 서버와 소켓 통신 (명령 수신, 상태 송신)
+ 2. 경로 생성: A* 알고리즘을 사용하여 최단 경로(Waypoints) 생성 및 Nav2 전송
+ 3. UI 동기화: STM32 화면 표시를 위한 데이터 프로토콜(Format) 맞춤 전송
+ 4. 정지 제어: 비상 정지 및 도착 시 '제자리 회전(Spin)' 없이 즉시 정지
+ 5. 상태 제어: 물리 버튼 입력에 따른 FSM(Finite State Machine) 상태 전이
  
  [최종 설정 값]
- - 도착 판정 오차 (Final Tolerance): 0.8m
- - 장소 이름 매칭 거리 (Name Match Dist): 1.0m
+ - 도착 판정 거리 (Final Tolerance): 0.8m (넉넉하게 설정하여 멈춤 현상 방지)
+ - 장소 이름 매칭 거리 (Name Match Dist): 1.0m (좌표 -> 이름 변환용)
 ============================================================================
 """
 
@@ -32,10 +33,12 @@ import heapq
 # -------------------------------------------------------------------------
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import PoseStamped
-from nav_msgs.msg import Odometry
-from sensor_msgs.msg import BatteryState
-from std_msgs.msg import Int32, Bool, String, Float32
+# PoseStamped: 목표 지점(위치+방향) 메시지
+# Quaternion: 방향(회전)을 표현하는 4원수 (x, y, z, w)
+from geometry_msgs.msg import PoseStamped, Quaternion
+from nav_msgs.msg import Odometry        # 로봇 현재 위치 정보
+from sensor_msgs.msg import BatteryState # 배터리 정보
+from std_msgs.msg import Int32, Bool, String, Float32 # 기본 데이터 타입
 
 # =========================================================================
 # 1. 프로토콜 상수 및 설정 정의
@@ -43,6 +46,7 @@ from std_msgs.msg import Int32, Bool, String, Float32
 
 # 패킷 유효성 검사용 매직 넘버 (헤더 맨 앞 1바이트)
 MAGIC_NUMBER = 0xAB
+# 장치 식별 ID (0x02: ROS Robot)
 DEVICE_ROBOT_ROS = 0x02
 
 # 메시지 타입 (서버와 약속된 프로토콜 ID)
@@ -50,7 +54,7 @@ MSG_LOGIN_REQ   = 0x01  # 로봇 로그인 (이름 전송)
 MSG_ROBOT_STATE = 0x20  # 로봇 상태 보고 (주기적 전송)
 MSG_ASSIGN_GOAL = 0x30  # 작업 지시 (서버 -> 로봇)
 
-# 로봇 상태 코드 (FSM State)
+# 로봇 상태 코드 (FSM State) - STM32와 공유
 STATE_WAITING  = 0  # 대기 중 (IDLE)
 STATE_HEADING  = 1  # 환자 픽업지로 이동 중
 STATE_BOARDING = 2  # 도착 후 환자 탑승 대기
@@ -68,7 +72,7 @@ HDR_SIZE = struct.calcsize(HDR_FMT)
 
 # 상태 보고 패킷 본문: 배터리, x, y, theta, 상태, 초음파, 착석여부
 STATE_FMT = "<ifffBiB"
-# 작업 지시 패킷 본문: 명령코드, 시작x, y, 목표x, y, 호출자이름
+# 작업 지시 패킷 본문: 명령코드, 시작x, y, 목표x, y, 호출자이름(64bytes)
 GOAL_FMT = "<iffff64s"
 GOAL_SIZE = struct.calcsize(GOAL_FMT)
 
@@ -79,10 +83,10 @@ BTN_EMERGENCY         = 4  # 비상 정지
 BTN_EXIT_COMPLETE     = 5  # 하차 완료 (복귀/대기)
 
 # [중요 설정] 주행 허용 오차 (단위: 미터)
-# 0.8m 이내에 들어오면 "도착"한 것으로 간주하고 다음 로직 수행
-DIST_TOLERANCE_FINAL    = 0.8  
-# 경유지는 1.0m 근처만 가도 멈추지 않고 부드럽게 지나감
-DIST_TOLERANCE_WAYPOINT = 1.0  
+# 도착지에 몇 m까지 근접했으면 도착 판정을 할 것인가
+DIST_TOLERANCE_FINAL    = 0.5
+# 경유지에 몇 m까지 근겁했으면 도착 판정을 할 것인가
+DIST_TOLERANCE_WAYPOINT = 0.7
 
 # =========================================================================
 # 2. 길찾기 및 맵 데이터 관리 클래스
@@ -95,8 +99,8 @@ class SimplePathFinder:
     """
     def __init__(self, json_path):
         self.nodes = {}      # 노드 ID -> (x, y)
-        self.edges = {}      # 노드 연결 정보
-        self.locations = {}  # 장소 이름 -> (x, y)
+        self.edges = {}      # 노드 연결 정보 (그래프)
+        self.locations = {}  # 장소 이름 -> (x, y) 매핑 정보
         self.load_map(json_path)
 
     def load_map(self, json_path):
@@ -109,14 +113,14 @@ class SimplePathFinder:
             # 1. 노드 정보 로드
             self.nodes = {int(k): tuple(v) for k, v in data.get('nodes', {}).items()}
             
-            # 2. 간선 정보 로드 (양방향 그래프)
+            # 2. 간선 정보 로드 (양방향 그래프 구성)
             for item in data.get('edges', []):
                 if len(item) >= 3:
                     u, v, w = item[0], item[1], item[2]
                     self.edges.setdefault(u, []).append((v, w))
                     self.edges.setdefault(v, []).append((u, w))
 
-            # 3. 장소 이름 정보 로드 (STM32 UI 표시용)
+            # 3. 장소 이름 정보 로드 (STM32 UI 표시용 - 정형외과, 약국 등)
             raw_locs = data.get('locations', {})
             for name, coords in raw_locs.items():
                 self.locations[name] = tuple(coords)
@@ -125,6 +129,7 @@ class SimplePathFinder:
             
         except Exception as e:
             print(f"[Map] ⚠️ 맵 로딩 실패: {e}")
+            # 실패 시 빈 딕셔너리로 초기화하여 프로그램 크래시 방지
             self.nodes = {}; self.edges = {}; self.locations = {}
 
     def find_location_name(self, target_x, target_y):
@@ -134,7 +139,7 @@ class SimplePathFinder:
         """
         if not self.locations: return "?"
         
-        # [설정] 검색 반경 1.0m (너무 넓으면 옆방 이름이 뜸)
+        # [설정] 검색 반경 1.0m (너무 넓으면 옆방 이름이 뜰 수 있음)
         min_dist = 1.0 
         found_name = "?"
         
@@ -177,6 +182,7 @@ class SimplePathFinder:
             # 인접 노드 탐색
             for neighbor, weight in self.edges.get(curr, []):
                 if neighbor not in visited:
+                    # 휴리스틱: 현재 비용 + 간선 비용 + 남은 직선 거리
                     h = math.dist(self.nodes[neighbor], self.nodes[end_node])
                     heapq.heappush(queue, (cost + weight + h, neighbor, new_path))
         
@@ -207,7 +213,7 @@ class TcpBridge(Node):
         # 네비게이션 목표 및 경로
         self.final_goal_x = 0.0; self.final_goal_y = 0.0
         self.current_goal_x = 0.0; self.current_goal_y = 0.0
-        self.waypoint_queue = []
+        self.waypoint_queue = [] # 경유지 큐
         
         # UI 표시 정보
         self.current_caller = ""     
@@ -247,11 +253,17 @@ class TcpBridge(Node):
     # 콜백 함수 (데이터 수신)
     # ---------------------------------------------------------------------
     def odom_cb(self, msg):
+        """ 로봇의 현재 위치(x,y) 및 방향(theta) 업데이트 """
         self.x = msg.pose.pose.position.x
         self.y = msg.pose.pose.position.y
+        # 쿼터니언 -> 오일러 각(Yaw/Theta) 변환
+        q = msg.pose.pose.orientation
+        siny_cosp = 2.0 * (q.w * q.z + q.x * q.y)
+        cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
+        self.theta = math.atan2(siny_cosp, cosy_cosp)
         
     def batt_cb(self, msg):
-        # 배터리 값이 0.0~1.0 사이면 100을 곱함
+        """ 배터리 잔량 업데이트 (0~100%) """
         val = int(msg.percentage) if msg.percentage > 1.0 else int(msg.percentage * 100)
         self.battery_percent = val
         
@@ -259,7 +271,7 @@ class TcpBridge(Node):
     def seat_cb(self, msg): self.seat_detected = msg.data
 
     def button_cb(self, msg):
-        """ 물리 버튼 입력 처리 """
+        """ 물리 버튼 입력 처리 핸들러 """
         btn = msg.data
         if btn == 0: return # 노이즈 필터링
         print(f"\n[Button] 🔘 입력 감지: {btn}")
@@ -278,14 +290,16 @@ class TcpBridge(Node):
 
         # 3. 언제든 [비상 정지]
         elif btn == BTN_EMERGENCY:
-            print("🚨 비상 정지 명령!")
+            print("🚨 비상 정지 명령! (제자리 정지)")
             self.change_state(STATE_STOP)
-            self.publish_nav2_goal(self.x, self.y) # 제자리 정지
+            # [중요] 현재 위치 + 현재 방향으로 정지 명령 전송 (회전 방지)
+            self.publish_stop_packet()
 
         # 4. 정지 상태 -> [주행 재개]
         elif self.current_state == STATE_STOP and btn == BTN_RESUME:
             print("▶️ 주행 재개.")
             self.change_state(STATE_RUNNING)
+            # 멈췄던 지점(current_goal)으로 다시 이동 명령
             self.publish_nav2_goal(self.current_goal_x, self.current_goal_y)
 
     # ---------------------------------------------------------------------
@@ -327,8 +341,8 @@ class TcpBridge(Node):
 
     def handle_arrival(self):
         """ 목적지 도착 시 처리 로직 """
-        # 로봇 정지 명령
-        self.publish_nav2_goal(self.x, self.y)
+        # [중요] 도착 시에도 0도로 돌지 않고 현재 방향 유지하며 정지
+        self.publish_stop_packet()
 
         # 1. 픽업하러 왔을 때
         if self.current_state == STATE_HEADING:
@@ -386,13 +400,33 @@ class TcpBridge(Node):
             self.publish_nav2_goal(wp[0], wp[1])
 
     def publish_nav2_goal(self, x, y):
-        """ ROS 2 Goal 발행 """
+        """ ROS 2 Goal 발행 (이동 시: 방향은 0도/진행방향 기준) """
         self.current_goal_x = x; self.current_goal_y = y
         goal = PoseStamped()
         goal.header.frame_id = "map"; goal.header.stamp = self.get_clock().now().to_msg()
         goal.pose.position.x = float(x); goal.pose.position.y = float(y)
-        goal.pose.orientation.w = 1.0
+        goal.pose.orientation.w = 1.0 # 이동 중에는 일단 0도 기준 (Nav2가 알아서 함)
         self.goal_pub.publish(goal)
+
+    def publish_stop_packet(self):
+        """ [추가] 정지 명령 (현재 로봇이 보고 있는 방향 유지) """
+        stop_goal = PoseStamped()
+        stop_goal.header.frame_id = "map"
+        stop_goal.header.stamp = self.get_clock().now().to_msg()
+        stop_goal.pose.position.x = float(self.x)
+        stop_goal.pose.position.y = float(self.y)
+        
+        # 현재 각도(Theta)를 Quaternion으로 변환하여 유지 -> 회전 방지
+        q = Quaternion()
+        q.w = math.cos(self.theta * 0.5)
+        q.z = math.sin(self.theta * 0.5)
+        stop_goal.pose.orientation = q
+        
+        self.goal_pub.publish(stop_goal)
+        
+        # 목표 변수 갱신 (재개 시 튀는 현상 방지)
+        self.current_goal_x = self.x
+        self.current_goal_y = self.y
 
     def publish_ui_info(self):
         """ 
@@ -403,7 +437,7 @@ class TcpBridge(Node):
         s_speed = "0.0" 
         s_batt = str(int(self.battery_percent))
         s_caller = self.current_caller if self.current_caller else "Waiting"
-        s_start = "-" # 출발지는 미사용
+        s_start = "-" # 출발지는 미사용 (STM32 코드에서 처리)
         s_dest = self.current_dest_name if self.current_dest_name else "?"
         
         msg = f"{s_mode}@{s_speed}@{s_batt}@{s_caller}@{s_start}@{s_dest}"
@@ -450,9 +484,6 @@ class TcpBridge(Node):
                 hdr = self.sock.recv(HDR_SIZE)
                 if len(hdr) != HDR_SIZE: self.close_socket(); continue
                 magic, dev, mtype, dlen = struct.unpack(HDR_FMT, hdr)
-                if magic != MAGIC_NUMBER: continue
-
-                # 본문 읽기
                 payload = self.sock.recv(dlen) if dlen > 0 else b""
                 
                 # 메시지 처리 (작업 할당)
@@ -476,15 +507,10 @@ class TcpBridge(Node):
             except: self.close_socket()
 
     def close_socket(self):
-        if self.sock: 
-            try: self.sock.close()
-            except: pass
-            self.sock = None
-            self.logged_in = False
-            print("[Net] 연결 끊김. 재연결 대기...")
+        if self.sock: self.sock.close(); self.sock = None; self.logged_in = False
 
 # =========================================================================
-# 메인 실행
+# 메인 실행부
 # =========================================================================
 def main():
     rclpy.init()
