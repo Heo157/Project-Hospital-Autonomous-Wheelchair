@@ -27,7 +27,8 @@ ros2 launch wc_bringup bringup.launch.py
 
 dist_seat_topic_pkg 터틀봇 turtlebot3_wc/src/turtlebot3에 이동
 robot.launch.py turtlebot3_bringup/launch안에 복사
-
+실행 터틀봇에서
+ros2 launch turtlebot3_bringup robot.launch.py
 
 //251223 임정민
 
