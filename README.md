@@ -6,6 +6,8 @@
 > TurtleBot3 Burger 플랫폼에 3D 프린팅 휠체어 구조물을 장착하고,  
 > **LiDAR SLAM 기반 자율주행(ROS2/Nav2)** + **중앙 서버/DB 배차 시스템** + **Qt 터치 키오스크(외래 호출)** + **STM32U5(초음파/압력 + Touch-GFX UI)** 를 결합해  
 > 병원 환경에서 **환자 호출 → 탑승 확인 → 목적지 이동 → 도착 알림 → 하차/대기/충전** 흐름을 구현하는 프로젝트입니다.
+>
+> Youtube 영상 : https://youtu.be/OP_KvQtHlb4
 
 ---
 
@@ -284,74 +286,13 @@ STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 �
 </div>
 
 
----
-
-
-## 🛠️8. 트러블 슈팅
-
- ## 각자 맡은 부분 채워주세요
-
-### 1) ROS2 / Nav2 / SLAM 관련
-
-#### ✅ [Issue] SLAM 맵 생성이 잘 안됨 / 맵이 찌그러짐
-- **증상:**
-- **원인:**
-- **해결:**
-  
-
-### 2) 로봇 하드웨어 / 센서 관련 (TurtleBot3, OpenCR, LiDAR)
-
-#### ✅ [Issue] 배터리(`/battery_state`) 값이 비정상
-- **증상:**
-- **원인:**
-- **해결:**
-
-
-### 3) STM32U5 센서 모듈 관련 (초음파 / 압력 / Touch-GFX)
-
-#### ✅ [Issue] 초음파(IUM-100) 센서 고장
-- **증상:** 코드를 정상적으로 구현했음에도 센서 출력값이 나오지 않았다   
-- **원인:** 초음파센서 고장
-- **해결:** 오실로스코프를이용하여 먼저 보드쪽에서 출력되는 TRIGGER핀을 확인 했을떄 정상적을 출력되고있는것을 확인했고 센서로 부터나오는 출력 ECHO핀을 찍어보니 출력신호가 나오지않아 센서 고장으로 결론 지었다
-
-
-
-### 4) 서버(C TCP) / 네트워크 통신 관련
-
-#### ✅ [Issue] 로봇이 서버에 접속은 되는데 상태가 DB에 안 저장됨
-- **증상:**
-- **원인:**
-- **해결:**
-
-
-
-### 5) DB(MariaDB/MySQL) 관련
-
-#### ✅ [Issue] 테이블/컬럼이 없어서 쿼리가 실패함
-- **증상:**
-- **원인:**
-- **해결:**
-
-
-
-### 6) Qt 키오스크 / 관리자 UI 관련
-
-#### ✅ [Issue] Qt에서 DB/서버 연결이 실패함
-- **증상:**
-- **원인:**
-- **해결:**
-  
----
-
-
-
 ## 👥9. 팀원 소개 
 
 | &nbsp;&nbsp;&nbsp;&nbsp;이름&nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp;역할&nbsp;&nbsp;&nbsp;&nbsp; | 파트 | 담당 기능(요약) | 사용 기술/도구 |
 | :---: | :---: | :--- | :--- | :--- |
 | **허진경** | 팀장 | Robot / ROS | TurtleBot3 자율주행(ROS2/Nav2/SLAM) 통합| ROS2, Nav2, SLAM |
-| **강송구** | 부팀장 | Server / DB | C 서버 구현, MariaDB 스키마/쿼리 설계,<br>로봇 상태 저장/배차 로직, ROS 토픽 → Touch-GFX UI 표시 | C(Socket), MariaDB / MySQL, Touch-GFX |
-| **김선곤** | 팀원 | Qt Kiosk / Touch-GFX | 외래 환자용 터치 키오스크(Qt) UI 구현,<br>STM32U5 Touch-GFX UI 연동 | Qt, Touch-GFX |
+| **강송구** | 부팀장 | Server / DB / Qt / Touch-GFX | C 서버 구현, MariaDB 스키마/쿼리 설계,<br>로봇 상태 저장/배차 로직, ROS 토픽 → Touch-GFX UI 표시 | C(Socket), MariaDB / MySQL, Touch-GFX(STM32) |
+| **김선곤** | 팀원 | Qt / Touch-GFX | Qt UI 디자인 전체 구현 <br>STM32U5 Touch-GFX UI 구현 | Qt, Touch-GFX(STM32) |
 | **임정민** | 팀원 | DB / ROS | DB 데이터 관리/정리, URDF | MariaDB / MySQL /ROS2 |
 | **유종민** | 팀원 | Firmware /ROS | STM32U5(초음파/압력) 센서 구현 및<br>ROS2 연동, 3D 프린팅 구조물 제작 | ROS2, STM32,Fusion 360 |
 
