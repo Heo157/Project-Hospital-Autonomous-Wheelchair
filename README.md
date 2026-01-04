@@ -257,7 +257,6 @@ STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 �
 <img src="https://img.shields.io/badge/ROS2-0A0FF9?style=for-the-badge&logo=ros&logoColor=white" />
 <img src="https://img.shields.io/badge/Nav2-0B7285?style=for-the-badge&logo=robotframework&logoColor=white" />
 <img src="https://img.shields.io/badge/SLAM-2F9E44?style=for-the-badge&logo=semantic-release&logoColor=white" />
-<img src="https://img.shields.io/badge/AMCL-F08C00?style=for-the-badge&logo=autodesk&logoColor=white" />
 
 <br/>
 
@@ -269,7 +268,6 @@ STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 �
 <br/>
 
 <!-- Backend -->
-<img src="https://img.shields.io/badge/C-111827?style=for-the-badge&logo=c&logoColor=white" />
 <img src="https://img.shields.io/badge/Socket-374151?style=for-the-badge&logoColor=white" />
 <img src="https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white" />
 <img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white" />
