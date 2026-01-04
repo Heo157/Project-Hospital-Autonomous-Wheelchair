@@ -167,8 +167,6 @@ STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 �
 
 ## 6. 🧱 Database (MariaDB/MySQL)
 
-> 본 프로젝트는 `hospital_backup.sql` 기준으로 DB를 구성합니다.  
-> 서버(C 코드)는 DB를 주기적으로 조회/갱신하여 배차(Dispatch)를 수행합니다.
 
 ### ✅ 주요 테이블 요약
 
