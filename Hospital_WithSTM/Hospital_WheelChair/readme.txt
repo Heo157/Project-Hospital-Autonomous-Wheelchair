@@ -25,6 +25,9 @@ colcon build
 source install/setup.bash
 ros2 launch wc_bringup bringup.launch.py
 
+dist_seat_topic_pkg 터틀봇 turtlebot3_wc/src/turtlebot3에 이동
+robot.launch.py turtlebot3_bringup/launch안에 복사
+
 
 //251223 임정민
 
