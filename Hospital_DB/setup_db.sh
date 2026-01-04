@@ -1,81 +1,117 @@
 #!/bin/bash
 
 # ==============================================================================
-# [설정 정보]
+# [1. 설정 정보]
 # ==============================================================================
-DB_USER="admin"
-DB_PASS="1234"
 DB_NAME="hospital_db"
+DB_USER="root"
+DB_PASS="1234"
+
+FILE_BACKUP="hospital_backup.sql"
+FILE_SCHEMA="hospital_schema.sql"
+SELECTED_FILE=""
 
 # ==============================================================================
-# [로직 시작]
+# [2. 파일 선택 메뉴]
 # ==============================================================================
-
-# 1. 인자($1)가 있는지 확인
-if [ -n "$1" ]; then
-    # 인자가 있으면 그걸 파일명으로 사용
-    SQL_FILE="$1"
-else
-    # 2. 인자가 없으면 파일 선택 메뉴 출력
-    echo "----------------------------------------"
-    echo " 현재 디렉토리의 SQL 파일 목록"
-    echo "----------------------------------------"
-    
-    # .sql 파일들을 배열에 담음
-    file_list=( *.sql )
-    
-    # 파일이 하나도 없으면 종료
-    if [ ${#file_list[@]} -eq 0 ] || [ ! -e "${file_list[0]}" ]; then
-        echo "[에러] .sql 파일이 하나도 없습니다!"
-        exit 1
-    fi
-
-    # 목록 출력
-    i=1
-    for f in "${file_list[@]}"; do
-        echo "$i) $f"
-        ((i++))
-    done
-    echo "----------------------------------------"
-
-    # 사용자 입력 받기
-    read -p "적용할 파일 번호를 선택하세요: " file_num
-
-    # 입력값 검증 (숫자인지, 범위 내인지)
-    # 배열 인덱스는 0부터 시작하므로 (입력값 - 1)
-    idx=$((file_num-1))
-
-    if [ -z "${file_list[$idx]}" ]; then
-        echo "[에러] 잘못된 번호입니다."
-        exit 1
-    fi
-
-    # 선택된 파일명 저장
-    SQL_FILE="${file_list[$idx]}"
-fi
-
-# ==============================================================================
-# [실행 단계]
-# ==============================================================================
-
-# 파일 존재 여부 최종 확인
-if [ ! -f "$SQL_FILE" ]; then
-    echo "[에러] '$SQL_FILE' 파일을 찾을 수 없습니다!"
-    exit 1
-fi
-
+echo "========================================================"
+echo " 🏥 Hospital DB 설치 및 초기화 스크립트 (Fix Version)"
+echo "========================================================"
+echo "현재 디렉토리에서 SQL 파일을 확인했습니다."
 echo ""
-echo ">>> 선택된 파일: $SQL_FILE"
-echo ">>> 데이터베이스($DB_NAME)에 적용을 시작합니다..."
+echo "  1) $FILE_BACKUP  (데이터 포함 복구)"
+echo "  2) $FILE_SCHEMA  (테이블 구조만 초기화)"
+echo ""
+echo "========================================================"
 
-# DB 생성 (없으면 생성)
-mysql -u$DB_USER -p$DB_PASS -e "CREATE DATABASE IF NOT EXISTS $DB_NAME"
+while true; do
+    read -p "진행할 번호를 선택하세요 (1 또는 2): " choice
+    case $choice in
+        1)
+            if [ -f "$FILE_BACKUP" ]; then
+                SELECTED_FILE="$FILE_BACKUP"
+                break
+            fi
+            echo "❌ 오류: $FILE_BACKUP 파일이 없습니다."
+            ;;
+        2)
+            if [ -f "$FILE_SCHEMA" ]; then
+                SELECTED_FILE="$FILE_SCHEMA"
+                break
+            fi
+            echo "❌ 오류: $FILE_SCHEMA 파일이 없습니다."
+            ;;
+        *) echo "잘못된 입력입니다." ;;
+    esac
+done
 
-# SQL 파일 import
-mysql -u$DB_USER -p$DB_PASS $DB_NAME < "$SQL_FILE"
+# ==============================================================================
+# [3. MariaDB 설치 및 호환성 패치]
+# ==============================================================================
+if ! command -v mariadb &> /dev/null; then
+    echo "📦 MariaDB 설치 중..."
+    sudo apt update
+    sudo apt install -y mariadb-server
+    sudo systemctl start mariadb
+    sudo systemctl enable mariadb
+    
+    echo "⏳ 서비스 안정화를 위해 5초 대기..."
+    sleep 5
+    echo "✅ MariaDB 설치 완료!"
+else
+    echo "✅ MariaDB가 이미 설치되어 있습니다."
+fi
+
+# ★ 핵심 수정: 최신 버전의 Collation(uca1400)을 구버전(general_ci)으로 강제 치환
+echo "🔧 SQL 파일 버전 호환성 패치 중..."
+sed -i 's/utf8mb4_uca1400_ai_ci/utf8mb4_general_ci/g' "$SELECTED_FILE"
+echo "✅ 패치 완료 (uca1400 -> general_ci)"
+
+# ==============================================================================
+# [4. Root 계정 설정 및 DB 생성]
+# ==============================================================================
+echo "⚙️ DB 및 Root 계정 설정 중..."
+
+# 1. DB 생성 (sudo 사용)
+sudo mariadb -e "DROP DATABASE IF EXISTS $DB_NAME;"
+sudo mariadb -e "CREATE DATABASE $DB_NAME DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;"
+
+# 2. Root 비밀번호 및 권한 설정
+# (이미 비번이 설정된 경우를 대비해 실패 시 무시하고 진행하도록 처리)
+sudo mariadb -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '$DB_PASS';" 2>/dev/null || true
+sudo mariadb -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY '$DB_PASS' WITH GRANT OPTION;"
+sudo mariadb -e "FLUSH PRIVILEGES;"
+
+echo "✅ DB($DB_NAME) 생성 및 Root 권한 설정 완료!"
+
+# ==============================================================================
+# [5. 외부 접속 허용]
+# ==============================================================================
+CONFIG_FILE="/etc/mysql/mariadb.conf.d/50-server.cnf"
+if grep -q "bind-address            = 127.0.0.1" "$CONFIG_FILE"; then
+    echo "🌍 외부 접속 설정 변경 (127.0.0.1 -> 0.0.0.0)"
+    sudo sed -i 's/bind-address            = 127.0.0.1/bind-address            = 0.0.0.0/' "$CONFIG_FILE"
+    sudo systemctl restart mariadb
+    echo "⏳ 재시작 대기 (3초)..."
+    sleep 3
+fi
+
+# ==============================================================================
+# [6. SQL 파일 적용]
+# ==============================================================================
+echo "📥 데이터 적용 시작 ($SELECTED_FILE)..."
+
+# 비밀번호 명시하여 접속
+mariadb -u root -p"$DB_PASS" $DB_NAME < "$SELECTED_FILE"
 
 if [ $? -eq 0 ]; then
-    echo ">>> [성공] DB 초기화가 완료되었습니다! 🎉"
+    echo ""
+    echo "🎉 [성공] 모든 작업이 완료되었습니다!"
+    echo "-----------------------------------------------------"
+    echo " 🔹 DB명: $DB_NAME"
+    echo " 🔹 ID  : root"
+    echo " 🔹 PW  : $DB_PASS"
+    echo "-----------------------------------------------------"
 else
-    echo ">>> [실패] DB 적용 중 오류가 발생했습니다."
+    echo "❌ [실패] 여전히 오류가 발생했습니다. SQL 파일을 확인해주세요."
 fi
