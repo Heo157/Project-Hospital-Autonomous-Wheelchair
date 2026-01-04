@@ -246,19 +246,45 @@ STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 �
 - STM32U5 보드(내장 Touch-GFX)
 - IUM-100 초음파 센서 (하단 장애물 감지)
 - FSR 압력 센서 (탑승 감지)
-- E-STOP (응급정지 버튼)
 
 ---
 
-## 🧰 7. 기술 스택 
+## 🧰 Tech Stack
 
-- **Robot**: ROS2, Nav2, SLAM, AMCL
-- **Edge**: Raspberry Pi 4
-- **Sensor Board**: STM32U5G9J-DK2 + Touch-GFX UI
-- **Server**: C Socket Server(Multi-process), MariaDB/MySQL
-- **UI**: Qt (Admin Dashboard / User Touch Kiosk / Nurse Dashboard)
+<div align="center">
+
+<!-- Core -->
+<img src="https://img.shields.io/badge/ROS2-0A0FF9?style=for-the-badge&logo=ros&logoColor=white" />
+<img src="https://img.shields.io/badge/Nav2-0B7285?style=for-the-badge&logo=robotframework&logoColor=white" />
+<img src="https://img.shields.io/badge/SLAM-2F9E44?style=for-the-badge&logo=semantic-release&logoColor=white" />
+<img src="https://img.shields.io/badge/AMCL-F08C00?style=for-the-badge&logo=autodesk&logoColor=white" />
+
+<br/>
+
+<!-- Hardware -->
+<img src="https://img.shields.io/badge/Raspberry%20Pi-4-A22846?style=for-the-badge&logo=raspberrypi&logoColor=white" />
+<img src="https://img.shields.io/badge/STM32U5G9J--DK2-03234B?style=for-the-badge&logo=stmicroelectronics&logoColor=white" />
+<img src="https://img.shields.io/badge/TouchGFX-6D28D9?style=for-the-badge&logoColor=white" />
+
+<br/>
+
+<!-- Backend -->
+<img src="https://img.shields.io/badge/C-111827?style=for-the-badge&logo=c&logoColor=white" />
+<img src="https://img.shields.io/badge/Socket-374151?style=for-the-badge&logoColor=white" />
+<img src="https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white" />
+<img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white" />
+
+<br/>
+
+<!-- UI -->
+<img src="https://img.shields.io/badge/Qt-41CD52?style=for-the-badge&logo=qt&logoColor=white" />
+
+</div>
+
 
 ---
+
+
 ## 🛠️8. 트러블 슈팅
 
  ## 각자 맡은 부분 채워주세요
