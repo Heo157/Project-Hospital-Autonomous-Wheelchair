@@ -22,7 +22,19 @@
 
 ---
 
-## ✨ 2. 핵심 기능
+
+## 🔧 2. 하드웨어 구성 
+
+### ✅ Robot Side
+<img width="787" height="224" alt="image" src="https://github.com/user-attachments/assets/54c18447-0883-4ffe-8b27-023a83595357" />
+
+
+### ✅ STM32 Side
+<img width="808" height="270" alt="image" src="https://github.com/user-attachments/assets/e0f09e85-82c0-49e6-930a-bf4ff67fae4e" />
+
+---
+
+## ✨ 3. 핵심 기능
 
 ### ✅ 자율주행
 - SLAM으로 맵 생성
@@ -53,25 +65,25 @@
 ---
 
 
-## 🗺️ 3. 동작 시나리오 
+## 🗺️ 4. 동작 시나리오 
 
-### 3.1 외래 환자 호출(키오스크)
+### 4.1 외래 환자 호출(키오스크)
 1. 외래 환자가 **Qt 키오스크**에서 휠체어 호출
 2. 키오스크가 서버/DB에 호출 등록(call queue insert)
 3. 서버 Dispatch가 가용 로봇을 선택하여 배차
 4. 로봇은 출발지 → 목적지로 Nav2 goal 이동
 5. 도착 시 서버/관리자 UI에 알림
 
-### 3.2 입원 환자 호출(병동/병실 기반)
+### 4.2 입원 환자 호출(병동/병실 기반)
 1. 간호사/관리자가 호출(병실/병동 선택)
 2. 서버가 DB의 위치(map_location) 좌표를 참조
 3. 로봇 배차 후 해당 위치로 이동
 
-### 3.3 탑승/하차 판단(압력 센서)
+### 4.3 탑승/하차 판단(압력 센서)
 - STM32U5의 FSR 압력 센서로 `seat_detected = 1/0` 판별
 - Raspberry Pi4가 이를 수신하고 서버에 전달하여 DB에 기록
 
-### 3.4 하단 장애물 안전(초음파)
+### 4.4 하단 장애물 안전(초음파)
 - LiDAR는 보통 바닥 가까운 낮은 장애물을 놓칠 수 있음
 - STM32U5 초음파를 하단에 장착하여 `/ultra_distance_cm` publish
 - 임계 거리 이하면:
@@ -80,7 +92,7 @@
 ----
 
 
-## 🧠 4. 시스템 아키텍처 
+## 🧠 5. 시스템 아키텍처 
 
 ### 1) 전체 시스템 아키텍처 
 
@@ -151,7 +163,7 @@ STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 �
 
 ---
 
-## 5. 🧱 Database (MariaDB/MySQL)
+## 6. 🧱 Database (MariaDB/MySQL)
 
 > 본 프로젝트는 `hospital_backup.sql` 기준으로 DB를 구성합니다.  
 > 서버(C 코드)는 DB를 주기적으로 조회/갱신하여 배차(Dispatch)를 수행합니다.
@@ -233,16 +245,6 @@ STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 �
 | 2 | `base_priority` | DESC (점수 높은 질병 먼저) |
 | 3 | `call_time` | ASC (먼저 온 호출 먼저) |
 
----
-
-## 🔧 6. 하드웨어 구성 
-
-### ✅ Robot Side
-<img width="787" height="224" alt="image" src="https://github.com/user-attachments/assets/54c18447-0883-4ffe-8b27-023a83595357" />
-
-
-### ✅ STM32 Side
-<img width="808" height="270" alt="image" src="https://github.com/user-attachments/assets/e0f09e85-82c0-49e6-930a-bf4ff67fae4e" />
 
 
 
