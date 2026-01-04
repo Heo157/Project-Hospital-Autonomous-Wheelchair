@@ -22,7 +22,7 @@
 
 ---
 
-## ✨ 2. 핵심 기능 (Key Features)
+## ✨ 2. 핵심 기능
 
 ### ✅ 자율주행
 - SLAM으로 맵 생성
@@ -53,7 +53,7 @@
 ---
 
 
-## 🗺️ 3. 동작 시나리오 (Workflow)
+## 🗺️ 3. 동작 시나리오 
 
 ### 3.1 외래 환자 호출(키오스크)
 1. 외래 환자가 **Qt 키오스크**에서 휠체어 호출
@@ -80,7 +80,7 @@
 ----
 
 
-## 🧠 4. 시스템 아키텍처 (System Architecture)
+## 🧠 4. 시스템 아키텍처 
 
 ### 1) 전체 시스템 아키텍처 
 
@@ -108,7 +108,7 @@
 본 시스템은 **DB의 `robot_status` 테이블**을 중심으로 로봇을 관리합니다.
 
 - 로봇 하드웨어가 추가 되다면
-  - 서버는 `robot_status`의 `robot_id`(또는 name)를 기준으로 **로봇 호스트를 식별/등록**
+  - 서버는 `robot_status`의 `robot_id`(또는 name)를 기준으로 **로봇 호스트를 등록**
   - 로봇 상태를 주기적으로 갱신하고,
   - 호출 큐(`call_queue`)와 매칭해 **배차/명령 할당**을 수행합니다.
 - 즉, **로봇이 늘어나도 서버/DB 구조는 동일**하며,
@@ -118,13 +118,13 @@
 ---
 
 
-### 3) STM32U5 + TouchGFX HMI 연동 구조 (ROS 토픽 표시 + 센서 토픽 생성)
+### 3) STM32U5 + TouchGFX  연동 구조 (ROS 토픽 표시 + 센서 토픽 생성)
 
 <img width="937" height="628" alt="image" src="https://github.com/user-attachments/assets/64a58873-ee28-4301-adb6-eec05be33936" />
 
 STM32U5는 단순 센서 보드가 아니라, **로봇 상태 표시(TouchGFX) + 센서 모듈** 역할을 수행합니다.
 
-#### ✅ A. ROS → STM32U5(TouchGFX) 상태 표시
+#### ✅ A. ROS → STM32U5(TouchGFX) 
 Raspberry Pi 4(ROS2)에서 수신/발행 중인 주요 토픽을 STM32U5로 전달하여 TouchGFX에 표시합니다.
 
 | Topic | 의미 | UI 표시 예시 |
@@ -135,8 +135,8 @@ Raspberry Pi 4(ROS2)에서 수신/발행 중인 주요 토픽을 STM32U5로 전�
 | `/hostname/goal_pose` | 목표 좌표 | goal x, y |
 | `/hostname/scan` | LiDAR 스캔 | min range |
 
-#### ✅ B. STM32U5 센서 → ROS2 토픽 생성(호스트명 포함)
-STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 생성**하고, 로봇 호스트명을 붙여 재발행 합니다
+#### ✅ B. STM32U5 센서 → ROS2 토픽 생성 → STM32U5(TouchGFX) 
+STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 생성**하고, 로봇 호스트명을 붙여 재발행 하고 STM32U5로 전달하여 TouchGFX에 표시합니다.
 
 - STM32U5 센서 입력:
 - | Topic | 의미 | UI 표시 예시 |
@@ -235,7 +235,7 @@ STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 �
 
 ---
 
-## 🔧 6. 하드웨어 구성 (Hardware)
+## 🔧 6. 하드웨어 구성 
 
 ### ✅ Robot Side
 - TurtleBot3 Burger base + LiDAR
@@ -250,7 +250,7 @@ STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 �
 
 ---
 
-## 🧰 7. 기술 스택 (Tech Stack)
+## 🧰 7. 기술 스택 
 
 - **Robot**: ROS2, Nav2, SLAM, AMCL
 - **Edge**: Raspberry Pi 4
@@ -259,7 +259,7 @@ STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 �
 - **UI**: Qt (Admin Dashboard / User Touch Kiosk / Nurse Dashboard)
 
 ---
-## 🛠️8. Troubleshooting (트러블 슈팅)
+## 🛠️8. 트러블 슈팅
 
  ## 각자 맡은 부분 채워주세요
 
@@ -317,7 +317,7 @@ STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 �
 
 
 
-## 👥9. 팀원 소개 (Team)
+## 👥9. 팀원 소개 
 
 | &nbsp;&nbsp;&nbsp;&nbsp;이름&nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp;역할&nbsp;&nbsp;&nbsp;&nbsp; | 파트 | 담당 기능(요약) | 사용 기술/도구 |
 | :---: | :---: | :--- | :--- | :--- |
