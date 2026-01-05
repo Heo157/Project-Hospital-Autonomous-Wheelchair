@@ -251,8 +251,14 @@ STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 �
 
 
 ---
+## 7. 지도
+   
+<img width="802" height="584" alt="image" src="https://github.com/user-attachments/assets/fb9f6af5-0ed8-4555-b5ec-a6c7ca96ab85" />
 
-## 🧰 7. 기술 스택
+
+---
+
+## 🧰 8. 기술 스택
 
 <div align="center">
 
