@@ -60,7 +60,7 @@ CREATE TABLE `call_queue` (
   `is_dispatched` int(11) DEFAULT 0,
   `eta` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`call_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=296 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=328 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -186,7 +186,7 @@ CREATE TABLE `robot_status` (
   `seat_detected` tinyint(1) DEFAULT 0,
   PRIMARY KEY (`robot_id`),
   UNIQUE KEY `uk_robot_name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=951709 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1006867 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -276,4 +276,4 @@ CREATE TABLE `users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;
 
--- Dump completed on 2026-01-02 16:57:29
+-- Dump completed on 2026-01-04 15:30:11

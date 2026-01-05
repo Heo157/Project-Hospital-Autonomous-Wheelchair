@@ -1,4 +1,4 @@
- 
+
 
 # 🏥 Hospital Autonomous Wheelchair Robot  
 
@@ -6,6 +6,8 @@
 > TurtleBot3 Burger 플랫폼에 3D 프린팅 휠체어 구조물을 장착하고,  
 > **LiDAR SLAM 기반 자율주행(ROS2/Nav2)** + **중앙 서버/DB 배차 시스템** + **Qt 터치 키오스크(외래 호출)** + **STM32U5(초음파/압력 + Touch-GFX UI)** 를 결합해  
 > 병원 환경에서 **환자 호출 → 탑승 확인 → 목적지 이동 → 도착 알림 → 하차/대기/충전** 흐름을 구현하는 프로젝트입니다.
+>
+> Youtube 영상 : https://youtu.be/OP_KvQtHlb4
 
 ---
 
@@ -22,7 +24,19 @@
 
 ---
 
-## ✨ 2. 핵심 기능 (Key Features)
+
+## 🔧 2. 하드웨어 구성 
+
+### ✅ Robot Side
+<img width="787" height="224" alt="image" src="https://github.com/user-attachments/assets/54c18447-0883-4ffe-8b27-023a83595357" />
+
+
+### ✅ STM32 Side
+<img width="808" height="270" alt="image" src="https://github.com/user-attachments/assets/e0f09e85-82c0-49e6-930a-bf4ff67fae4e" />
+
+---
+
+## ✨ 3. 핵심 기능
 
 ### ✅ 자율주행
 - SLAM으로 맵 생성
@@ -53,25 +67,25 @@
 ---
 
 
-## 🗺️ 3. 동작 시나리오 (Workflow)
+## 🗺️ 4. 동작 시나리오 
 
-### 3.1 외래 환자 호출(키오스크)
+### 4.1 외래 환자 호출(키오스크)
 1. 외래 환자가 **Qt 키오스크**에서 휠체어 호출
 2. 키오스크가 서버/DB에 호출 등록(call queue insert)
 3. 서버 Dispatch가 가용 로봇을 선택하여 배차
 4. 로봇은 출발지 → 목적지로 Nav2 goal 이동
 5. 도착 시 서버/관리자 UI에 알림
 
-### 3.2 입원 환자 호출(병동/병실 기반)
+### 4.2 입원 환자 호출(병동/병실 기반)
 1. 간호사/관리자가 호출(병실/병동 선택)
 2. 서버가 DB의 위치(map_location) 좌표를 참조
 3. 로봇 배차 후 해당 위치로 이동
 
-### 3.3 탑승/하차 판단(압력 센서)
+### 4.3 탑승/하차 판단(압력 센서)
 - STM32U5의 FSR 압력 센서로 `seat_detected = 1/0` 판별
 - Raspberry Pi4가 이를 수신하고 서버에 전달하여 DB에 기록
 
-### 3.4 하단 장애물 안전(초음파)
+### 4.4 하단 장애물 안전(초음파)
 - LiDAR는 보통 바닥 가까운 낮은 장애물을 놓칠 수 있음
 - STM32U5 초음파를 하단에 장착하여 `/ultra_distance_cm` publish
 - 임계 거리 이하면:
@@ -80,7 +94,7 @@
 ----
 
 
-## 🧠 4. 시스템 아키텍처 (System Architecture)
+## 🧠 5. 시스템 아키텍처 
 
 ### 1) 전체 시스템 아키텍처 
 
@@ -103,12 +117,14 @@
 
 ### 2) 다중 로봇 확장형 배차 구조 (robot_status 기반 최대 N대 운영)
 
-<img width="745" height="620" alt="image" src="https://github.com/user-attachments/assets/d50571a4-5844-4957-a214-0a69dcbf3490" />
+<img width="925" height="564" alt="image" src="https://github.com/user-attachments/assets/eee87182-efa9-4ca2-8d63-f168c2322ef1" />
+
+
 
 본 시스템은 **DB의 `robot_status` 테이블**을 중심으로 로봇을 관리합니다.
 
 - 로봇 하드웨어가 추가 되다면
-  - 서버는 `robot_status`의 `robot_id`(또는 name)를 기준으로 **로봇 호스트를 식별/등록**
+  - 서버는 `robot_status`의 `robot_id`(또는 name)를 기준으로 **로봇 호스트를 등록**
   - 로봇 상태를 주기적으로 갱신하고,
   - 호출 큐(`call_queue`)와 매칭해 **배차/명령 할당**을 수행합니다.
 - 즉, **로봇이 늘어나도 서버/DB 구조는 동일**하며,
@@ -118,13 +134,13 @@
 ---
 
 
-### 3) STM32U5 + TouchGFX HMI 연동 구조 (ROS 토픽 표시 + 센서 토픽 생성)
+### 3) STM32U5 + TouchGFX  연동 구조 (ROS 토픽 표시 + 센서 토픽 생성)
 
 <img width="937" height="628" alt="image" src="https://github.com/user-attachments/assets/64a58873-ee28-4301-adb6-eec05be33936" />
 
 STM32U5는 단순 센서 보드가 아니라, **로봇 상태 표시(TouchGFX) + 센서 모듈** 역할을 수행합니다.
 
-#### ✅ A. ROS → STM32U5(TouchGFX) 상태 표시
+#### ✅ A. ROS → STM32U5(TouchGFX) 
 Raspberry Pi 4(ROS2)에서 수신/발행 중인 주요 토픽을 STM32U5로 전달하여 TouchGFX에 표시합니다.
 
 | Topic | 의미 | UI 표시 예시 |
@@ -135,8 +151,8 @@ Raspberry Pi 4(ROS2)에서 수신/발행 중인 주요 토픽을 STM32U5로 전�
 | `/hostname/goal_pose` | 목표 좌표 | goal x, y |
 | `/hostname/scan` | LiDAR 스캔 | min range |
 
-#### ✅ B. STM32U5 센서 → ROS2 토픽 생성(호스트명 포함)
-STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 생성**하고, 로봇 호스트명을 붙여 재발행 합니다
+#### ✅ B. STM32U5 센서 → ROS2 토픽 생성 → STM32U5(TouchGFX) 
+STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 생성**하고, 로봇 호스트명을 붙여 재발행 하고 STM32U5로 전달하여 TouchGFX에 표시합니다.
 
 - STM32U5 센서 입력:
 - | Topic | 의미 | UI 표시 예시 |
@@ -151,10 +167,8 @@ STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 �
 
 ---
 
-## 5. 🧱 Database (MariaDB/MySQL)
+## 6. 🧱 Database (MariaDB/MySQL)
 
-> 본 프로젝트는 `hospital_backup.sql` 기준으로 DB를 구성합니다.  
-> 서버(C 코드)는 DB를 주기적으로 조회/갱신하여 배차(Dispatch)를 수행합니다.
 
 ### ✅ 주요 테이블 요약
 
@@ -233,98 +247,60 @@ STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 �
 | 2 | `base_priority` | DESC (점수 높은 질병 먼저) |
 | 3 | `call_time` | ASC (먼저 온 호출 먼저) |
 
+
+
+
 ---
+## 7. 지도
+   
+<img width="802" height="584" alt="image" src="https://github.com/user-attachments/assets/fb9f6af5-0ed8-4555-b5ec-a6c7ca96ab85" />
 
-## 🔧 6. 하드웨어 구성 (Hardware)
-
-### ✅ Robot Side
-- TurtleBot3 Burger base + LiDAR
-- Raspberry Pi 4
-- OpenCR
-
-### ✅ STM32U5 Sensor Module
-- STM32U5 보드(내장 Touch-GFX)
-- IUM-100 초음파 센서 (하단 장애물 감지)
-- FSR 압력 센서 (탑승 감지)
-- E-STOP (응급정지 버튼)
 
 ---
 
-## 🧰 7. 기술 스택 (Tech Stack)
+## 🧰 8. 기술 스택
 
-- **Robot**: ROS2, Nav2, SLAM, AMCL
-- **Edge**: Raspberry Pi 4
-- **Sensor Board**: STM32U5G9J-DK2 + Touch-GFX UI
-- **Server**: C Socket Server(Multi-process), MariaDB/MySQL
-- **UI**: Qt (Admin Dashboard / User Touch Kiosk / Nurse Dashboard)
+<div align="center">
+
+<!-- UI -->
+<img src="https://img.shields.io/badge/Qt-41CD52?style=for-the-badge&logo=qt&logoColor=white" />
+
+<br/>
+
+<!-- Backend -->
+<img src="https://img.shields.io/badge/Socket-374151?style=for-the-badge&logoColor=white" />
+<img src="https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white" />
+<img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white" />
+
+<br/>
+
+<!-- Core -->
+<img src="https://img.shields.io/badge/ROS2-0A0FF9?style=for-the-badge&logo=ros&logoColor=white" />
+<img src="https://img.shields.io/badge/Nav2-0B7285?style=for-the-badge&logo=robotframework&logoColor=white" />
+<img src="https://img.shields.io/badge/SLAM-2F9E44?style=for-the-badge&logo=semantic-release&logoColor=white" />
+
+<br/>
+
+<!-- Hardware -->
+<img src="https://img.shields.io/badge/Raspberry%20Pi-4-A22846?style=for-the-badge&logo=raspberrypi&logoColor=white" />
+<img src="https://img.shields.io/badge/STM32U5G9J--DK2-03234B?style=for-the-badge&logo=stmicroelectronics&logoColor=white" />
+<img src="https://img.shields.io/badge/TouchGFX-6D28D9?style=for-the-badge&logoColor=white" />
+
+<br/>
+
+
+</div>
 
 ---
-## 🛠️8. Troubleshooting (트러블 슈팅)
 
- ## 각자 맡은 부분 채워주세요
-
-### 1) ROS2 / Nav2 / SLAM 관련
-
-#### ✅ [Issue] SLAM 맵 생성이 잘 안됨 / 맵이 찌그러짐
-- **증상:**
-- **원인:**
-- **해결:**
-  
-
-### 2) 로봇 하드웨어 / 센서 관련 (TurtleBot3, OpenCR, LiDAR)
-
-#### ✅ [Issue] 배터리(`/battery_state`) 값이 비정상
-- **증상:**
-- **원인:**
-- **해결:**
-
-
-### 3) STM32U5 센서 모듈 관련 (초음파 / 압력 / Touch-GFX)
-
-#### ✅ [Issue] 초음파(IUM-100) 센서 고장
-- **증상:** 코드를 정상적으로 구현했음에도 센서 출력값이 나오지 않았다   
-- **원인:** 초음파센서 고장
-- **해결:** 오실로스코프를이용하여 먼저 보드쪽에서 출력되는 TRIGGER핀을 확인 했을떄 정상적을 출력되고있는것을 확인했고 센서로 부터나오는 출력 ECHO핀을 찍어보니 출력신호가 나오지않아 센서 고장으로 결론 지었다
-
-
-
-### 4) 서버(C TCP) / 네트워크 통신 관련
-
-#### ✅ [Issue] 로봇이 서버에 접속은 되는데 상태가 DB에 안 저장됨
-- **증상:**
-- **원인:**
-- **해결:**
-
-
-
-### 5) DB(MariaDB/MySQL) 관련
-
-#### ✅ [Issue] 테이블/컬럼이 없어서 쿼리가 실패함
-- **증상:**
-- **원인:**
-- **해결:**
-
-
-
-### 6) Qt 키오스크 / 관리자 UI 관련
-
-#### ✅ [Issue] Qt에서 DB/서버 연결이 실패함
-- **증상:**
-- **원인:**
-- **해결:**
-  
----
-
-
-
-## 👥9. 팀원 소개 (Team)
+## 👥9. 팀원 소개 
 
 | &nbsp;&nbsp;&nbsp;&nbsp;이름&nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp;역할&nbsp;&nbsp;&nbsp;&nbsp; | 파트 | 담당 기능(요약) | 사용 기술/도구 |
 | :---: | :---: | :--- | :--- | :--- |
 | **허진경** | 팀장 | Robot / ROS | TurtleBot3 자율주행(ROS2/Nav2/SLAM) 통합| ROS2, Nav2, SLAM |
-| **강송구** | 부팀장 | Server / DB | C 서버 구현, MariaDB 스키마/쿼리 설계,<br>로봇 상태 저장/배차 로직, ROS 토픽 → Touch-GFX UI 표시 | C(Socket), MariaDB / MySQL, Touch-GFX |
-| **김선곤** | 팀원 | Qt Kiosk / Touch-GFX | 외래 환자용 터치 키오스크(Qt) UI 구현,<br>STM32U5 Touch-GFX UI 연동 | Qt, Touch-GFX |
-| **임정민** | 팀원 | DB / ROS | DB 데이터 관리/정리, URDF | MariaDB / MySQL /ROS2 |
+| **강송구** | 부팀장 | Server / DB / Qt / Touch-GFX | C 서버 구현, MariaDB 스키마/쿼리 설계,<br>로봇 상태 저장/배차 로직, ROS 토픽 → Touch-GFX UI 표시 | C(Socket), MariaDB / MySQL, Touch-GFX(STM32) |
+| **김선곤** | 팀원 | Qt / Touch-GFX | Qt UI 디자인 전체 구현 <br>STM32U5 Touch-GFX UI 구현 | Qt, Touch-GFX(STM32) |
+| **임정민** | 팀원 | DB / ROS | DB 데이터 관리/정리, URDF | MariaDB /ROS2 |
 | **유종민** | 팀원 | Firmware /ROS | STM32U5(초음파/압력) 센서 구현 및<br>ROS2 연동, 3D 프린팅 구조물 제작 | ROS2, STM32,Fusion 360 |
 
 
