@@ -97,12 +97,13 @@
 ## 🧠 5. 시스템 아키텍처 
 
 ### 1) 전체 시스템 아키텍처 
+<img width="787" height="539" alt="image" src="https://github.com/user-attachments/assets/56bccc3c-7ea7-4e55-9197-c0469b62460f" />
 
-<img width="850" height="596" alt="image" src="https://github.com/user-attachments/assets/4c0d09a5-9963-4567-ac51-ab5ef822cb45" />
+
 
 - **Application (Qt)**  
   - 관리자용 Qt / 외래환자용 Qt  / 간호사용 Qt 
-- **Database (MariaDB/MySQL)**  
+- **Database (MariaDB/SQL)**  
   - `robot_status`, `call_queue`, `map_location` 등을 통해 상태 저장 및 배차 데이터 관리
 - **Central Server (TCP, C)**  
   - 로봇 접속 관리, 상태 수집, 명령 전달, 배차 로직 수행
@@ -116,8 +117,9 @@
 
 
 ### 2) 다중 로봇 확장형 배차 구조 (robot_status 기반 최대 N대 운영)
+<img width="656" height="551" alt="image" src="https://github.com/user-attachments/assets/cc0663b3-6a31-4001-9924-6ead65dee5dd" />
 
-<img width="925" height="564" alt="image" src="https://github.com/user-attachments/assets/eee87182-efa9-4ca2-8d63-f168c2322ef1" />
+
 
 
 
@@ -136,7 +138,8 @@
 
 ### 3) STM32U5 + TouchGFX  연동 구조 (ROS 토픽 표시 + 센서 토픽 생성)
 
-<img width="937" height="628" alt="image" src="https://github.com/user-attachments/assets/64a58873-ee28-4301-adb6-eec05be33936" />
+<img width="870" height="562" alt="image" src="https://github.com/user-attachments/assets/0a79c6d4-a78e-4ef9-8138-e94d0924d4d7" />
+
 
 STM32U5는 단순 센서 보드가 아니라, **로봇 상태 표시(TouchGFX) + 센서 모듈** 역할을 수행합니다.
 
