@@ -300,7 +300,7 @@ STM32U5에 연결된 센서를 통해 ROS2로 전송하여 **추가 토픽을 �
 
 | &nbsp;&nbsp;&nbsp;&nbsp;이름&nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp;역할&nbsp;&nbsp;&nbsp;&nbsp; | 파트 | 담당 기능(요약) | 사용 기술/도구 |
 | :---: | :---: | :--- | :--- | :--- |
-| **허진경** | 팀장 | Robot / ROS | TurtleBot3 자율주행(ROS2/Nav2/SLAM) 통합| ROS2, Nav2, SLAM |
+| **허진경** | 팀장 | Robot / ROS | TurtleBot3 자율주행(ROS2/Nav2/SLAM) 통합, <br>C 서버와 ROS 연결 노드, 미션 수행 로직 구현| ROS2, Nav2, SLAM |
 | **강송구** | 부팀장 | Server / DB / Qt / Touch-GFX | C 서버 구현, MariaDB 스키마/쿼리 설계,<br>로봇 상태 저장/배차 로직, ROS 토픽 → Touch-GFX UI 표시 | C(Socket), MariaDB / MySQL, Touch-GFX(STM32) |
 | **김선곤** | 팀원 | Qt / Touch-GFX | Qt UI 디자인 전체 구현 <br>STM32U5 Touch-GFX UI 구현 | Qt, Touch-GFX(STM32) |
 | **임정민** | 팀원 | DB / ROS | DB 데이터 관리/정리, URDF | MariaDB /ROS2 |
