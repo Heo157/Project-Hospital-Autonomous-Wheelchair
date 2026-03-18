@@ -1,3 +1,4 @@
 {
-    "github.copilot.chat.codeGeneration.useInstructionFiles": true
+    "github.copilot.chat.codeGeneration.useInstructionFiles": true,
+    "cmake.sourceDirectory": "C:/Users/hjk33/OneDrive/Desktop/git/Project-Hospital-Autonomous-Wheelchair/Hospital_Server"
 }
